@@ -19,7 +19,7 @@ from enum import Enum, auto
 from typing import Callable, Deque, Optional
 
 from mycroft_dinkum_listener.voice_loop.microphone import Microphone
-from mycroft_dinkum_listener.voice_loop.voice_activity import DinkumVoiceActivity
+from ovos_plugin_manager.vad import VADEngine
 from ovos_plugin_manager.wakewords import HotWordEngine
 from ovos_plugin_manager.stt import StreamingSTT
 
@@ -45,7 +45,7 @@ class VoiceLoop:
     mic: Microphone
     hotword: HotWordEngine
     stt: StreamingSTT
-    vad: DinkumVoiceActivity
+    vad: VADEngine
 
     def start(self):
         raise NotImplementedError()
@@ -93,7 +93,6 @@ class MycroftVoiceLoop(VoiceLoop):
     text_callback: Optional[TextCallback] = None
     hotword_audio_callback: Optional[AudioCallback] = None
     stt_audio_callback: Optional[AudioCallback] = None
-    chunk_callback: Optional[ChunkCallback] = None
     is_muted: bool = False
     _is_running: bool = False
     _chunk_info: ChunkInfo = field(default_factory=ChunkInfo)
@@ -116,8 +115,6 @@ class MycroftVoiceLoop(VoiceLoop):
         # This allows you to speak a command immediately after the wake word.
         stt_chunks: Deque[bytes] = deque(maxlen=self.num_stt_rewind_chunks + 1)
 
-        has_probability = hasattr(self.hotword, "probability")
-
         while self._is_running:
             chunk = self.mic.read_chunk()
             assert chunk is not None, "No audio from microphone"
@@ -137,13 +134,6 @@ class MycroftVoiceLoop(VoiceLoop):
                 hotword_chunks.append(chunk)
                 stt_chunks.append(chunk)
                 self.hotword.update(chunk)
-
-                if has_probability:
-                    # For diagnostics
-                    self._chunk_info.hotword_probability = self.hotword.probability
-
-                if self.chunk_callback is not None:
-                    self._chunk_info.is_speech = not self.vad.is_silence(stt_chunk)
 
                 if self.hotword.found_wake_word(None) or self.skip_next_wake:
 
@@ -173,7 +163,8 @@ class MycroftVoiceLoop(VoiceLoop):
 
                     # Reset the VAD internal state to avoid the model getting
                     # into a degenerative state where it always reports silence.
-                    self.vad.reset()
+                    if hasattr(self.vad, "reset"):
+                        self.vad.reset()
 
             elif state == State.BEFORE_COMMAND:
                 # Recording voice command, but user has not spoken yet

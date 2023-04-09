@@ -13,5 +13,4 @@
 # limitations under the License.
 #
 from mycroft_dinkum_listener.voice_loop.microphone import AlsaMicrophone
-from mycroft_dinkum_listener.voice_loop.voice_activity import DinkumVoiceActivity
 from mycroft_dinkum_listener.voice_loop.voice_loop import MycroftVoiceLoop

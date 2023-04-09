@@ -19,6 +19,7 @@ from enum import Enum
 from pathlib import Path
 from threading import Thread
 from typing import List, Optional
+from ovos_plugin_manager.vad import OVOSVADFactory, VADEngine
 
 import requests
 import sdnotify
@@ -30,7 +31,7 @@ from ovos_utils.sound import play_listening_sound
 
 from mycroft_dinkum_listener.plugins import load_stt_module
 from ovos_plugin_manager.wakewords import OVOSWakeWordFactory
-from mycroft_dinkum_listener.voice_loop import AlsaMicrophone, MycroftVoiceLoop, DinkumVoiceActivity
+from mycroft_dinkum_listener.voice_loop import AlsaMicrophone, MycroftVoiceLoop
 
 # Seconds between systemd watchdog updates
 WATCHDOG_DELAY = 0.5
@@ -149,7 +150,7 @@ class DinkumVoiceService:
 
         hotword = OVOSWakeWordFactory.create_hotword(listener["wake_word"])
 
-        vad = DinkumVoiceActivity()
+        vad = OVOSVADFactory.create()
         stt = load_stt_module(self.config, self.bus)
 
         self.voice_loop = MycroftVoiceLoop(
