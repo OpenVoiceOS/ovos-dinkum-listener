@@ -48,9 +48,6 @@ class Microphone:
         raise NotImplementedError()
 
 
-# -------------------------------------------------------------------------------
-
-
 @dataclass
 class AlsaMicrophone(Microphone):
     device: str

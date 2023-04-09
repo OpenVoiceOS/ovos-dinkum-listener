@@ -181,12 +181,15 @@ class DinkumVoiceService:
         if not vad_model:
             raise ValueError("you need to provide the path to vad model, "
                              "dinkum does not support standard plugins")
+
+        # TODO - use OPM plugins
         vad = SileroVoiceActivity(
             model=vad_model,
             threshold=listener.get("vad_threshold", 0.5),
         )
         vad.start()
 
+        # TODO - use OPM plugins
         stt = load_stt_module(self.config, self.bus)
         stt.start()
 
