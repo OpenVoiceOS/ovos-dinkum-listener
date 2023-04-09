@@ -12,26 +12,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import dataclasses
+import argparse
+import logging
 import time
 import wave
+from enum import Enum
 from pathlib import Path
-from typing import Optional
+from threading import Thread
+from typing import List, Optional
 from uuid import uuid4
 
 import requests
-from ovos_bus_client import Message
+import sdnotify
+from ovos_bus_client import Message, MessageBusClient
+from ovos_config import Configuration
 from ovos_utils.file_utils import resolve_resource_file, get_cache_directory
 from ovos_utils.log import LOG
 from ovos_utils.sound import play_listening_sound
 
-from mycroft_dinkum_listener.dinkum_service import DinkumService
 from mycroft_dinkum_listener.plugins import load_stt_module
 from mycroft_dinkum_listener.plugins.ww_tflite import TFLiteHotWordEngine
 from mycroft_dinkum_listener.voice_loop import AlsaMicrophone, MycroftVoiceLoop, SileroVoiceActivity
 
+# Seconds between systemd watchdog updates
+WATCHDOG_DELAY = 0.5
 
-class VoiceService(DinkumService):
+
+class ServiceState(str, Enum):
+    NOT_STARTED = "not_started"
+    STARTED = "started"
+    RUNNING = "running"
+    STOPPING = "stopping"
+
+
+class DinkumVoiceService:
     """
     Service for handling user voice input.
 
@@ -72,11 +86,62 @@ class VoiceService(DinkumService):
     """
 
     def __init__(self):
-        super().__init__(service_id="voice")
+        self.service_id = "voice"
+        self._notifier = sdnotify.SystemdNotifier()
+        self._state: ServiceState = ServiceState.NOT_STARTED
         self.mycroft_session_id: Optional[str] = None
-        self._is_diagnostics_enabled = False
         self._last_hotword_audio_uri: Optional[str] = None
         self._last_stt_audio_uri: Optional[str] = None
+
+    @property
+    def state(self):
+        return self._state
+
+    def main(self, argv: Optional[List[str]] = None):
+        """Service entry point"""
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--service-id", help="Override service id")
+        args = parser.parse_args(argv)
+
+        if args.service_id is not None:
+            self.service_id = args.service_id
+
+        try:
+            self._state = ServiceState.NOT_STARTED
+            self.before_start()
+            self.start()
+            self._state = ServiceState.STARTED
+            self.after_start()
+
+            try:
+                self._state = ServiceState.RUNNING
+                self.run()
+            except KeyboardInterrupt:
+                pass
+            finally:
+                self._state = ServiceState.STOPPING
+                self.stop()
+                self.after_stop()
+                self._state = ServiceState.NOT_STARTED
+        except Exception:
+            LOG.exception("Service failed to start")
+
+    def before_start(self):
+        """Initialization logic called before start()"""
+        self.config = Configuration()
+
+        level_str = self.config.get("log_level", "DEBUG").upper()
+        level = logging.getLevelName(level_str)
+
+        log_format = self.config.get("log_format")
+        if log_format:
+            logging.basicConfig(level=level, format=log_format)
+        else:
+            logging.basicConfig(level=level)
+
+        LOG.info("Starting service...")
+
+        self._connect_to_bus()
 
     def start(self):
         listener = self.config["listener"]
@@ -148,7 +213,14 @@ class VoiceService(DinkumService):
         self.bus.on("mycroft.mic.mute", self._handle_mute)
         self.bus.on("mycroft.mic.unmute", self._handle_unmute)
         self.bus.on("mycroft.mic.listen", self._handle_listen)
-        self.bus.on("mycroft.mic.set-diagnostics", self._handle_set_diagnostics)
+
+    def after_start(self):
+        """Initialization logic called after start()"""
+        self._start_watchdog()
+
+        # Inform systemd that we successfully started
+        self._notifier.notify("READY=1")
+        self.bus.emit(Message(f"{self.service_id}.initialize.ended"))
 
     def run(self):
         self.voice_loop.run()
@@ -173,6 +245,47 @@ class VoiceService(DinkumService):
 
         mic.stop()
 
+    def after_stop(self):
+        """Shut down code called after stop()"""
+        self.bus.close()
+
+    def _connect_to_bus(self):
+        """Connects to the websocket message bus"""
+        self.bus = MessageBusClient()
+        self.bus.run_in_thread()
+        self.bus.connected_event.wait()
+
+        # Add event handlers
+        self.bus.on(f"{self.service_id}.service.state", self._report_service_state)
+        self.bus.on("configuration.updated", self._reload_config)
+
+        self.bus.emit(Message(f"{self.service_id}.initialize.started"))
+        LOG.info("Connected to Mycroft Core message bus")
+
+    def _report_service_state(self, message):
+        """Response to service state requests"""
+        self.bus.emit(message.response(data={"state": self.state.value})),
+
+    def _reload_config(self, _message):
+        """Force reloading of config"""
+        Configuration.reload()
+        LOG.debug("Reloaded configuration")
+
+    def _start_watchdog(self):
+        """Run systemd watchdog in separate thread"""
+        Thread(target=self._watchdog, daemon=True).start()
+
+    def _watchdog(self):
+        """Notify systemd that the service is still running"""
+        try:
+            while True:
+                # Prevent systemd from restarting service
+                self._notifier.notify("WATCHDOG=1")
+                time.sleep(WATCHDOG_DELAY)
+        except Exception:
+            LOG.exception("Unexpected error in watchdog thread")
+
+    # audio handlers
     def _wake(self):
         LOG.debug("Awake!")
         play_listening_sound()
@@ -244,30 +357,21 @@ class VoiceService(DinkumService):
             )
         )
 
-        if self._is_diagnostics_enabled:
-            # Bypass intent service when diagnostics are enabled
+        # Report utterance to intent service
+        if text:
             self.bus.emit(
                 Message(
-                    "mycroft.mic.diagnostics:utterance",
-                    data={"utterance": text},
+                    "recognizer_loop:utterance",
+                    {
+                        "utterances": [text],
+                        "mycroft_session_id": self.mycroft_session_id,
+                        "hotword_audio_uri": self._last_hotword_audio_uri,
+                        "stt_audio_uri": self._last_stt_audio_uri,
+                    },
                 )
             )
         else:
-            # Report utterance to intent service
-            if text:
-                self.bus.emit(
-                    Message(
-                        "recognizer_loop:utterance",
-                        {
-                            "utterances": [text],
-                            "mycroft_session_id": self.mycroft_session_id,
-                            "hotword_audio_uri": self._last_hotword_audio_uri,
-                            "stt_audio_uri": self._last_stt_audio_uri,
-                        },
-                    )
-                )
-            else:
-                self.bus.emit(Message("recognizer_loop:speech.recognition.unknown"))
+            self.bus.emit(Message("recognizer_loop:speech.recognition.unknown"))
 
         LOG.debug("STT: %s", text)
         self.mycroft_session_id = None
@@ -299,12 +403,6 @@ class VoiceService(DinkumService):
         except Exception:
             LOG.exception("Error while saving STT audio")
 
-    def _chunk_diagnostics(self, chunk_info):
-        if self._is_diagnostics_enabled:
-            self.bus.emit(
-                Message("mycroft.mic.diagnostics", data=dataclasses.asdict(chunk_info))
-            )
-
     def _handle_mute(self, _message: Message):
         self.voice_loop.is_muted = True
 
@@ -315,20 +413,10 @@ class VoiceService(DinkumService):
         self.mycroft_session_id = message.data.get("mycroft_session_id")
         self.voice_loop.skip_next_wake = True
 
-    def _handle_set_diagnostics(self, message: Message):
-        self._is_diagnostics_enabled = message.data.get("enabled", True)
-
-        if self._is_diagnostics_enabled:
-            self.voice_loop.chunk_callback = self._chunk_diagnostics
-            self.log.debug("Diagnostics enabled")
-        else:
-            self.voice_loop.chunk_callback = None
-            self.log.debug("Diagnostics disabled")
-
 
 def main():
     """Service entry point"""
-    VoiceService().main()
+    DinkumVoiceService().main()
 
 
 if __name__ == "__main__":
