@@ -18,9 +18,10 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Callable, Deque, Optional
 
-from mycroft_dinkum_listener.plugins import AbstractDinkumStreamingSTT, DinkumHotWordEngine
 from mycroft_dinkum_listener.voice_loop.microphone import Microphone
 from mycroft_dinkum_listener.voice_loop.voice_activity import VoiceActivity
+from ovos_plugin_manager.wakewords import HotWordEngine
+from ovos_plugin_manager.stt import StreamingSTT
 
 
 def debiased_energy(audio_data: bytes, sample_width: int) -> float:
@@ -42,8 +43,8 @@ def debiased_energy(audio_data: bytes, sample_width: int) -> float:
 @dataclass
 class VoiceLoop:
     mic: Microphone
-    hotword: DinkumHotWordEngine
-    stt: AbstractDinkumStreamingSTT
+    hotword: HotWordEngine
+    stt: StreamingSTT
     vad: VoiceActivity
 
     def start(self):
@@ -175,7 +176,7 @@ class MycroftVoiceLoop(VoiceLoop):
                     speech_seconds_left = self.speech_seconds
                     timeout_seconds_left = self.timeout_seconds
                     stt_audio_bytes = bytes()
-                    self.stt.start()
+                    self.stt.stream_start()
 
                     # Reset the VAD internal state to avoid the model getting
                     # into a degenerative state where it always reports silence.
@@ -188,7 +189,7 @@ class MycroftVoiceLoop(VoiceLoop):
                 stt_chunks.append(chunk)
                 while stt_chunks:
                     stt_chunk = stt_chunks.popleft()
-                    self.stt.update(stt_chunk)
+                    self.stt.stream_data(stt_chunk)
 
                     timeout_seconds_left -= self.mic.seconds_per_chunk
                     if timeout_seconds_left <= 0:
@@ -221,7 +222,7 @@ class MycroftVoiceLoop(VoiceLoop):
                 stt_chunks.append(chunk)
                 while stt_chunks:
                     stt_chunk = stt_chunks.popleft()
-                    self.stt.update(stt_chunk)
+                    self.stt.stream_data(stt_chunk)
 
                     timeout_seconds_left -= self.mic.seconds_per_chunk
                     if timeout_seconds_left <= 0:
@@ -254,7 +255,7 @@ class MycroftVoiceLoop(VoiceLoop):
                 stt_audio_bytes = bytes()
 
                 # Command has ended, get text and trigger callback
-                text = self.stt.stop() or ""
+                text = self.stt.stream_stop() or ""
 
                 # Callback to handle STT text
                 if self.text_callback is not None:

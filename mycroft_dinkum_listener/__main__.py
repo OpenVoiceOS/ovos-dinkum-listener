@@ -29,7 +29,7 @@ from ovos_utils.log import LOG
 from ovos_utils.sound import play_listening_sound
 
 from mycroft_dinkum_listener.plugins import load_stt_module
-from mycroft_dinkum_listener.plugins.ww_tflite import TFLiteHotWordEngine
+from ovos_plugin_manager.wakewords import OVOSWakeWordFactory
 from mycroft_dinkum_listener.voice_loop import AlsaMicrophone, MycroftVoiceLoop, SileroVoiceActivity
 
 # Seconds between systemd watchdog updates
@@ -147,12 +147,7 @@ class DinkumVoiceService:
         )
         mic.start()
 
-        try:
-            wake_word = listener["wake_word"]
-            hotword_config = self.config["hotwords"][wake_word]
-            hotword = TFLiteHotWordEngine(hotword_config)
-        except:
-            raise ValueError("tflite models only check your config, dinkum does not support standard plugins")
+        hotword = OVOSWakeWordFactory.create_hotword(listener["wake_word"])
 
         vad_model = listener.get("vad_model") or \
                     "https://github.com/snakers4/silero-vad/raw/74f759c8f87189659ef7b82f78dc1ddb96dee202/files/silero_vad.onnx"
@@ -178,7 +173,7 @@ class DinkumVoiceService:
 
         # TODO - use OPM plugins
         stt = load_stt_module(self.config, self.bus)
-        stt.start()
+       # stt.start()
 
         self.voice_loop = MycroftVoiceLoop(
             mic=mic,

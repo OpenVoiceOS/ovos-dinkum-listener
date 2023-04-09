@@ -16,70 +16,25 @@
 
 import subprocess
 import tempfile
-from abc import ABCMeta, abstractmethod
-from typing import Any, BinaryIO, Dict, Optional
+from queue import Queue
+from typing import Any, Dict
 
-from ovos_backend_client.api import STTApi
+from ovos_backend_client.api import STTApi, BackendType
 from ovos_bus_client import MessageBusClient
+from ovos_plugin_manager.stt import OVOSSTTFactory
+from ovos_plugin_manager.templates.stt import StreamingSTT, StreamThread
 from ovos_utils.log import LOG
 
 
-class DinkumHotWordEngine(metaclass=ABCMeta):
-    def __init__(self, key_phrase="hey mycroft", config=None, lang="en-us"):
-        self.config = config or {}
+class FlacStreamThread(StreamThread):
 
-    @abstractmethod
-    def found_wake_word(self, frame_data) -> bool:
-        """frame_data is unused"""
-        return False
-
-    @abstractmethod
-    def update(self, chunk):
-        pass
-
-    def shutdown(self):
-        pass
-
-
-class AbstractDinkumStreamingSTT(metaclass=ABCMeta):
-    def __init__(self, bus: MessageBusClient, config):
-        self.bus = bus
-        self.config = config
-
-    def start(self):
-        pass
-
-    @abstractmethod
-    def update(self, chunk: bytes):
-        pass
-
-    @abstractmethod
-    def stop(self) -> Optional[str]:
-        pass
-
-    def shutdown(self):
-        pass
-
-
-class DinkumRemoteSTT(AbstractDinkumStreamingSTT):
-    def __init__(self, bus: MessageBusClient, config):
-        super().__init__(bus, config)
-
-        self._api = STTApi()
-        self._flac_proc: Optional[subprocess.Popen] = None
-        self._flac_file: Optional[BinaryIO] = None
-
-    def start(self):
+    def __init__(self, queue, language):
+        super().__init__(queue, language)
+        self._flac_proc = None
         self._start_flac()
 
-    def update(self, chunk: bytes):
-        # Stream chunks into FLAC encoder
-        assert self._flac_proc is not None
-        assert self._flac_proc.stdin is not None
-
-        self._flac_proc.stdin.write(chunk)
-
-    def stop(self) -> Optional[str]:
+    def finalize(self):
+        """ return final transcription """
         try:
             assert self._flac_proc is not None
             assert self._flac_file is not None
@@ -91,17 +46,23 @@ class DinkumRemoteSTT(AbstractDinkumStreamingSTT):
             self._flac_proc.communicate()
             self._flac_file.seek(0)
             flac = self._flac_file.read()
+            self._stop_flac()
 
-            self._flac_file.close()
-            self._flac_file = None
-
-            self._flac_proc = None
-
-            return self._api.stt(flac, "en-US", 1)
+            return STTApi(backend_type=BackendType.OFFLINE).stt(flac, "en-US", 1)
         except Exception:
-            LOG.exception("Error in Mycroft STT")
-
+            LOG.exception("Error in STTApi")
         return None
+
+    def handle_audio_stream(self, audio, language):
+        for chunk in audio:
+            self.update(chunk)
+
+    def update(self, chunk: bytes):
+        # Stream chunks into FLAC encoder
+        assert self._flac_proc is not None
+        assert self._flac_proc.stdin is not None
+
+        self._flac_proc.stdin.write(chunk)
 
     def _start_flac(self):
         self._stop_flac()
@@ -141,21 +102,18 @@ class DinkumRemoteSTT(AbstractDinkumStreamingSTT):
             self._flac_proc = None
 
 
-def load_stt_module(config: Dict[str, Any], bus: MessageBusClient) -> AbstractDinkumStreamingSTT:
+class RemoteFlacStreamingSTT(StreamingSTT):
+
+    def create_streaming_thread(self):
+        self.queue = Queue()
+        return FlacStreamThread(self.queue, self.lang)
+
+
+def load_stt_module(config: Dict[str, Any], bus: MessageBusClient) -> StreamingSTT:
     stt_config = config["stt"]
-    module_name = stt_config["module"]
-    if "coqui" in module_name:
-        LOG.debug("Using Dinkum Coqui STT")
-        from mycroft_dinkum_listener.plugins.stt_coqui import CoquiStreamingSTT
-        return CoquiStreamingSTT(bus, config)
-
-    elif "vosk" in module_name:
-        LOG.debug("Using Dinkum Vosk STT")
-        from mycroft_dinkum_listener.plugins.stt_vosk import VoskStreamingSTT
-        return VoskStreamingSTT(bus, config)
-
-    elif "mycroft" not in module_name:
-        LOG.warning("dinkum does not follow plugin standards, choose one of 'mycroft'/'coqui'/'vosk'")
-
-    LOG.debug("Using Dinkum Remote STT (ovos-backend-client)")
-    return DinkumRemoteSTT(bus, config)
+    plug = OVOSSTTFactory.create(stt_config)
+    if not isinstance(plug, StreamingSTT):
+        LOG.warning("dinkum only supports streaming STTs")
+        LOG.info("Using Dinkum Streaming Remote STT wrapper (ovos-backend-client)")
+        return RemoteFlacStreamingSTT(config)
+    return plug
