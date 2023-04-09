@@ -1,4 +1,0 @@
-numpy
-sonopy~=0.1.0
-sdnotify
-onnxruntime

@@ -1,8 +1,0 @@
-README.md
-setup.py
-mycroft_dinkum_listener.egg-info/PKG-INFO
-mycroft_dinkum_listener.egg-info/SOURCES.txt
-mycroft_dinkum_listener.egg-info/dependency_links.txt
-mycroft_dinkum_listener.egg-info/entry_points.txt
-mycroft_dinkum_listener.egg-info/requires.txt
-mycroft_dinkum_listener.egg-info/top_level.txt

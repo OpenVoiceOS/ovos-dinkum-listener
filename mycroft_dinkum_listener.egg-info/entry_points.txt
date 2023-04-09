@@ -1,3 +1,0 @@
-[console_scripts]
-mycroft-dinkum-listener = mycroft_dinkum_listener.__main__:main
-
