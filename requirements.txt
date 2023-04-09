@@ -1,7 +1,4 @@
-# vosk
-# stt>=1.4.0,<2.0
-numpy
-sonopy~=0.1.0
-#tflite_runtime>=2.5.0,<3.0
+ovos-plugin-manager
+ovos-utils
+ovos-bus-client
 sdnotify
-onnxruntime
