@@ -30,7 +30,7 @@ from ovos_utils.sound import play_listening_sound
 
 from mycroft_dinkum_listener.plugins import load_stt_module
 from ovos_plugin_manager.wakewords import OVOSWakeWordFactory
-from mycroft_dinkum_listener.voice_loop import AlsaMicrophone, MycroftVoiceLoop, SileroVoiceActivity
+from mycroft_dinkum_listener.voice_loop import AlsaMicrophone, MycroftVoiceLoop, DinkumVoiceActivity
 
 # Seconds between systemd watchdog updates
 WATCHDOG_DELAY = 0.5
@@ -149,31 +149,8 @@ class DinkumVoiceService:
 
         hotword = OVOSWakeWordFactory.create_hotword(listener["wake_word"])
 
-        vad_model = listener.get("vad_model") or \
-                    "https://github.com/snakers4/silero-vad/raw/74f759c8f87189659ef7b82f78dc1ddb96dee202/files/silero_vad.onnx"
-        if vad_model.startswith("http"):
-            LOG.info("downloading silero model")
-            content = requests.get(vad_model).content
-            vad_model = "/tmp/silero_vad.onnx"  # TODO - XDG
-            with open(vad_model, "wb") as f:
-                f.write(content)
-        else:
-            vad_model = resolve_resource_file(vad_model)
-
-        if not vad_model:
-            raise ValueError("you need to provide the path to vad model, "
-                             "dinkum does not support standard plugins")
-
-        # TODO - use OPM plugins
-        vad = SileroVoiceActivity(
-            model=vad_model,
-            threshold=listener.get("vad_threshold", 0.5),
-        )
-        vad.start()
-
-        # TODO - use OPM plugins
+        vad = DinkumVoiceActivity()
         stt = load_stt_module(self.config, self.bus)
-       # stt.start()
 
         self.voice_loop = MycroftVoiceLoop(
             mic=mic,
@@ -222,8 +199,6 @@ class DinkumVoiceService:
 
         if hasattr(stt, "shutdown"):
             stt.shutdown()
-
-        vad.stop()
 
         if hasattr(hotword, "shutdown"):
             hotword.shutdown()

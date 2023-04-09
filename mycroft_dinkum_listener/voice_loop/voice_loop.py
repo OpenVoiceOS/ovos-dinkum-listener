@@ -19,7 +19,7 @@ from enum import Enum, auto
 from typing import Callable, Deque, Optional
 
 from mycroft_dinkum_listener.voice_loop.microphone import Microphone
-from mycroft_dinkum_listener.voice_loop.voice_activity import VoiceActivity
+from mycroft_dinkum_listener.voice_loop.voice_activity import DinkumVoiceActivity
 from ovos_plugin_manager.wakewords import HotWordEngine
 from ovos_plugin_manager.stt import StreamingSTT
 
@@ -45,7 +45,7 @@ class VoiceLoop:
     mic: Microphone
     hotword: HotWordEngine
     stt: StreamingSTT
-    vad: VoiceActivity
+    vad: DinkumVoiceActivity
 
     def start(self):
         raise NotImplementedError()
@@ -126,8 +126,6 @@ class MycroftVoiceLoop(VoiceLoop):
                 # Soft mute
                 chunk = bytes(self.mic.chunk_size)
 
-            self._reset_diagnostics()
-
             # State machine:
             #
             # DETECT_HOTWORD -> BEFORE_COMMAND
@@ -145,12 +143,7 @@ class MycroftVoiceLoop(VoiceLoop):
                     self._chunk_info.hotword_probability = self.hotword.probability
 
                 if self.chunk_callback is not None:
-                    # Need to calculate VAD probability for diagnostics.
-                    # This is usually not calculated until STT recording.
-                    (
-                        self._chunk_info.is_speech,
-                        self._chunk_info.vad_probability,
-                    ) = self.vad.is_speech(chunk)
+                    self._chunk_info.is_speech = not self.vad.is_silence(stt_chunk)
 
                 if self.hotword.found_wake_word(None) or self.skip_next_wake:
 
@@ -182,7 +175,6 @@ class MycroftVoiceLoop(VoiceLoop):
                     # into a degenerative state where it always reports silence.
                     self.vad.reset()
 
-                self._send_diagnostics(chunk)
             elif state == State.BEFORE_COMMAND:
                 # Recording voice command, but user has not spoken yet
                 stt_audio_bytes += chunk
@@ -199,11 +191,8 @@ class MycroftVoiceLoop(VoiceLoop):
 
                     # Wait for enough speech before looking for the end of the
                     # command (silence).
-                    (
-                        self._chunk_info.is_speech,
-                        self._chunk_info.vad_probability,
-                    ) = self.vad.is_speech(stt_chunk)
-                    self._send_diagnostics(chunk)
+
+                    self._chunk_info.is_speech = not self.vad.is_silence(stt_chunk)
 
                     if self._chunk_info.is_speech:
                         speech_seconds_left -= self.mic.seconds_per_chunk
@@ -232,11 +221,7 @@ class MycroftVoiceLoop(VoiceLoop):
 
                     # Wait for enough silence before considering the command to be
                     # ended.
-                    (
-                        self._chunk_info.is_speech,
-                        self._chunk_info.vad_probability,
-                    ) = self.vad.is_speech(stt_chunk)
-                    self._send_diagnostics(chunk)
+                    self._chunk_info.is_speech = not self.vad.is_silence(stt_chunk)
 
                     if not self._chunk_info.is_speech:
                         silence_seconds_left -= self.mic.seconds_per_chunk
@@ -271,18 +256,6 @@ class MycroftVoiceLoop(VoiceLoop):
                 if hasattr(self.hotword, "reset"):
                     self.hotword.reset()
 
-                self._send_diagnostics(chunk)
-
     def stop(self):
         self._is_running = False
 
-    def _reset_diagnostics(self):
-        self._chunk_info.vad_probability = 0.0
-        self._chunk_info.is_speech = False
-        self._chunk_info.hotword_probability = None
-        self._chunk_info.energy = 0.0
-
-    def _send_diagnostics(self, chunk: bytes):
-        if self.chunk_callback is not None:
-            self._chunk_info.energy = debiased_energy(chunk, self.mic.sample_width)
-            self.chunk_callback(self._chunk_info)
