@@ -36,9 +36,7 @@ class VoiceActivity:
         pass
 
 
-# -----------------------------------------------------------------------------
-
-
+# TODO - use OPM plugins
 @dataclass
 class SileroVoiceActivity(VoiceActivity):
     model: Union[str, Path]
