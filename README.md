@@ -1,19 +1,12 @@
 # Mycroft Dinkum Listener 
 
-Dinkum Listener made standalone, at this point in time this repo is just a copy pasta with updated imports
+Dinkum Listener made standalone, at this point in time this repo is just a copy pasta with imports updated to use OVOS packages and OPM support added
 
-A proof of concept alternate implementation, this does NOT support OPM and standard plugins
+Non streaming STT plugins are wrapped into a `FlacStreamingPlugin`(adapted from default dinkum STT), this uses `flac` via subprocess, if using a StreamingSTT directly the `flac` dependency is not needed
 
-Only precise-lite models are supported for wake word
+the usual configuration files are loaded, some new params are exposed under the `"listener"` section but not yet documented (check the code...)
 
-Only silero is supported for VAD
-
-If you are using offline backend then STT plugins are supported via ovos-backend-client (default STT) otherwise the backend STT proxy is used by default
-
-Valid hardcoded dinkum plugins are vosk and coqui, but usage is not recommended (needs extra deps)
-
-You need to manually install either tflite runtime or full tensorflow for wake word detection
-
+using [ovos-vad-plugin-silero](https://github.com/OpenVoiceOS/ovos-vad-plugin-silero) is strongly recommended instead of the default webrtcvad plugin
 
 ## Usage
 
