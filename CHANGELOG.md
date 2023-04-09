@@ -1,5 +1,9 @@
 # Changelog
 
+## [V0.0.0a3](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/tree/V0.0.0a3) (2023-04-09)
+
+[Full Changelog](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/compare/V0.0.0a2...V0.0.0a3)
+
 ## [V0.0.0a2](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/tree/V0.0.0a2) (2023-04-09)
 
 [Full Changelog](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/compare/d79a0a12906051a608d887fd755f7242cfae2ad8...V0.0.0a2)
