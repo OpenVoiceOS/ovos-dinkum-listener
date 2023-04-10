@@ -21,6 +21,7 @@ from threading import Thread
 from typing import List, Optional
 
 import sdnotify
+from ovos_dinkum_listener.transformers import AudioTransformersService
 from ovos_backend_client.api import DatasetApi
 from ovos_bus_client import Message, MessageBusClient
 from ovos_bus_client.session import SessionManager
@@ -164,11 +165,14 @@ class DinkumVoiceService:
         vad = OVOSVADFactory.create()
         stt = load_stt_module(self.config, self.bus)
 
+        transformers = AudioTransformersService(self.bus, self.config)
+
         self.voice_loop = DinkumVoiceLoop(
             mic=mic,
             hotwords=hotwords,
             stt=stt,
             vad=vad,
+            transformers=transformers,
             #
             speech_seconds=listener.get("speech_begin", 0.3),
             silence_seconds=listener.get("silence_end", 0.7),
@@ -402,20 +406,16 @@ class DinkumVoiceService:
             text = text[0]
 
         LOG.debug("Record end")
-
-        context = {'client_name': 'ovos_dinkum_listener',
-                   'source': 'audio',  # default native audio source
-                   'destination': ["skills"]}
         self.bus.emit(Message("recognizer_loop:record_end",
-                              context=context))
+                              context=stt_metadata))
 
         # Report utterance to intent service
         if text:
             payload = stt_metadata
             payload["utterances"] = [text]
-            self.bus.emit(Message("recognizer_loop:utterance", payload, context))
+            self.bus.emit(Message("recognizer_loop:utterance", payload, stt_metadata))
         else:
-            self.bus.emit(Message("recognizer_loop:speech.recognition.unknown", context=context))
+            self.bus.emit(Message("recognizer_loop:speech.recognition.unknown", context=stt_metadata))
 
         LOG.debug(f"STT: {text}")
 
@@ -457,17 +457,17 @@ class DinkumVoiceService:
 
         Thread(target=upload, daemon=True, args=(wav_data, metadata)).start()
 
-    def _stt_audio(self, audio_bytes: bytes, stt_metadata: dict):
+    def _stt_audio(self, audio_bytes: bytes, stt_context: dict):
         try:
             listener = self.config["listener"]
             if listener["save_utterances"]:
-                stt_metadata["filename"] = self._save_stt(audio_bytes, stt_metadata)
+                stt_context["filename"] = self._save_stt(audio_bytes, stt_context)
                 upload_disabled = listener.get('stt_upload', {}).get('disable')
                 if self.config['opt_in'] and not upload_disabled:
-                    self._upload_stt(audio_bytes, stt_metadata)
+                    self._upload_stt(audio_bytes, stt_context)
         except Exception:
             LOG.exception("Error while saving STT audio")
-        return stt_metadata
+        return stt_context
 
     def _save_recording(self, audio_bytes, stt_meta, save_path=None):
         LOG.info("Saving Recording")
