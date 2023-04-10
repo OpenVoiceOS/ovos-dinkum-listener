@@ -12,5 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from mycroft_dinkum_listener.voice_loop.microphone import AlsaMicrophone
-from mycroft_dinkum_listener.voice_loop.voice_loop import MycroftVoiceLoop
+from ovos_dinkum_listener.voice_loop.microphone import AlsaMicrophone
+from ovos_dinkum_listener.voice_loop.voice_loop import DinkumVoiceLoop, ListeningMode, ListeningState

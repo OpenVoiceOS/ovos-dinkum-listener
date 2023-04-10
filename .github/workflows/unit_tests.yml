@@ -4,7 +4,7 @@ on:
     branches:
       - dev
     paths-ignore:
-      - 'mycroft_dinkum_listener/version.py'
+      - 'ovos_dinkum_listener/version.py'
       - 'examples/**'
       - '.github/**'
       - '.gitignore'
@@ -17,7 +17,7 @@ on:
     branches:
       - master
     paths-ignore:
-      - 'mycroft_dinkum_listener/version.py'
+      - 'ovos_dinkum_listener/version.py'
       - 'requirements/**'
       - 'examples/**'
       - '.github/**'
@@ -55,7 +55,7 @@ jobs:
           pip install -r requirements/tests.txt
       - name: Run unittests
         run: |
-          pytest --cov=mycroft_dinkum_listener --cov-report xml test/unittests
+          pytest --cov=ovos_dinkum_listener --cov-report xml test/unittests
           # NOTE: additional pytest invocations should also add the --cov-append flag
           #       or they will overwrite previous invocations' coverage reports
           #       (for an example, see OVOS Skill Manager's workflow)

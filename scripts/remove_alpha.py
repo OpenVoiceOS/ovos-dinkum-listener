@@ -2,7 +2,7 @@ import fileinput
 from os.path import join, dirname
 
 
-version_file = join(dirname(dirname(__file__)), "mycroft_dinkum_listener", "version.py")
+version_file = join(dirname(dirname(__file__)), "ovos_dinkum_listener", "version.py")
 
 alpha_var_name = "VERSION_ALPHA"
 

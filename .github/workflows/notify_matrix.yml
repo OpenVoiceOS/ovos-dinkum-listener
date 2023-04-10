@@ -20,4 +20,4 @@ jobs:
           token: ${{ secrets.MATRIX_TOKEN }}
           channel: '!WjxEKjjINpyBRPFgxl:krbel.duckdns.org'
           message: |
-            new mycroft-dinkum-listener PR merged! https://github.com/OpenVoiceOS/mycroft-dinkum-listener/pull/${{ github.event.number }}
+            new ovos-dinkum-listener PR merged! https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/${{ github.event.number }}
