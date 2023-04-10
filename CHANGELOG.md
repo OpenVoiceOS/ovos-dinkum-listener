@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/tree/HEAD)
+
+[Full Changelog](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/compare/V0.0.1...HEAD)
+
+**Implemented enhancements:**
+
+- feature parity with ovos-listener [\#2](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/pull/2) ([JarbasAl](https://github.com/JarbasAl))
+
+## [V0.0.1](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/tree/V0.0.1) (2023-04-09)
+
+[Full Changelog](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/compare/V0.0.1a3...V0.0.1)
+
 ## [V0.0.1a3](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/tree/V0.0.1a3) (2023-04-09)
 
 [Full Changelog](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/compare/V0.0.1a2...V0.0.1a3)
