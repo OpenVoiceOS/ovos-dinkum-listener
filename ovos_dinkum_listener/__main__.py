@@ -21,6 +21,7 @@ from threading import Thread
 from typing import List, Optional
 
 import sdnotify
+from ovos_dinkum_listener.transformers import AudioTransformersService
 from ovos_backend_client.api import DatasetApi
 from ovos_bus_client import Message, MessageBusClient
 from ovos_bus_client.session import SessionManager
@@ -164,11 +165,14 @@ class DinkumVoiceService:
         vad = OVOSVADFactory.create()
         stt = load_stt_module(self.config, self.bus)
 
+        transformers = AudioTransformersService(self.bus, self.config)
+
         self.voice_loop = DinkumVoiceLoop(
             mic=mic,
             hotwords=hotwords,
             stt=stt,
             vad=vad,
+            transformers=transformers,
             #
             speech_seconds=listener.get("speech_begin", 0.3),
             silence_seconds=listener.get("silence_end", 0.7),
@@ -286,7 +290,7 @@ class DinkumVoiceService:
             hotword_audio_dir = Path(f"{self.default_save_path}/wake_words")
             hotword_audio_dir.mkdir(parents=True, exist_ok=True)
 
-        metafile = self._compile_ww_metadata(ww_meta["key_phrase"], ww_meta["module"])
+        metafile = self._compile_ww_context(ww_meta["key_phrase"], ww_meta["module"])
         # TODO - do we need to keep this convention? i don't think so...
         #   move to the standard ww_id + timestamp from OPM
         filename = '_'.join(str(metafile[k]) for k in sorted(metafile))
@@ -319,7 +323,7 @@ class DinkumVoiceService:
         Thread(target=upload, daemon=True, args=(wav_data, metadata)).start()
 
     @staticmethod
-    def _compile_ww_metadata(key_phrase, ww_module):
+    def _compile_ww_context(key_phrase, ww_module):
         """ creates metadata in the format expected by selene
         while this format is mostly deprecated we want to
         ensure backwards compat and no missing keys"""
@@ -333,25 +337,25 @@ class DinkumVoiceService:
             'model': str(model_hash)
         }
 
-    def _hotword_audio(self, audio_bytes: bytes, ww_metadata: dict):
-        payload = ww_metadata
+    def _hotword_audio(self, audio_bytes: bytes, ww_context: dict):
+        payload = ww_context
         context = {'client_name': 'ovos_dinkum_listener',
                    'source': 'audio',  # default native audio source
                    'destination': ["skills"]}
-        stt_lang = ww_metadata.get("lang")
+        stt_lang = ww_context.get("lang")
         if stt_lang:
             context["lang"] = stt_lang
 
         try:
             listener = self.config["listener"]
             if listener["record_wake_words"]:
-                payload["filename"] = self._save_ww(audio_bytes, ww_metadata)
+                payload["filename"] = self._save_ww(audio_bytes, ww_context)
 
             upload_disabled = listener.get('wake_word_upload', {}).get('disable')
             if self.config['opt_in'] and not upload_disabled:
-                self._upload_hotword(audio_bytes, ww_metadata)
+                self._upload_hotword(audio_bytes, ww_context)
 
-            utterance = ww_metadata.get("utterance")
+            utterance = ww_context.get("utterance")
             if utterance:
                 LOG.debug("Hotword utterance: " + utterance)
                 # send the transcribed word on for processing
@@ -364,9 +368,9 @@ class DinkumVoiceService:
 
             # If enabled, play a wave file with a short sound to audibly
             # indicate hotword was detected.
-            sound = ww_metadata.get("sound")
-            listen = ww_metadata.get("listen")
-            event = ww_metadata.get("event")
+            sound = ww_context.get("sound")
+            listen = ww_context.get("listen")
+            event = ww_context.get("event")
 
             if sound:
                 try:
@@ -378,13 +382,13 @@ class DinkumVoiceService:
 
             if listen:
                 msg_type = "recognizer_loop:wakeword"
-                payload["utterance"] = ww_metadata["key_phrase"].replace("_", " ").replace("-", " ")
+                payload["utterance"] = ww_context["key_phrase"].replace("_", " ").replace("-", " ")
             elif event:
                 msg_type = event
             else:
-                if ww_metadata.get("wakeup"):
+                if ww_context.get("wakeup"):
                     wordtype = "wakeupword"
-                elif ww_metadata.get("stop"):
+                elif ww_context.get("stop"):
                     wordtype = "stopword"
                 else:
                     wordtype = "hotword"
@@ -397,25 +401,21 @@ class DinkumVoiceService:
             LOG.exception("Error while saving STT audio")
         return payload
 
-    def _stt_text(self, text: str, stt_metadata: dict):
+    def _stt_text(self, text: str, stt_context: dict):
         if isinstance(text, list):
             text = text[0]
 
         LOG.debug("Record end")
-
-        context = {'client_name': 'ovos_dinkum_listener',
-                   'source': 'audio',  # default native audio source
-                   'destination': ["skills"]}
         self.bus.emit(Message("recognizer_loop:record_end",
-                              context=context))
+                              context=stt_context))
 
         # Report utterance to intent service
         if text:
-            payload = stt_metadata
+            payload = stt_context
             payload["utterances"] = [text]
-            self.bus.emit(Message("recognizer_loop:utterance", payload, context))
+            self.bus.emit(Message("recognizer_loop:utterance", payload, stt_context))
         else:
-            self.bus.emit(Message("recognizer_loop:speech.recognition.unknown", context=context))
+            self.bus.emit(Message("recognizer_loop:speech.recognition.unknown", context=stt_context))
 
         LOG.debug(f"STT: {text}")
 
@@ -457,17 +457,17 @@ class DinkumVoiceService:
 
         Thread(target=upload, daemon=True, args=(wav_data, metadata)).start()
 
-    def _stt_audio(self, audio_bytes: bytes, stt_metadata: dict):
+    def _stt_audio(self, audio_bytes: bytes, stt_context: dict):
         try:
             listener = self.config["listener"]
             if listener["save_utterances"]:
-                stt_metadata["filename"] = self._save_stt(audio_bytes, stt_metadata)
+                stt_context["filename"] = self._save_stt(audio_bytes, stt_context)
                 upload_disabled = listener.get('stt_upload', {}).get('disable')
                 if self.config['opt_in'] and not upload_disabled:
-                    self._upload_stt(audio_bytes, stt_metadata)
+                    self._upload_stt(audio_bytes, stt_context)
         except Exception:
             LOG.exception("Error while saving STT audio")
-        return stt_metadata
+        return stt_context
 
     def _save_recording(self, audio_bytes, stt_meta, save_path=None):
         LOG.info("Saving Recording")
@@ -493,12 +493,12 @@ class DinkumVoiceService:
         LOG.debug(f"Wrote {wav_path}")
         return f"file://{wav_path.absolute()}"
 
-    def _recording_audio(self, audio_bytes: bytes, stt_metadata: dict):
+    def _recording_audio(self, audio_bytes: bytes, stt_context: dict):
         try:
-            stt_metadata["filename"] = self._save_recording(audio_bytes, stt_metadata)
+            stt_context["filename"] = self._save_recording(audio_bytes, stt_context)
         except Exception:
             LOG.exception("Error while saving recording audio")
-        return stt_metadata
+        return stt_context
 
     # mic bus api
     def _handle_mute(self, _message: Message):
