@@ -1,40 +1,48 @@
 # Changelog
 
-## [Unreleased](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/tree/HEAD)
+## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/compare/V0.0.1...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a1...HEAD)
 
 **Implemented enhancements:**
 
-- feature parity with ovos-listener [\#2](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/pull/2) ([JarbasAl](https://github.com/JarbasAl))
+- feat/neon\_transformers [\#3](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/3) ([JarbasAl](https://github.com/JarbasAl))
 
-## [V0.0.1](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/tree/V0.0.1) (2023-04-09)
+## [V0.0.2a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a1) (2023-04-10)
 
-[Full Changelog](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/compare/V0.0.1a3...V0.0.1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.1...V0.0.2a1)
 
-## [V0.0.1a3](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/tree/V0.0.1a3) (2023-04-09)
+**Implemented enhancements:**
 
-[Full Changelog](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/compare/V0.0.1a2...V0.0.1a3)
+- feature parity with ovos-listener [\#2](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/2) ([JarbasAl](https://github.com/JarbasAl))
 
-## [V0.0.1a2](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/tree/V0.0.1a2) (2023-04-09)
+## [V0.0.1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.1) (2023-04-09)
 
-[Full Changelog](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/compare/V0.0.1a1...V0.0.1a2)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.1a3...V0.0.1)
 
-## [V0.0.1a1](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/tree/V0.0.1a1) (2023-04-09)
+## [V0.0.1a3](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.1a3) (2023-04-09)
 
-[Full Changelog](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/compare/V0.0.0...V0.0.1a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.1a2...V0.0.1a3)
 
-## [V0.0.0](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/tree/V0.0.0) (2023-04-09)
+## [V0.0.1a2](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.1a2) (2023-04-09)
 
-[Full Changelog](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/compare/V0.0.0a3...V0.0.0)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.1a1...V0.0.1a2)
 
-## [V0.0.0a3](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/tree/V0.0.0a3) (2023-04-09)
+## [V0.0.1a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.1a1) (2023-04-09)
 
-[Full Changelog](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/compare/V0.0.0a2...V0.0.0a3)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.0...V0.0.1a1)
 
-## [V0.0.0a2](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/tree/V0.0.0a2) (2023-04-09)
+## [V0.0.0](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.0) (2023-04-09)
 
-[Full Changelog](https://github.com/OpenVoiceOS/mycroft-dinkum-listener/compare/d79a0a12906051a608d887fd755f7242cfae2ad8...V0.0.0a2)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.0a3...V0.0.0)
+
+## [V0.0.0a3](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.0a3) (2023-04-09)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.0a2...V0.0.0a3)
+
+## [V0.0.0a2](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.0a2) (2023-04-09)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/d79a0a12906051a608d887fd755f7242cfae2ad8...V0.0.0a2)
 
 
 
