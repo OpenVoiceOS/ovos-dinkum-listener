@@ -172,8 +172,9 @@ class DinkumVoiceLoop(VoiceLoop):
             # AFTER_COMMAND -> DETECT_HOTWORD
             #
             if self.state == ListeningState.DETECT_WAKEWORD:
-                if self._detect_ww(chunk):  # check hotwords
-                    self._detect_hot(chunk)
+                if not self._detect_ww(chunk):  # check hotwords
+                    if not self._detect_hot(chunk):
+                        self.transformers.feed_audio(chunk)
             elif self.state == ListeningState.WAITING_CMD:
                 self._wait_cmd(chunk)
 
@@ -357,13 +358,13 @@ class DinkumVoiceLoop(VoiceLoop):
             # check hotwords
             hot = self._detect_hot(chunk)
 
-        if hot:
-            self.transformers.feed_hotword(chunk)
-        else:
+        if not hot:
             self.transformers.feed_audio(chunk)
 
     def _before_cmd(self, chunk):
         # Recording voice command, but user has not spoken yet
+        self.transformers.feed_audio(chunk)
+
         self.stt_audio_bytes += chunk
         self.stt_chunks.append(chunk)
         while self.stt_chunks:
