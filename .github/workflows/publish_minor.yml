@@ -84,4 +84,4 @@ jobs:
           token: ${{ secrets.MATRIX_TOKEN }}
           channel: '!WjxEKjjINpyBRPFgxl:krbel.duckdns.org'
           message: |
-            New mycroft-dinkum-listener release! ${{ steps.version.outputs.version }}
+            New ovos-dinkum-listener release! ${{ steps.version.outputs.version }}

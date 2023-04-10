@@ -102,7 +102,7 @@ class FlacStreamThread(StreamThread):
             self._flac_proc = None
 
 
-class RemoteFlacStreamingSTT(StreamingSTT):
+class FlacStreamingSTT(StreamingSTT):
 
     def create_streaming_thread(self):
         self.queue = Queue()
@@ -114,6 +114,6 @@ def load_stt_module(config: Dict[str, Any], bus: MessageBusClient) -> StreamingS
     plug = OVOSSTTFactory.create(stt_config)
     if not isinstance(plug, StreamingSTT):
         LOG.warning("dinkum only supports streaming STTs")
-        LOG.info("Using Dinkum Streaming Remote STT wrapper (ovos-backend-client)")
-        return RemoteFlacStreamingSTT(config)
+        LOG.info("Using FlacStreamingSTT wrapper -> ovos-backend-client.api.STTApi(backend_type=BackendType.OFFLINE)")
+        return FlacStreamingSTT(config)
     return plug

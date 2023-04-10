@@ -7,7 +7,7 @@ on:
     branches:
       - dev
     paths-ignore:
-      - 'mycroft_dinkum_listener/version.py'
+      - 'ovos_dinkum_listener/version.py'
       - 'test/**'
       - 'examples/**'
       - '.github/**'
