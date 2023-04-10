@@ -18,16 +18,17 @@ using [ovos-vad-plugin-silero](https://github.com/OpenVoiceOS/ovos-vad-plugin-si
 
 ovos exclusive features:
 
-- sleep mode
 - continuous listening  (no wakeword, VAD only)
 - hybrid listening  (no wakeword for follow up commands)
 - multiple wakewords
    - assign a STT lang per wakeword (multilingual support)
 - hotword types (perform actions other than listen)
+- sleep mode (no stt -> no accidental activations)
 - recording mode (save speech to file instead of STT)
 - OPM bus api (query available plugins)
-- wake word upload (backend)
+- sample upload (DatasetApi ovos-backend-client)
 - XDG path standards for recorded audio data
+- [neon-transformers](https://github.com/NeonGeckoCom/neon-transformers) support
 
 ## Usage
 
