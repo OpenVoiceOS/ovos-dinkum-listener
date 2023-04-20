@@ -70,6 +70,8 @@ setup(
     license='Apache-2.0',
     url='https://github.com/OpenVoiceOS/ovos-dinkum-listener',
     description='ovos-core listener daemon client',
+    packages=['ovos_dinkum_listener'],
+    package_data={'': package_files('ovos_dinkum_listener')},
     include_package_data=True,
     install_requires=required('requirements.txt'),
     classifiers=[
