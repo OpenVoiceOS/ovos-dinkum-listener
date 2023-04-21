@@ -1,4 +1,4 @@
-name: Run Install Tests
+name: Run Build Tests
 on:
   push:
     branches:
