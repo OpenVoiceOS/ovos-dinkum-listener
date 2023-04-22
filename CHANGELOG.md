@@ -2,7 +2,23 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a2...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a3...HEAD)
+
+**Fixed bugs:**
+
+- fix/dataclass py 3.11 [\#7](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/7) ([JarbasAl](https://github.com/JarbasAl))
+
+**Closed issues:**
+
+- ValueError: mutable default \<class 'collections.deque'\> for field hotword\_chunks is not allowed: use default\_factory [\#6](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/6)
+
+**Merged pull requests:**
+
+- Fix workflows [\#5](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/5) ([emphasize](https://github.com/emphasize))
+
+## [V0.0.2a3](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a3) (2023-04-20)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a2...V0.0.2a3)
 
 **Fixed bugs:**
 
