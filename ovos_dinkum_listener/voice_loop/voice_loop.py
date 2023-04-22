@@ -103,8 +103,8 @@ class DinkumVoiceLoop(VoiceLoop):
     num_stt_rewind_chunks: int
     num_hotword_keep_chunks: int
     skip_next_wake: bool = False
-    hotword_chunks: Deque = deque()
-    stt_chunks: Deque = deque()
+    hotword_chunks: Deque = field(default_factory=deque)
+    stt_chunks: Deque = field(default_factory=deque)
     stt_audio_bytes: bytes = bytes()
     last_ww: float = -1
     speech_seconds_left: float = 0
