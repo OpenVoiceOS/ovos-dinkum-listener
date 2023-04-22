@@ -432,6 +432,10 @@ class DinkumVoiceLoop(VoiceLoop):
 
         # get text and trigger callback
         text = self.stt.stream_stop() or ""
+        # TODO - some plugins return list of transcripts some just text
+        # standardize support for this
+        if isinstance(text, list):
+            text = text[0]
         stt_context["transcription"] = text
 
         # Voice command has finished recording
