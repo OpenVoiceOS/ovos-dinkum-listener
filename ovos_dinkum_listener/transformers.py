@@ -40,7 +40,7 @@ class AudioTransformersService:
         self.bus = bus
         # to activate a plugin, just add an entry to mycroft.conf for it
         self.config = self.config_core.get("audio_transformers") or {
-            # "ovos_audio_transformer_xxx_plugin": {}
+          #  "ovos-audio-classifier-gender": {}
         }
         self.load_plugins()
 
@@ -77,16 +77,21 @@ class AudioTransformersService:
                 pass
 
     def feed_audio(self, chunk):
+        #   print("...feeding audio", len(chunk))
         for module in self.modules:
             module.feed_audio_chunk(chunk)
 
     def feed_hotword(self, chunk):
+        #  print("....feeding ww", len(chunk))
         for module in self.modules:
             module.feed_hotword_chunk(chunk)
 
     def feed_speech(self, chunk):
-        for module in self.modules:
-            module.feed_speech_chunk(chunk)
+        try:
+            for module in self.modules:
+                module.feed_speech_chunk(chunk)
+        except Exception as e:
+            LOG.exception(e)
 
     def transform(self, chunk):
         context = {'client_name': 'ovos_dinkum_listener',
@@ -98,6 +103,6 @@ class AudioTransformersService:
                 chunk, data = module.transform(chunk)
                 LOG.debug(f"{module.name}: {data}")
                 context = merge_dict(context, data)
-            except:
-                pass
+            except Exception as e:
+                LOG.exception(e)
         return chunk, context

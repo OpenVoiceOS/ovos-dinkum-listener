@@ -1,5 +1,6 @@
-ovos-plugin-manager
+ovos-plugin-manager>=0.0.23a9
 ovos-utils
 ovos-bus-client
 sdnotify
 pyalsaaudio
+SpeechRecognition
