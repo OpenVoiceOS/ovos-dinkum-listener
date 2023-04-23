@@ -18,6 +18,7 @@ ovos exclusive features:
 
 - fallback STT
 - non-streaming STT support
+- compatible with all existing wake-word/STT plugins
 - continuous listening  (no wakeword, VAD only)
 - hybrid listening  (no wakeword for follow up commands)
 - multiple wakewords
