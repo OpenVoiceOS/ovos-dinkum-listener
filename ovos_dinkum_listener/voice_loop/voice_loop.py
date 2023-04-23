@@ -54,6 +54,7 @@ class VoiceLoop:
     mic: Microphone
     hotwords: HotwordContainer
     stt: StreamingSTT
+    fallback_stt: StreamingSTT
     vad: VADEngine
     transformers: AudioTransformersService
 
@@ -331,6 +332,7 @@ class DinkumVoiceLoop(VoiceLoop):
                 self.timeout_seconds_left = self.timeout_seconds
                 self.stt_audio_bytes = bytes()
                 self.stt.stream_start()
+                self.fallback_stt.stream_start()
 
             # Reset the VAD internal state to avoid the model getting
             # into a degenerative state where it always reports silence.
@@ -370,6 +372,7 @@ class DinkumVoiceLoop(VoiceLoop):
         while self.stt_chunks:
             stt_chunk = self.stt_chunks.popleft()
             self.stt.stream_data(stt_chunk)
+            self.fallback_stt.stream_data(stt_chunk)
 
             self.timeout_seconds_left -= self.mic.seconds_per_chunk
             if self.timeout_seconds_left <= 0:
@@ -404,6 +407,7 @@ class DinkumVoiceLoop(VoiceLoop):
             stt_chunk = self.stt_chunks.popleft()
 
             self.stt.stream_data(stt_chunk)
+            self.fallback_stt.stream_data(stt_chunk)
 
             self.timeout_seconds_left -= self.mic.seconds_per_chunk
             if self.timeout_seconds_left <= 0:
@@ -431,7 +435,15 @@ class DinkumVoiceLoop(VoiceLoop):
         LOG.debug(f"transformers metadata: {stt_context}")
 
         # get text and trigger callback
-        text = self.stt.stream_stop() or ""
+        try:
+            text = self.stt.stream_stop() or ""
+        except:
+            text = ""
+
+        if not text:
+            LOG.info("STT failed, attempting fallback STT plugin")
+            text = self.fallback_stt.stream_stop() or ""
+
         # TODO - some plugins return list of transcripts some just text
         # standardize support for this
         if isinstance(text, list):

@@ -43,9 +43,9 @@ class FakeStreamThread(StreamThread):
 
 
 class FakeStreamingSTT(StreamingSTT):
-    def __init__(self, config=None):
+    def __init__(self, engine, config=None):
         super().__init__(config)
-        self.engine = OVOSSTTFactory.create()
+        self.engine = engine
 
     def create_streaming_thread(self):
         listener = Configuration().get("listener", {})
@@ -54,10 +54,21 @@ class FakeStreamingSTT(StreamingSTT):
         return FakeStreamThread(self.queue, self.lang, self.engine, sample_rate, sample_width)
 
 
-def load_stt_module(config: Dict[str, Any], bus: MessageBusClient) -> StreamingSTT:
-    stt_config = config["stt"]
+def load_stt_module(config: Dict[str, Any] = None) -> StreamingSTT:
+    stt_config = config or Configuration()["stt"]
     plug = OVOSSTTFactory.create(stt_config)
     if not isinstance(plug, StreamingSTT):
         LOG.debug("Using FakeStreamingSTT wrapper")
-        return FakeStreamingSTT(config)
+        return FakeStreamingSTT(plug, config)
+    return plug
+
+
+def load_fallback_stt(cfg: Dict[str, Any] = None) -> StreamingSTT:
+    cfg = cfg or Configuration().get("stt", {})
+    fbm = cfg.get("fallback_module")
+    config = cfg.get(fbm, {})
+    plug = OVOSSTTFactory.create({"stt": {"module": fbm, fbm: config}})
+    if not isinstance(plug, StreamingSTT):
+        LOG.debug("Using FakeStreamingSTT wrapper")
+        return FakeStreamingSTT(plug, config)
     return plug

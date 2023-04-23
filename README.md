@@ -16,6 +16,7 @@ using [ovos-vad-plugin-silero](https://github.com/OpenVoiceOS/ovos-vad-plugin-si
 
 ovos exclusive features:
 
+- fallback STT
 - non-streaming STT support
 - continuous listening  (no wakeword, VAD only)
 - hybrid listening  (no wakeword for follow up commands)
