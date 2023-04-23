@@ -36,7 +36,7 @@ from ovos_utils.file_utils import resolve_resource_file
 from ovos_utils.log import LOG
 from ovos_utils.sound import play_audio
 
-from ovos_dinkum_listener.plugins import load_stt_module
+from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt
 from ovos_dinkum_listener.voice_loop import AlsaMicrophone, DinkumVoiceLoop, ListeningMode, ListeningState
 from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer
 
@@ -163,7 +163,8 @@ class DinkumVoiceService:
         hotwords.load_hotword_engines()
 
         vad = OVOSVADFactory.create()
-        stt = load_stt_module(self.config, self.bus)
+        stt = load_stt_module()
+        fallback_stt = load_fallback_stt()
 
         transformers = AudioTransformersService(self.bus, self.config)
 
@@ -171,6 +172,7 @@ class DinkumVoiceService:
             mic=mic,
             hotwords=hotwords,
             stt=stt,
+            fallback_stt=fallback_stt,
             vad=vad,
             transformers=transformers,
             #
