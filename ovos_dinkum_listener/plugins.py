@@ -66,15 +66,14 @@ def load_stt_module(config: Dict[str, Any] = None) -> StreamingSTT:
 def load_fallback_stt(cfg: Dict[str, Any] = None) -> StreamingSTT:
     cfg = cfg or Configuration().get("stt", {})
     fbm = cfg.get("fallback_module")
-    if not fbm:
-        return None
-    try:
-        config = cfg.get(fbm, {})
-        plug = OVOSSTTFactory.create({"stt": {"module": fbm, fbm: config}})
-        if not isinstance(plug, StreamingSTT):
-            LOG.debug("Using FakeStreamingSTT wrapper")
-            return FakeStreamingSTT(plug, config)
-        return plug
-    except:
-        LOG.exception("Failed to load fallback STT")
-        raise
+    if fbm:
+        try:
+            config = cfg.get(fbm, {})
+            plug = OVOSSTTFactory.create({"stt": {"module": fbm, fbm: config}})
+            if not isinstance(plug, StreamingSTT):
+                LOG.debug("Using FakeStreamingSTT wrapper")
+                return FakeStreamingSTT(plug, config)
+            return plug
+        except:
+            LOG.exception("Failed to load fallback STT")
+    return None
