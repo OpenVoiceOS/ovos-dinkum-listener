@@ -2,7 +2,15 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a4...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a5...HEAD)
+
+**Merged pull requests:**
+
+- feat/stt\_compat\_no\_more\_flac [\#9](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/9) ([JarbasAl](https://github.com/JarbasAl))
+
+## [V0.0.2a5](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a5) (2023-04-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a4...V0.0.2a5)
 
 **Fixed bugs:**
 
