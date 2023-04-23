@@ -441,10 +441,11 @@ class DinkumVoiceLoop(VoiceLoop):
         try:
             text = self.stt.stream_stop() or ""
         except:
+            LOG.exception("STT failed")
             text = ""
 
         if not text and self.fallback_stt is not None:
-            LOG.info("STT failed, attempting fallback STT plugin")
+            LOG.info("Attempting fallback STT plugin")
             text = self.fallback_stt.stream_stop() or ""
 
         # TODO - some plugins return list of transcripts some just text
