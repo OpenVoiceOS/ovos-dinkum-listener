@@ -2,7 +2,15 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a6...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a7...HEAD)
+
+**Merged pull requests:**
+
+- Fix missing ovos-backend-client library [\#11](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/11) ([goldyfruit](https://github.com/goldyfruit))
+
+## [V0.0.2a7](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a7) (2023-04-23)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a6...V0.0.2a7)
 
 **Implemented enhancements:**
 
