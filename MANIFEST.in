@@ -1,0 +1,4 @@
+include requirements.txt
+include ovos_dinkum_listener/res/snd/start_listening.wav
+include ovos_dinkum_listener/res/snd/acknowledge.mp3
+include ovos_dinkum_listener/res/snd/error.mp3
