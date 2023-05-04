@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a9...HEAD)
+
+**Fixed bugs:**
+
+- listener level missing [\#15](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/15) ([goldyfruit](https://github.com/goldyfruit))
+
+## [V0.0.2a9](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a9) (2023-05-04)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a8...V0.0.2a9)
+
 ## [V0.0.2a8](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a8) (2023-04-26)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a7...V0.0.2a8)
