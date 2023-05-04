@@ -432,10 +432,32 @@ class DinkumVoiceLoop(VoiceLoop):
                 # Reset
                 self.silence_seconds_left = self.silence_seconds
 
-    def _after_cmd(self, chunk):
-        # Command has ended, call transformers pipeline before STT
-        chunk, stt_context = self.transformers.transform(chunk)
-        LOG.debug(f"transformers metadata: {stt_context}")
+    def _validate_lang(self, lang):
+        """ ensure lang classification from speech is one of the valid langs
+        if not then drop classification, as there are no speakers of that language around this device
+        """
+        cfg = Configuration()
+        default_lang = cfg.get("lang", "en-us")
+        valid_langs = set([default_lang] + cfg.get("secondary_langs'", []))
+
+        if lang in valid_langs:
+            if lang != default_lang:
+                LOG.info(f"replaced {default_lang} with {lang}")
+            return v
+        else:
+            LOG.warning(f"ignoring classification: {lang} is not in enabled languages: {valid_langs}")
+
+        return default_lang
+
+    def _get_tx(self, stt_context):
+        # handle lang detection from speech
+        if "stt_lang" in stt_context:
+            lang = self._validate_lang(stt_context["stt_lang"])
+            # note: self.stt.stream is recreated every listen start
+            # this is safe to do, and makes lang be passed to self.execute
+            self.stt.stream.language = lang
+            if self.fallback_stt:
+                self.fallback_stt.stream.language = lang
 
         # get text and trigger callback
         try:
@@ -453,6 +475,15 @@ class DinkumVoiceLoop(VoiceLoop):
         if isinstance(text, list):
             text = text[0]
         stt_context["transcription"] = text
+        return text, stt_context
+
+    def _after_cmd(self, chunk):
+        # Command has ended, call transformers pipeline before STT
+        chunk, stt_context = self.transformers.transform(chunk)
+        LOG.debug(f"transformers metadata: {stt_context}")
+
+        text, stt_context = self._get_tx(stt_context)
+
 
         # Voice command has finished recording
         if self.stt_audio_callback is not None:

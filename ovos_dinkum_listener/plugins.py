@@ -13,7 +13,6 @@ class FakeStreamThread(StreamThread):
 
     def __init__(self, queue, language, engine, sample_rate, sample_width):
         super().__init__(queue, language)
-        self.lang = language
         self.buffer = ReadWriteStream()
         self.engine = engine
         self.sample_rate = sample_rate
@@ -26,7 +25,7 @@ class FakeStreamThread(StreamThread):
             audio = AudioData(self.buffer.read(),
                               sample_rate=self.sample_rate,
                               sample_width=self.sample_width)
-            transcript = self.engine.execute(audio, self.lang)
+            transcript = self.engine.execute(audio, self.language)
 
             self.buffer.clear()
             return transcript

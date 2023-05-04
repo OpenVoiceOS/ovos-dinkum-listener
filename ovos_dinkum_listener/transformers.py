@@ -35,7 +35,7 @@ class AudioTransformersService:
 
     def __init__(self, bus, config=None):
         self.config_core = config or {}
-        self.loaded_modules = {}
+        self.loaded_plugins = {}
         self.has_loaded = False
         self.bus = bus
         # to activate a plugin, just add an entry to mycroft.conf for it
@@ -51,13 +51,13 @@ class AudioTransformersService:
                 if not self.config[plug_name].get("active", True):
                     continue
                 try:
-                    self.loaded_modules[plug_name] = plug()
+                    self.loaded_plugins[plug_name] = plug()
                     LOG.info(f"loaded audio transformer plugin: {plug_name}")
                 except Exception as e:
-                    LOG.exception(f"Failed to load audio transfomer plugin: {plug_name}")
+                    LOG.exception(f"Failed to load audio transformer plugin: {plug_name}")
 
     @property
-    def modules(self):
+    def plugins(self):
         """
         Return loaded transformers in priority order, such that modules with a
         higher `priority` rank are called first and changes from lower ranked
@@ -66,11 +66,11 @@ class AudioTransformersService:
         A plugin of `priority` 1 will override any existing context keys and
         will be the last to modify `audio_data`
         """
-        return sorted(self.loaded_modules.values(),
+        return sorted(self.loaded_plugins.values(),
                       key=lambda k: k.priority, reverse=True)
 
     def shutdown(self):
-        for module in self.modules:
+        for module in self.plugins:
             try:
                 module.shutdown()
             except:
@@ -78,17 +78,17 @@ class AudioTransformersService:
 
     def feed_audio(self, chunk):
         #   print("...feeding audio", len(chunk))
-        for module in self.modules:
+        for module in self.plugins:
             module.feed_audio_chunk(chunk)
 
     def feed_hotword(self, chunk):
         #  print("....feeding ww", len(chunk))
-        for module in self.modules:
+        for module in self.plugins:
             module.feed_hotword_chunk(chunk)
 
     def feed_speech(self, chunk):
         try:
-            for module in self.modules:
+            for module in self.plugins:
                 module.feed_speech_chunk(chunk)
         except Exception as e:
             LOG.exception(e)
@@ -97,8 +97,9 @@ class AudioTransformersService:
         context = {'client_name': 'ovos_dinkum_listener',
                    'source': 'audio',  # default native audio source
                    'destination': ["skills"]}
-        for module in self.modules:
+        for module in self.plugins:
             try:
+                LOG.debug(f"checking audio transformer: {module}")
                 chunk = module.feed_speech_utterance(chunk)
                 chunk, data = module.transform(chunk)
                 LOG.debug(f"{module.name}: {data}")
