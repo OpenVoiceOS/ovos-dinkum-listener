@@ -39,7 +39,7 @@ class AudioTransformersService:
         self.has_loaded = False
         self.bus = bus
         # to activate a plugin, just add an entry to mycroft.conf for it
-        self.config = self.config_core.get("audio_transformers") or {
+        self.config = self.config_core.get("listener").get("audio_transformers") or {
           #  "ovos-audio-classifier-gender": {}
         }
         self.load_plugins()
