@@ -2,7 +2,15 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a10...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a11...HEAD)
+
+**Closed issues:**
+
+- No start\_listening listening sound [\#12](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/12)
+
+## [V0.0.2a11](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a11) (2023-05-04)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a10...V0.0.2a11)
 
 **Fixed bugs:**
 
