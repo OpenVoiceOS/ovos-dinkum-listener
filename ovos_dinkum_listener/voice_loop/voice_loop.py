@@ -443,7 +443,7 @@ class DinkumVoiceLoop(VoiceLoop):
         if lang in valid_langs:
             if lang != default_lang:
                 LOG.info(f"replaced {default_lang} with {lang}")
-            return v
+            return lang
         else:
             LOG.warning(f"ignoring classification: {lang} is not in enabled languages: {valid_langs}")
 
@@ -453,6 +453,7 @@ class DinkumVoiceLoop(VoiceLoop):
         # handle lang detection from speech
         if "stt_lang" in stt_context:
             lang = self._validate_lang(stt_context["stt_lang"])
+            stt_context["stt_lang"] = lang
             # note: self.stt.stream is recreated every listen start
             # this is safe to do, and makes lang be passed to self.execute
             self.stt.stream.language = lang
