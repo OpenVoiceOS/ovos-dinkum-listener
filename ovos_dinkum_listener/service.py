@@ -424,13 +424,14 @@ class OVOSDinkumVoiceService(Thread):
 
         # Report utterance to intent service
         if text:
+            LOG.debug(f"STT: {text}")
             payload = stt_context
             payload["utterances"] = [text]
             self.bus.emit(Message("recognizer_loop:utterance", payload, stt_context))
+        elif self.voice_loop.listen_mode == ListeningMode.CONTINUOUS:
+            LOG.debug("ignoring transcription failure")
         else:
             self.bus.emit(Message("recognizer_loop:speech.recognition.unknown", context=stt_context))
-
-        LOG.debug(f"STT: {text}")
 
     def _save_stt(self, audio_bytes, stt_meta, save_path=None):
         LOG.info("Saving Utterance Recording")
