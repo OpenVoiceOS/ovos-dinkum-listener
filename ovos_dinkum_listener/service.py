@@ -111,7 +111,7 @@ class OVOSDinkumVoiceService(Thread):
 
     def __init__(self, on_ready=on_ready, on_error=on_error,
                  on_stopping=on_stopping, on_alive=on_alive,
-                 on_started=on_started, watchdog=lambda: None):
+                 on_started=on_started, watchdog=lambda: None, mic=None):
         """
         watchdog: (callable) function to call periodically indicating
           operational status.
@@ -134,7 +134,8 @@ class OVOSDinkumVoiceService(Thread):
 
         self._before_start()  # connect to bus
         listener = self.config["listener"]
-        self.mic = AlsaMicrophone(
+
+        self.mic = mic or AlsaMicrophone(
             device=listener.get("device_name") or "default",
             sample_rate=listener.get("sample_rate", 1600),
             sample_width=listener.get("sample_width", 2),

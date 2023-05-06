@@ -139,6 +139,9 @@ class DinkumVoiceLoop(VoiceLoop):
         else:
             self.listen_mode = ListeningMode.WAKEWORD
 
+        self.listen_mode = ListeningMode.CONTINUOUS
+        LOG.info(f"Listening mode: {self.listen_mode}")
+
     def run(self):
         # Voice command state
         self.speech_seconds_left = self.speech_seconds
@@ -152,7 +155,11 @@ class DinkumVoiceLoop(VoiceLoop):
 
         # Audio from just before the wake word is detected is kept for STT.
         # This allows you to speak a command immediately after the wake word.
-        self.stt_chunks: Deque[bytes] = deque(maxlen=self.num_stt_rewind_chunks + 1)
+        n = self.num_stt_rewind_chunks + 1
+        if self.listen_mode == ListeningMode.CONTINUOUS:
+            self.stt_chunks: Deque[bytes] = deque(maxlen=3 * n)
+        else:
+            self.stt_chunks: Deque[bytes] = deque(maxlen=n)
 
         while self._is_running:
             chunk = self.mic.read_chunk()
@@ -172,11 +179,15 @@ class DinkumVoiceLoop(VoiceLoop):
             # IN_COMMAND -> AFTER_COMMAND
             # AFTER_COMMAND -> DETECT_HOTWORD
             #
+
             if self.state == ListeningState.DETECT_WAKEWORD:
-                if not self._detect_ww(chunk):  # check hotwords
+                if self.listen_mode == ListeningMode.CONTINUOUS:
+                    self.state = ListeningState.WAITING_CMD
+                elif not self._detect_ww(chunk):  # check hotwords
                     if not self._detect_hot(chunk):
                         self.transformers.feed_audio(chunk)
-            elif self.state == ListeningState.WAITING_CMD:
+
+            if self.state == ListeningState.WAITING_CMD:
                 self._wait_cmd(chunk)
 
             elif self.state == ListeningState.RECORDING:
@@ -335,11 +346,6 @@ class DinkumVoiceLoop(VoiceLoop):
                 if self.fallback_stt is not None:
                     self.fallback_stt.stream_start()
 
-            # Reset the VAD internal state to avoid the model getting
-            # into a degenerative state where it always reports silence.
-            if hasattr(self.vad, "reset"):
-                self.vad.reset()
-
             self.last_ww = time.time()
             self.transformers.feed_hotword(chunk)
             return True
@@ -354,7 +360,15 @@ class DinkumVoiceLoop(VoiceLoop):
             self.speech_seconds_left -= self.mic.seconds_per_chunk
             if self.speech_seconds_left <= 0:
                 # Voice command has started, so start looking for the end.
-                self.state = ListeningState.BEFORE_COMMAND
+                if self.listen_mode == ListeningMode.CONTINUOUS:
+                    prev_audio = len(self.stt_chunks) * self.mic.seconds_per_chunk
+                    LOG.debug(f"waiting for speech: {prev_audio}")
+                    self.stt.stream_start()
+                    if self.fallback_stt is not None:
+                        self.fallback_stt.stream_start()
+                    self.state = ListeningState.IN_COMMAND
+                else:
+                    self.state = ListeningState.BEFORE_COMMAND
         else:
             # Reset
             self.speech_seconds_left = self.speech_seconds
@@ -363,6 +377,9 @@ class DinkumVoiceLoop(VoiceLoop):
 
         if not hot:
             self.transformers.feed_audio(chunk)
+            if self.listen_mode == ListeningMode.CONTINUOUS:
+                self.stt_audio_bytes += chunk
+                self.stt_chunks.append(chunk)
 
     def _before_cmd(self, chunk):
         # Recording voice command, but user has not spoken yet
@@ -421,7 +438,6 @@ class DinkumVoiceLoop(VoiceLoop):
             # Wait for enough silence before considering the command to be
             # ended.
             self._chunk_info.is_speech = not self.vad.is_silence(stt_chunk)
-
             if not self._chunk_info.is_speech:
                 self.silence_seconds_left -= self.mic.seconds_per_chunk
                 if self.silence_seconds_left <= 0:
@@ -431,6 +447,8 @@ class DinkumVoiceLoop(VoiceLoop):
             else:
                 # Reset
                 self.silence_seconds_left = self.silence_seconds
+        print(self.silence_seconds_left, len(self.stt_chunks))
+        print(self._chunk_info)
 
     def _validate_lang(self, lang):
         """ ensure lang classification from speech is one of the valid langs
@@ -479,13 +497,17 @@ class DinkumVoiceLoop(VoiceLoop):
         return text, stt_context
 
     def _after_cmd(self, chunk):
+        print(self._chunk_info)
+
         # Command has ended, call transformers pipeline before STT
         chunk, stt_context = self.transformers.transform(chunk)
-        LOG.debug(f"transformers metadata: {stt_context}")
 
         text, stt_context = self._get_tx(stt_context)
 
-
+        if text:
+            LOG.debug(f"transformers metadata: {stt_context}")
+        else:
+            LOG.info("nothing transcribed")
         # Voice command has finished recording
         if self.stt_audio_callback is not None:
             metadata = self.stt_audio_callback(self.stt_audio_bytes, stt_context)
@@ -499,12 +521,6 @@ class DinkumVoiceLoop(VoiceLoop):
         # Back to detecting wake word
         if self.listen_mode == ListeningMode.CONTINUOUS or \
                 self.listen_mode == ListeningMode.HYBRID:
-
-            # Reset the VAD internal state to avoid the model getting
-            # into a degenerative state where it always reports silence.
-            if hasattr(self.vad, "reset"):
-                self.vad.reset()
-
             self.state = ListeningState.WAITING_CMD
         else:
             self.state = ListeningState.DETECT_WAKEWORD
@@ -514,6 +530,12 @@ class DinkumVoiceLoop(VoiceLoop):
 
         # Reset wakeword detector state, if available
         self.hotwords.reset()
+
+        # Reset the VAD internal state to avoid the model getting
+        # into a degenerative state where it always reports silence.
+        if hasattr(self.vad, "reset"):
+            LOG.debug("reset VAD")
+            self.vad.reset()
 
     def stop(self):
         self._is_running = False
