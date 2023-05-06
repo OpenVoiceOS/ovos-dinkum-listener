@@ -139,7 +139,6 @@ class DinkumVoiceLoop(VoiceLoop):
         else:
             self.listen_mode = ListeningMode.WAKEWORD
 
-        self.listen_mode = ListeningMode.CONTINUOUS
         LOG.info(f"Listening mode: {self.listen_mode}")
 
     def run(self):
@@ -447,8 +446,6 @@ class DinkumVoiceLoop(VoiceLoop):
             else:
                 # Reset
                 self.silence_seconds_left = self.silence_seconds
-        print(self.silence_seconds_left, len(self.stt_chunks))
-        print(self._chunk_info)
 
     def _validate_lang(self, lang):
         """ ensure lang classification from speech is one of the valid langs
@@ -497,8 +494,6 @@ class DinkumVoiceLoop(VoiceLoop):
         return text, stt_context
 
     def _after_cmd(self, chunk):
-        print(self._chunk_info)
-
         # Command has ended, call transformers pipeline before STT
         chunk, stt_context = self.transformers.transform(chunk)
 
@@ -536,6 +531,8 @@ class DinkumVoiceLoop(VoiceLoop):
         if hasattr(self.vad, "reset"):
             LOG.debug("reset VAD")
             self.vad.reset()
+
+        self.timeout_seconds_left = self.timeout_seconds
 
     def stop(self):
         self._is_running = False
