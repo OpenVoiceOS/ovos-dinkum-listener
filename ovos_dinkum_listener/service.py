@@ -17,10 +17,7 @@ import wave
 from enum import Enum
 from hashlib import md5
 from pathlib import Path
-from threading import Thread
-from typing import List, Optional
 
-import sdnotify
 from ovos_dinkum_listener.transformers import AudioTransformersService
 from ovos_backend_client.api import DatasetApi
 from ovos_bus_client import Message, MessageBusClient
@@ -35,10 +32,13 @@ from ovos_plugin_manager.wakewords import get_ww_lang_configs, get_ww_supported_
 from ovos_utils.file_utils import resolve_resource_file
 from ovos_utils.log import LOG
 from ovos_utils.sound import play_audio
+from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap
 
 from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt
 from ovos_dinkum_listener.voice_loop import AlsaMicrophone, DinkumVoiceLoop, ListeningMode, ListeningState
 from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer
+from threading import Thread
+
 
 # Seconds between systemd watchdog updates
 WATCHDOG_DELAY = 0.5
@@ -51,7 +51,27 @@ class ServiceState(str, Enum):
     STOPPING = "stopping"
 
 
-class DinkumVoiceService:
+def on_ready():
+    LOG.info('DinkumVoiceService is ready.')
+
+
+def on_alive():
+    LOG.info('DinkumVoiceService is alive.')
+
+
+def on_started():
+    LOG.info('DinkumVoiceService started.')
+
+
+def on_error(e='Unknown'):
+    LOG.error(f'DinkumVoiceService failed to launch ({e}).')
+
+
+def on_stopping():
+    LOG.info('DinkumVoiceService is shutting down...')
+
+
+class DinkumVoiceService(Thread):
     """
     Service for handling user voice input.
 
@@ -91,61 +111,25 @@ class DinkumVoiceService:
 
     """
 
-    def __init__(self):
-        self.service_id = "voice"
-        self._notifier = sdnotify.SystemdNotifier()
+    def __init__(self, ready_hook=on_ready, error_hook=on_error,
+                 stopping_hook=on_stopping, alive_hook=on_alive,
+                 started_hook=on_started, watchdog=lambda: None):
+        super().__init__()
+
+        LOG.info("Starting Voice Service")
+        callbacks = StatusCallbackMap(on_ready=ready_hook, on_error=error_hook,
+                                      on_stopping=stopping_hook,
+                                      on_alive=alive_hook,
+                                      on_started=started_hook)
+        self.status = ProcessStatus('voice', callback_map=callbacks)
+
+        self.status.set_alive()
         self._state: ServiceState = ServiceState.NOT_STARTED
-
-    @property
-    def default_save_path(self):
-        """ where recorded hotwords/utterances are saved """
-        listener = Configuration().get("listener", {})
-        return listener.get('save_path', f"{get_xdg_data_save_path()}/listener")
-
-    @property
-    def state(self):
-        return self._state
-
-    def main(self, argv: Optional[List[str]] = None):
-        """Service entry point"""
-        parser = argparse.ArgumentParser()
-        parser.add_argument("--service-id", help="Override service id")
-        args = parser.parse_args(argv)
-
-        if args.service_id is not None:
-            self.service_id = args.service_id
-
-        try:
-            self._state = ServiceState.NOT_STARTED
-            self.before_start()
-            self.start()
-            self._state = ServiceState.STARTED
-            self.after_start()
-
-            try:
-                self._state = ServiceState.RUNNING
-                self.run()
-            except KeyboardInterrupt:
-                pass
-            finally:
-                self._state = ServiceState.STOPPING
-                self.stop()
-                self.after_stop()
-                self._state = ServiceState.NOT_STARTED
-        except Exception:
-            LOG.exception("Service failed to start")
-
-    def before_start(self):
-        """Initialization logic called before start()"""
         self.config = Configuration()
-        LOG.info("Starting service...")
 
-        self._connect_to_bus()
-
-    def start(self):
+        self._before_start()  # connect to bus
         listener = self.config["listener"]
-
-        mic = AlsaMicrophone(
+        self.mic = AlsaMicrophone(
             device=listener.get("device_name") or "default",
             sample_rate=listener.get("sample_rate", 1600),
             sample_width=listener.get("sample_width", 2),
@@ -157,24 +141,18 @@ class DinkumVoiceService:
             audio_retries=listener.get("audio_retries", 3),
             audio_retry_delay=listener.get("audio_retry_delay", 1),
         )
-        mic.start()
-
-        hotwords = HotwordContainer(self.bus)
-        hotwords.load_hotword_engines()
-
-        vad = OVOSVADFactory.create()
-        stt = load_stt_module()
-        fallback_stt = load_fallback_stt()
-
-        transformers = AudioTransformersService(self.bus, self.config)
-
+        self.hotwords = HotwordContainer(self.bus)
+        self.vad = OVOSVADFactory.create()
+        self.stt = load_stt_module()
+        self.fallback_stt = load_fallback_stt()
+        self.transformers = AudioTransformersService(self.bus, self.config)
         self.voice_loop = DinkumVoiceLoop(
-            mic=mic,
-            hotwords=hotwords,
-            stt=stt,
-            fallback_stt=fallback_stt,
-            vad=vad,
-            transformers=transformers,
+            mic=self.mic,
+            hotwords=self.hotwords,
+            stt=self.stt,
+            fallback_stt=self.fallback_stt,
+            vad=self.vad,
+            transformers=self.transformers,
             #
             speech_seconds=listener.get("speech_begin", 0.3),
             silence_seconds=listener.get("silence_end", 0.7),
@@ -191,8 +169,57 @@ class DinkumVoiceService:
             stt_audio_callback=self._stt_audio,
             recording_audio_callback=self._recording_audio,
         )
-        self.voice_loop.start()
 
+    @property
+    def default_save_path(self):
+        """ where recorded hotwords/utterances are saved """
+        listener = Configuration().get("listener", {})
+        return listener.get('save_path', f"{get_xdg_data_save_path()}/listener")
+
+    @property
+    def state(self):
+        return self._state
+
+    def run(self):
+        """Service entry point"""
+        try:
+            self._state = ServiceState.NOT_STARTED
+            self._before_start()
+            self._start()
+            self.status.set_started()
+            self._state = ServiceState.STARTED
+            self._after_start()
+
+            try:
+                self.status.set_ready()
+                self._state = ServiceState.RUNNING
+                self.voice_loop.run()
+            except KeyboardInterrupt:
+                pass
+            finally:
+                self._state = ServiceState.STOPPING
+                self.status.set_stopping()
+                self.stop()
+                self._after_stop()
+                self._state = ServiceState.NOT_STARTED
+        except Exception as e:
+            LOG.exception("Service failed to start")
+            self.status.set_error(str(e))
+
+    def _before_start(self):
+        """Initialization logic called before start()"""
+        self.config = Configuration()
+        LOG.info("Starting service...")
+        self._connect_to_bus()
+
+    def _start(self):
+
+        self.mic.start()
+        self.hotwords.load_hotword_engines()
+        self.voice_loop.start()
+        self.register_event_handlers()
+
+    def register_event_handlers(self):
         # Register events
         self.bus.on("mycroft.mic.mute", self._handle_mute)
         self.bus.on("mycroft.mic.unmute", self._handle_unmute)
@@ -214,7 +241,7 @@ class DinkumVoiceService:
         self.bus.on("opm.ww.query", self._handle_opm_ww_query)
         self.bus.on("opm.vad.query", self._handle_opm_vad_query)
 
-    def after_start(self):
+    def _after_start(self):
         """Initialization logic called after start()"""
         self._start_watchdog()
 
@@ -222,31 +249,21 @@ class DinkumVoiceService:
         self._notifier.notify("READY=1")
         self.bus.emit(Message(f"{self.service_id}.initialize.ended"))
 
-    def run(self):
-        self.voice_loop.run()
-
     def stop(self):
         self.voice_loop.stop()
 
-        mic, hotwords, vad, stt = (
-            self.voice_loop.mic,
-            self.voice_loop.hotwords,
-            self.voice_loop.vad,
-            self.voice_loop.stt,
-        )
+        if hasattr(self.stt, "shutdown"):
+            self.stt.shutdown()
 
-        if hasattr(stt, "shutdown"):
-            stt.shutdown()
+        if hasattr(self.hotwords, "shutdown"):
+            self.hotwords.shutdown()
 
-        if hasattr(hotwords, "shutdown"):
-            hotwords.shutdown()
+        if hasattr(self.vad, "stop"):
+            self.vad.stop()
 
-        if hasattr(vad, "stop"):
-            vad.stop()
+        self.mic.stop()
 
-        mic.stop()
-
-    def after_stop(self):
+    def _after_stop(self):
         """Shut down code called after stop()"""
         self.bus.close()
 
@@ -694,12 +711,3 @@ class DinkumVoiceService:
             "options": self.get_vad_options()
         }
         self.bus.emit(message.response(data))
-
-
-def main():
-    """Service entry point"""
-    DinkumVoiceService().main()
-
-
-if __name__ == "__main__":
-    main()

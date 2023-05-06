@@ -11,11 +11,15 @@
 # limitations under the License.
 #
 from ovos_dinkum_listener.service import DinkumVoiceService
+from ovos_utils import wait_for_exit_signal
 
 
 def main():
     """Service entry point"""
-    DinkumVoiceService().main()
+    service = DinkumVoiceService()
+    service.start()
+    wait_for_exit_signal()
+    service.stop()
 
 
 if __name__ == "__main__":
