@@ -10,12 +10,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from ovos_dinkum_listener.service import DinkumVoiceService
+from ovos_dinkum_listener.service import OVOSDinkumVoiceService
+from ovos_utils import wait_for_exit_signal
 
 
 def main():
     """Service entry point"""
-    DinkumVoiceService().main()
+
+    service = OVOSDinkumVoiceService()
+    service.start()
+    wait_for_exit_signal()
+    service.stop()
 
 
 if __name__ == "__main__":
