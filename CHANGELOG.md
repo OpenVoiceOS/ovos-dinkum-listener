@@ -1,5 +1,9 @@
 # Changelog
 
+## [V0.0.2a13](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a13) (2023-05-06)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a12...V0.0.2a13)
+
 ## [V0.0.2a12](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a12) (2023-05-05)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a11...V0.0.2a12)
