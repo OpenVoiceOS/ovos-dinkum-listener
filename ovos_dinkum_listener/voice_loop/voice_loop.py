@@ -439,11 +439,12 @@ class DinkumVoiceLoop(VoiceLoop):
         cfg = Configuration()
         default_lang = cfg.get("lang", "en-us")
         valid_langs = set([default_lang] + cfg.get("secondary_langs'", []))
-
-        if lang in valid_langs:
-            if lang != default_lang:
+        valid_langs = [l.lower().split("-")[0] for l in valid_langs]
+        l2 = lang.lower().split("-")[0]
+        if l2 in valid_langs:
+            if l2 != default_lang.lower().split("-")[0]:
                 LOG.info(f"replaced {default_lang} with {lang}")
-            return lang
+                return lang
         else:
             LOG.warning(f"ignoring classification: {lang} is not in enabled languages: {valid_langs}")
 
