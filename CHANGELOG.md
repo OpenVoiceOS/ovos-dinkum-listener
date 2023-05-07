@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a15...HEAD)
+
+**Implemented enhancements:**
+
+- fix/continuous\_listen + pyaudio support \(optional\) [\#18](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/18) ([JarbasAl](https://github.com/JarbasAl))
+
+## [V0.0.2a15](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a15) (2023-05-06)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a14...V0.0.2a15)
+
 ## [V0.0.2a14](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a14) (2023-05-06)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a13...V0.0.2a14)
