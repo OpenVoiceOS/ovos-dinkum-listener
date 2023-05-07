@@ -111,7 +111,7 @@ class OVOSDinkumVoiceService(Thread):
 
     def __init__(self, on_ready=on_ready, on_error=on_error,
                  on_stopping=on_stopping, on_alive=on_alive,
-                 on_started=on_started, watchdog=lambda: None):
+                 on_started=on_started, watchdog=lambda: None, mic=None):
         """
         watchdog: (callable) function to call periodically indicating
           operational status.
@@ -134,7 +134,8 @@ class OVOSDinkumVoiceService(Thread):
 
         self._before_start()  # connect to bus
         listener = self.config["listener"]
-        self.mic = AlsaMicrophone(
+
+        self.mic = mic or AlsaMicrophone(
             device=listener.get("device_name") or "default",
             sample_rate=listener.get("sample_rate", 1600),
             sample_width=listener.get("sample_width", 2),
@@ -423,13 +424,14 @@ class OVOSDinkumVoiceService(Thread):
 
         # Report utterance to intent service
         if text:
+            LOG.debug(f"STT: {text}")
             payload = stt_context
             payload["utterances"] = [text]
             self.bus.emit(Message("recognizer_loop:utterance", payload, stt_context))
+        elif self.voice_loop.listen_mode == ListeningMode.CONTINUOUS:
+            LOG.debug("ignoring transcription failure")
         else:
             self.bus.emit(Message("recognizer_loop:speech.recognition.unknown", context=stt_context))
-
-        LOG.debug(f"STT: {text}")
 
     def _save_stt(self, audio_bytes, stt_meta, save_path=None):
         LOG.info("Saving Utterance Recording")

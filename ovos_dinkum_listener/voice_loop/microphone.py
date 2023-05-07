@@ -50,9 +50,9 @@ class Microphone:
 
 @dataclass
 class AlsaMicrophone(Microphone):
-    device: str
-    timeout: float
-    period_size: int
+    device: str = "default"
+    period_size: int = 1024
+    timeout: float = 5.0
     multiplier: float = 1.0
     audio_retries: int = 0
     audio_retry_delay: float = 0.0
