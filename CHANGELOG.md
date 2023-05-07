@@ -2,7 +2,15 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a15...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a16...HEAD)
+
+**Implemented enhancements:**
+
+- feat/valid langs from session manager [\#19](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/19) ([JarbasAl](https://github.com/JarbasAl))
+
+## [V0.0.2a16](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a16) (2023-05-07)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a15...V0.0.2a16)
 
 **Implemented enhancements:**
 
