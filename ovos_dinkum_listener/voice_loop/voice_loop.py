@@ -142,6 +142,9 @@ class DinkumVoiceLoop(VoiceLoop):
         LOG.info(f"Listening mode: {self.listen_mode}")
 
     def run(self):
+        """
+        Run the VoiceLoop so long as `self._is_running` is True
+        """
         # Voice command state
         self.speech_seconds_left = self.speech_seconds
         self.silence_seconds_left = self.silence_seconds
@@ -160,7 +163,10 @@ class DinkumVoiceLoop(VoiceLoop):
         else:
             self.stt_chunks: Deque[bytes] = deque(maxlen=n)
 
+        LOG.info(f"Starting loop in mode: {self.listen_mode}")
+
         while self._is_running:
+            # If no audio is provided, raise an exception and stop the loop
             chunk = self.mic.read_chunk()
             assert chunk is not None, "No audio from microphone"
 
@@ -181,6 +187,7 @@ class DinkumVoiceLoop(VoiceLoop):
 
             if self.state == ListeningState.DETECT_WAKEWORD:
                 if self.listen_mode == ListeningMode.CONTINUOUS:
+                    LOG.info(f"Continuous listening mode, updating state")
                     self.state = ListeningState.WAITING_CMD
                 elif not self._detect_ww(chunk):  # check hotwords
                     if not self._detect_hot(chunk):
@@ -198,16 +205,20 @@ class DinkumVoiceLoop(VoiceLoop):
                 self._detect_wakeup(chunk)
 
             elif self.state == ListeningState.BEFORE_COMMAND:
+                LOG.debug("waiting for speech")
                 self._before_cmd(chunk)
             elif self.state == ListeningState.IN_COMMAND:
+                LOG.debug("recording speech")
                 self._in_cmd(chunk)
             elif self.state == ListeningState.AFTER_COMMAND:
+                LOG.info("speech finished")
                 self._after_cmd(chunk)
 
             if self.chunk_callback is not None:
                 self._chunk_info.energy = \
                     self.debiased_energy(chunk, self.mic.sample_width)
                 self.chunk_callback(self._chunk_info)
+        LOG.info(f"Loop stopped running")
 
     def reset_state(self):
         if self.listen_mode == ListeningMode.CONTINUOUS:
