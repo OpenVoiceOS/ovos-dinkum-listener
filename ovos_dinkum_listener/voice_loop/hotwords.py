@@ -61,6 +61,9 @@ class HotwordContainer:
                                               sample_width=sample_width)
 
     def load_hotword_engines(self):
+        """
+        Load hotword objects from configuration
+        """
         LOG.info("creating hotword engines")
         config_core = Configuration()
         default_lang = config_core.get("lang", "en-us")
@@ -68,8 +71,12 @@ class HotwordContainer:
         global_listen = config_core.get("confirm_listening")
         global_sounds = config_core.get("sounds", {})
 
-        main_ww = config_core.get("listener", {}).get("wake_word", "hey_mycroft").replace(" ", "_")
-        wakeupw = config_core.get("listener", {}).get("stand_up_word", "wake_up").replace(" ", "_")
+        main_ww = config_core.get("listener",
+                                  {}).get("wake_word",
+                                          "hey_mycroft").replace(" ", "_")
+        wakeupw = config_core.get("listener",
+                                  {}).get("stand_up_word",
+                                          "wake_up").replace(" ", "_")
 
         for word, data in dict(hot_words).items():
             try:
@@ -106,6 +113,7 @@ class HotwordContainer:
 
                 engine = OVOSWakeWordFactory.create_hotword(word, lang=lang)
                 if engine is not None:
+                    LOG.info(f"Loading hotword: {word} with engine: {engine}")
                     if hasattr(engine, "bind"):
                         engine.bind(self.bus)
                         # not all plugins implement this
@@ -177,14 +185,18 @@ class HotwordContainer:
         # streaming engines will ignore the byte_data
         audio_data = self.audio_buffer.get()
         for ww_name, engine in engines.items():
-            assert isinstance(engine, HotWordEngine)
             try:
+                assert isinstance(engine, HotWordEngine)
                 # non streaming ww engines expect a 3 second cyclic buffer here
                 # streaming engines will ignore audio_data (got it via self.update)
                 if engine.found_wake_word(audio_data):
+                    LOG.debug(f"Detected wake_word: {ww_name}")
                     return ww_name
-            except:
-                pass
+            except AssertionError:
+                LOG.error(f"Expected HotWordEngine, but got: {engine} for "
+                          f"{ww_name}")
+            except Exception as e:
+                LOG.error(e)
         return None
 
     def get_ww(self, ww):

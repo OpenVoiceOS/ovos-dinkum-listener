@@ -75,9 +75,9 @@ class VoiceLoop:
         energy = -audioop.rms(audio_data, sample_width)
         energy_bytes = bytes([energy & 0xFF, (energy >> 8) & 0xFF])
         debiased_energy = audioop.rms(
-            audioop.add(
-                audio_data, energy_bytes * (len(audio_data) // sample_width), sample_width
-            ),
+            audioop.add(audio_data,
+                        energy_bytes * (len(audio_data) // sample_width),
+                        sample_width),
             sample_width,
         )
 
@@ -205,7 +205,8 @@ class DinkumVoiceLoop(VoiceLoop):
                 self._after_cmd(chunk)
 
             if self.chunk_callback is not None:
-                self._chunk_info.energy = self.debiased_energy(chunk, self.mic.sample_width)
+                self._chunk_info.energy = \
+                    self.debiased_energy(chunk, self.mic.sample_width)
                 self.chunk_callback(self._chunk_info)
 
     def reset_state(self):
@@ -215,23 +216,28 @@ class DinkumVoiceLoop(VoiceLoop):
         else:
             self.state = ListeningState.DETECT_WAKEWORD
             self.hotwords.state = HotwordState.LISTEN
+        LOG.debug(f"state={self.state}|hotwords.state={self.hotwords.state}")
 
     def go_to_sleep(self):
         self.state = ListeningState.SLEEPING
+        LOG.info("sleeping")
 
     def wakeup(self):
         self.reset_state()
+        LOG.info("wakeup")
 
     def start_recording(self, filename=None):
         self.recording_filename = filename or str(time.time())
+        LOG.debug(f"Recording to {self.recording_filename}")
         self.state = ListeningState.RECORDING
 
     def stop_recording(self):
         #  finished recording
         if self.recording_audio_callback is not None:
             metadata = {"recording_name": self.recording_filename}
-            metadata = self.recording_audio_callback(self.stt_audio_bytes, metadata) or \
-                       metadata
+            metadata = self.recording_audio_callback(self.stt_audio_bytes,
+                                                     metadata) or metadata
+        LOG.debug("Finished recording")
         self.reset_state()
 
     def _in_recording(self, chunk):
@@ -313,7 +319,7 @@ class DinkumVoiceLoop(VoiceLoop):
 
         ww = self.hotwords.found()
         if ww or self.skip_next_wake:
-
+            LOG.debug(f"Wake word detected={ww}")
             # Callback to handle recorded hotword audio
             if (self.listenword_audio_callback is not None) and (
                     not self.skip_next_wake
@@ -447,9 +453,13 @@ class DinkumVoiceLoop(VoiceLoop):
                 # Reset
                 self.silence_seconds_left = self.silence_seconds
 
-    def _validate_lang(self, lang):
-        """ ensure lang classification from speech is one of the valid langs
-        if not then drop classification, as there are no speakers of that language around this device
+    def _validate_lang(self, lang: str) -> str:
+        """
+        ensure lang classification from speech is one of the valid langs
+        if not then drop classification, as there are no speakers of that
+        language around this device
+        @param lang: BCP-47 language code to evaluate
+        @return: validated language (or default)
         """
         default_lang = Configuration().get("lang", "en-us")
         s = SessionManager.get()
@@ -460,7 +470,8 @@ class DinkumVoiceLoop(VoiceLoop):
                 LOG.info(f"replaced {default_lang} with {lang}")
                 return lang
         else:
-            LOG.warning(f"ignoring classification: {lang} is not in enabled languages: {valid_langs}")
+            LOG.warning(f"ignoring classification: {lang} is not in enabled "
+                        f"languages: {valid_langs}")
 
         return default_lang
 
@@ -501,11 +512,13 @@ class DinkumVoiceLoop(VoiceLoop):
 
         if text:
             LOG.debug(f"transformers metadata: {stt_context}")
+            LOG.info(f"transcribed: {text}")
         else:
             LOG.info("nothing transcribed")
         # Voice command has finished recording
         if self.stt_audio_callback is not None:
-            metadata = self.stt_audio_callback(self.stt_audio_bytes, stt_context)
+            metadata = self.stt_audio_callback(self.stt_audio_bytes,
+                                               stt_context)
 
         self.stt_audio_bytes = bytes()
 

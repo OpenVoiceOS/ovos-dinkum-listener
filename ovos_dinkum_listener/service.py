@@ -351,6 +351,11 @@ class OVOSDinkumVoiceService(Thread):
         }
 
     def _hotword_audio(self, audio_bytes: bytes, ww_context: dict):
+        """
+        Callback method for when a hotword is detected
+        @param audio_bytes: Audio that triggered detection
+        @param ww_context: Context attached to hotword detection
+        """
         payload = ww_context
         context = {'client_name': 'ovos_dinkum_listener',
                    'source': 'audio',  # default native audio source
@@ -364,7 +369,8 @@ class OVOSDinkumVoiceService(Thread):
             if listener["record_wake_words"]:
                 payload["filename"] = self._save_ww(audio_bytes, ww_context)
 
-            upload_disabled = listener.get('wake_word_upload', {}).get('disable')
+            upload_disabled = listener.get('wake_word_upload',
+                                           {}).get('disable')
             if self.config['opt_in'] and not upload_disabled:
                 self._upload_hotword(audio_bytes, ww_context)
 
@@ -376,7 +382,8 @@ class OVOSDinkumVoiceService(Thread):
                     'utterances': [utterance],
                     "lang": stt_lang or Configuration().get("lang", "en-us")
                 }
-                self.bus.emit(Message("recognizer_loop:utterance", payload, context))
+                self.bus.emit(Message("recognizer_loop:utterance", payload,
+                                      context))
                 return payload
 
             # If enabled, play a wave file with a short sound to audibly
@@ -386,6 +393,7 @@ class OVOSDinkumVoiceService(Thread):
             event = ww_context.get("event")
 
             if sound:
+                LOG.debug(f"Handling listen sound: {sound}")
                 try:
                     sound = resolve_resource_file(sound)
                     if sound:
@@ -395,7 +403,8 @@ class OVOSDinkumVoiceService(Thread):
 
             if listen:
                 msg_type = "recognizer_loop:wakeword"
-                payload["utterance"] = ww_context["key_phrase"].replace("_", " ").replace("-", " ")
+                payload["utterance"] = \
+                    ww_context["key_phrase"].replace("_", " ").replace("-", " ")
             elif event:
                 msg_type = event
             else:
@@ -407,6 +416,7 @@ class OVOSDinkumVoiceService(Thread):
                     wordtype = "hotword"
                 msg_type = f"recognizer_loop:{wordtype}"
 
+            LOG.debug(f"Emitting hotword event: {msg_type}")
             # emit ww event
             self.bus.emit(Message(msg_type, payload, context))
 
