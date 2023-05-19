@@ -14,38 +14,14 @@
 #
 import audioop
 import time
+import alsaaudio
+
 from dataclasses import dataclass, field
 from queue import Queue
 from threading import Thread, Lock
 from typing import Optional
-
-import alsaaudio
 from ovos_utils.log import LOG
-
-
-@dataclass
-class Microphone:
-    sample_rate: int
-    sample_width: int
-    sample_channels: int
-    chunk_size: int
-
-    @property
-    def frames_per_chunk(self) -> int:
-        return self.chunk_size // (self.sample_width * self.sample_channels)
-
-    @property
-    def seconds_per_chunk(self) -> float:
-        return self.frames_per_chunk / self.sample_rate
-
-    def start(self):
-        raise NotImplementedError()
-
-    def read_chunk(self) -> Optional[bytes]:
-        raise NotImplementedError()
-
-    def stop(self):
-        raise NotImplementedError()
+from ovos_plugin_manager.templates.microphone import Microphone
 
 
 @dataclass
