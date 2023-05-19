@@ -23,6 +23,7 @@ from ovos_bus_client import Message, MessageBusClient
 from ovos_bus_client.session import SessionManager
 from ovos_config import Configuration
 from ovos_config.locations import get_xdg_data_save_path
+from ovos_plugin_manager.microphone import OVOSMicrophoneFactory
 from ovos_plugin_manager.stt import get_stt_lang_configs, get_stt_supported_langs, get_stt_module_configs
 from ovos_plugin_manager.utils.tts_cache import hash_sentence
 from ovos_plugin_manager.vad import OVOSVADFactory
@@ -35,7 +36,7 @@ from ovos_utils.sound import play_audio
 
 from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt
 from ovos_dinkum_listener.transformers import AudioTransformersService
-from ovos_dinkum_listener.voice_loop import AlsaMicrophone, DinkumVoiceLoop, ListeningMode, ListeningState
+from ovos_dinkum_listener.voice_loop import DinkumVoiceLoop, ListeningMode, ListeningState
 from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer
 
 # Seconds between systemd watchdog updates
@@ -135,18 +136,8 @@ class OVOSDinkumVoiceService(Thread):
         self._before_start()  # connect to bus
         listener = self.config["listener"]
 
-        self.mic = mic or AlsaMicrophone(
-            device=listener.get("device_name") or "default",
-            sample_rate=listener.get("sample_rate", 1600),
-            sample_width=listener.get("sample_width", 2),
-            sample_channels=listener.get("sample_channels", 1),
-            chunk_size=listener.get("chunk_size", 4096),
-            period_size=listener.get("period_size", 1024),
-            multiplier=listener.get("multiplier", 1),
-            timeout=listener.get("audio_timeout", 5),
-            audio_retries=listener.get("audio_retries", 3),
-            audio_retry_delay=listener.get("audio_retry_delay", 1),
-        )
+        self.mic = mic or OVOSMicrophoneFactory.create(self.config)
+
         self.hotwords = HotwordContainer(self.bus)
         self.vad = OVOSVADFactory.create()
         self.stt = load_stt_module()

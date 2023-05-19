@@ -11,6 +11,5 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-from ovos_dinkum_listener.voice_loop.microphone import AlsaMicrophone
+
 from ovos_dinkum_listener.voice_loop.voice_loop import DinkumVoiceLoop, ListeningMode, ListeningState
