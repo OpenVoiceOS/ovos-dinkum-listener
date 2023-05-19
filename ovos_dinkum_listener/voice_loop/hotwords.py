@@ -282,7 +282,9 @@ class HotwordContainer:
         self.audio_buffer.clear()
         for engine in self.plugins:
             try:
-                engine.reset()
+                # TODO: Remove check when default method is added to base class
+                if hasattr(engine, 'reset'):
+                    engine.reset()
             except Exception as e:
                 LOG.error(e)
 
