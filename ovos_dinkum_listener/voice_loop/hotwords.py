@@ -216,7 +216,8 @@ class HotwordContainer:
         # streaming engines will ignore the byte_data
         audio_data = self.audio_buffer.get()
         for ww_name, engine in engines.items():
-            LOG.debug(f"Checking for {ww_name} in {len(audio_data)} chunks")
+            # Checking for hey_neon in 96000 chunks
+            # LOG.debug(f"Checking for {ww_name} in {len(audio_data)} chunks")
             try:
                 assert isinstance(engine, HotWordEngine)
                 # non-streaming ww engines expect a 3-second cyclic buffer here
