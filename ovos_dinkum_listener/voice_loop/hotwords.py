@@ -198,6 +198,7 @@ class HotwordContainer:
         # streaming engines will ignore the byte_data
         audio_data = self.audio_buffer.get()
         for ww_name, engine in engines.items():
+            LOG.debug(f"Checking for {ww_name}")
             try:
                 assert isinstance(engine, HotWordEngine)
                 # non-streaming ww engines expect a 3-second cyclic buffer here
@@ -235,16 +236,16 @@ class HotwordContainer:
         @param chunk: bytes of audio to feed to hotword engines
         """
         if self.state == HotwordState.LISTEN:
-            LOG.debug(f"Checking listen_words")
+            # LOG.debug(f"Update listen_words")
             engines = self.listen_words.values()
         elif self.state == HotwordState.WAKEUP:
-            LOG.debug(f"Checking wakeup_words")
+            # LOG.debug(f"Update wakeup_words")
             engines = self.wakeup_words.values()
         elif self.state == HotwordState.RECORDING:
-            LOG.debug(f"Checking stop_words")
+            # LOG.debug(f"Update stop_words")
             engines = self.stop_words.values()
         else:
-            LOG.debug(f"Checking hot_words")
+            # LOG.debug(f"Update hot_words")
             engines = self.hot_words.values()
 
         for engine in engines:
