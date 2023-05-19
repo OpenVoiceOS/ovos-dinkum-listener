@@ -112,7 +112,8 @@ class OVOSDinkumVoiceService(Thread):
 
     def __init__(self, on_ready=on_ready, on_error=on_error,
                  on_stopping=on_stopping, on_alive=on_alive,
-                 on_started=on_started, watchdog=lambda: None, mic=None):
+                 on_started=on_started, watchdog=lambda: None, mic=None,
+                 bus=None):
         """
         watchdog: (callable) function to call periodically indicating
           operational status.
@@ -125,6 +126,7 @@ class OVOSDinkumVoiceService(Thread):
                                       on_stopping=on_stopping,
                                       on_alive=on_alive,
                                       on_started=on_started)
+        self.bus = bus
         self.service_id = "voice"
         self.status = ProcessStatus(self.service_id, callback_map=callbacks)
         self._watchdog = watchdog
@@ -262,7 +264,7 @@ class OVOSDinkumVoiceService(Thread):
 
     def _connect_to_bus(self):
         """Connects to the websocket message bus"""
-        self.bus = MessageBusClient()
+        self.bus = self.bus or MessageBusClient()
         self.bus.run_in_thread()
         self.bus.connected_event.wait()
         LOG.info("Connected to Mycroft Core message bus")
