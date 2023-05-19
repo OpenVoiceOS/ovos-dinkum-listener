@@ -16,7 +16,7 @@ import audioop
 import time
 from dataclasses import dataclass, field
 from queue import Queue
-from threading import Thread
+from threading import Thread, Lock
 from typing import Optional
 
 import alsaaudio
@@ -59,27 +59,42 @@ class AlsaMicrophone(Microphone):
     _thread: Optional[Thread] = None
     _queue: "Queue[Optional[bytes]]" = field(default_factory=Queue)
     _is_running: bool = False
+    _lock = Lock()
 
     def start(self):
-        assert self._thread is None, "Already started"
-        self._is_running = True
-        self._thread = Thread(target=self._run, daemon=True)
-        self._thread.start()
+        """
+        Start processing audio and adding to _queue
+        """
+        with self._lock:
+            assert self._thread is None, "Already started"
+            self._is_running = True
+            self._thread = Thread(target=self._run, daemon=True)
+            self._thread.start()
 
     def read_chunk(self) -> Optional[bytes]:
+        """
+        Get the next audio chunk from the queue
+        """
         assert self._is_running, "Not running"
         return self._queue.get(timeout=self.timeout)
 
     def stop(self):
-        assert self._thread is not None, "Not started"
-        self._is_running = False
-        while not self._queue.empty():
-            self._queue.get()
-        self._queue.put_nowait(None)
-        self._thread.join()
-        self._thread = None
+        """
+        Stop processing audio and discard any unhandled chunks
+        """
+        with self._lock:
+            assert self._thread is not None, "Not started"
+            self._is_running = False
+            while not self._queue.empty():
+                self._queue.get()
+            self._queue.put_nowait(None)
+            self._thread.join()
+            self._thread = None
 
     def _run(self):
+        """
+        Start recording audio
+        """
         try:
             assert self.sample_width in {
                 2,
@@ -88,13 +103,10 @@ class AlsaMicrophone(Microphone):
 
             for _ in range(self.audio_retries + 1):
                 try:
-                    LOG.debug(
-                        "Opening microphone (device=%s, rate=%s, width=%s, channels=%s)",
-                        self.device,
-                        self.sample_rate,
-                        self.sample_width,
-                        self.sample_channels,
-                    )
+                    LOG.debug(f"Opening microphone (device={self.device}, "
+                              f"rate={self.sample_rate}, "
+                              f"width={self.sample_width}, "
+                              f"channels={self.sample_channels})")
 
                     mic = alsaaudio.PCM(
                         type=alsaaudio.PCM_CAPTURE,
@@ -113,7 +125,8 @@ class AlsaMicrophone(Microphone):
                         while self._is_running:
                             mic_chunk_length, mic_chunk = mic.read()
                             if mic_chunk_length <= 0:
-                                LOG.warning("Bad chunk length: %s", mic_chunk_length)
+                                LOG.warning(f"Bad chunk length: "
+                                            f"{mic_chunk_length}")
                                 continue
 
                             # Increase loudness of audio
@@ -127,7 +140,7 @@ class AlsaMicrophone(Microphone):
                                 self._queue.put_nowait(full_chunk[: self.chunk_size])
                                 full_chunk = full_chunk[self.chunk_size:]
 
-                            time.sleep(0.0)
+                            time.sleep(0.0)  # TODO: why?
                     finally:
                         mic.close()
                 except Exception:

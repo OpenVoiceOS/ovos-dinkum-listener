@@ -16,29 +16,47 @@ class CyclicAudioBuffer:
         self._buffer = initial_data[-self.size:]
 
     def clear(self):
+        """
+        Set the buffer to empty data
+        """
         self._buffer = self.get_silence(self.size)
 
     @staticmethod
-    def duration_to_bytes(duration, sample_rate=16000, sample_width=2):
+    def duration_to_bytes(duration: float, sample_rate: int = 16000,
+                          sample_width: int = 2) -> int:
+        """
+        Convert duration in seconds to a number of bytes
+        @param duration: duration in seconds
+        @param sample_rate: sample rate of expected audio
+        @param sample_width: sample width of expected audio
+        @return: number of bytes
+        """
         return int(duration * sample_rate) * sample_width
 
     @staticmethod
-    def get_silence(num_bytes):
+    def get_silence(num_bytes: int) -> bytes:
+        """
+        Return null bytes
+        @param num_bytes: number of bytes to return
+        @return: requested number of null bytes
+        """
         return b'\0' * num_bytes
 
-    def append(self, data):
-        """Add new data to the buffer, and slide out data if the buffer is full
-        Arguments:
-            data (bytes): binary data to append to the buffer. If buffer size
-                          is exceeded the oldest data will be dropped.
+    def append(self, data: bytes):
+        """
+        Add new data to the buffer, and slide out data if the buffer is full
+        @param data: binary data to append to the buffer.
+            If buffer size is exceeded, the oldest data will be dropped.
         """
         buff = self._buffer + data
         if len(buff) > self.size:
             buff = buff[-self.size:]
         self._buffer = buff
 
-    def get(self):
-        """Get the binary data."""
+    def get(self) -> bytes:
+        """
+        Get the binary audio data from the buffer
+        """
         return self._buffer
 
 
@@ -198,7 +216,7 @@ class HotwordContainer:
         # streaming engines will ignore the byte_data
         audio_data = self.audio_buffer.get()
         for ww_name, engine in engines.items():
-            LOG.debug(f"Checking for {ww_name}")
+            LOG.debug(f"Checking for {ww_name} in {len(audio_data)} chunks")
             try:
                 assert isinstance(engine, HotWordEngine)
                 # non-streaming ww engines expect a 3-second cyclic buffer here

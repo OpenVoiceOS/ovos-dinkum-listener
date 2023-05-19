@@ -2,11 +2,13 @@
 
 Dinkum Listener made standalone, the voice loop is now a much more responsive state machine
 
-the usual configuration files are loaded, some new params are exposed under the `"listener"` section but not yet documented (check the code...)
+the usual configuration files are loaded, some new params are exposed under the 
+`"listener"` section but not yet documented (check the code...)
 
 ## Install
 
-using [ovos-vad-plugin-silero](https://github.com/OpenVoiceOS/ovos-vad-plugin-silero) is strongly recommended instead of the default webrtcvad plugin
+using [ovos-vad-plugin-silero](https://github.com/OpenVoiceOS/ovos-vad-plugin-silero) 
+is strongly recommended instead of the default webrtcvad plugin
 
 ## mycroft-dinkum vs ovos-dinkum-listener
 
