@@ -254,6 +254,7 @@ class HotwordContainer:
         Update appropriate engines based on self.state
         @param chunk: bytes of audio to feed to hotword engines
         """
+        self.audio_buffer.append(chunk)
         if self.state == HotwordState.LISTEN:
             # LOG.debug(f"Update listen_words")
             engines = self.listen_words.values()
