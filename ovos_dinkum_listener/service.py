@@ -138,7 +138,10 @@ class OVOSDinkumVoiceService(Thread):
         self._before_start()  # connect to bus
         listener = self.config["listener"]
 
-        self.mic = mic or OVOSMicrophoneFactory.create(self.config)
+        # Initialize with default (bundled) plugin
+        microphone_config = self.config.get("microphone", {})
+        microphone_config.setdefault('module', 'ovos-microphone-plugin-alsa')
+        self.mic = mic or OVOSMicrophoneFactory.create(microphone_config)
 
         self.hotwords = HotwordContainer(self.bus)
         self.vad = OVOSVADFactory.create()
