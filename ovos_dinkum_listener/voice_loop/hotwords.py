@@ -188,7 +188,7 @@ class HotwordContainer:
             engines = self.hot_words
 
         if not engines:
-            raise RuntimeError("No hotwords loaded!")
+            LOG.debug("No hotwords loaded")
 
         # streaming engines will ignore the byte_data
         audio_data = self.audio_buffer.get()
