@@ -178,17 +178,22 @@ class HotwordContainer:
         Check if a hotword is found in a relevant engine, based on self.state
         @return: string detected hotword, else None
         """
+        # Check for which detectors we want; if none are active, log something
+        # because it means there's no ww that "exits" the current state
         if self.state == HotwordState.LISTEN:
             engines = self.listen_words
+            if not engines:
+                LOG.debug("No listen_words loaded")
         elif self.state == HotwordState.WAKEUP:
             engines = self.wakeup_words
+            if not engines:
+                LOG.debug("No wakeup_words loaded")
         elif self.state == HotwordState.RECORDING:
             engines = self.stop_words
+            if not engines:
+                LOG.debug("No stop_words loaded")
         else:
             engines = self.hot_words
-
-        if not engines:
-            LOG.debug("No hotwords loaded")
 
         # streaming engines will ignore the byte_data
         audio_data = self.audio_buffer.get()
