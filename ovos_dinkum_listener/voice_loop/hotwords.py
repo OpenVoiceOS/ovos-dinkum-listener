@@ -89,7 +89,7 @@ class HotwordContainer:
 
                 sound = data.get("sound")
                 utterance = data.get("utterance")
-                listen = data.get("listen", False)
+                listen = data.get("listen", False) or word == main_ww
                 wakeup = data.get("wakeup", False)
                 stopword = data.get("stopword", False)
                 trigger = data.get("trigger", False)
