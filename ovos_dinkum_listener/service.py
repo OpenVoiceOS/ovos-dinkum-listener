@@ -265,8 +265,9 @@ class OVOSDinkumVoiceService(Thread):
     def _connect_to_bus(self):
         """Connects to the websocket message bus"""
         self.bus = self.bus or MessageBusClient()
-        self.bus.run_in_thread()
-        self.bus.connected_event.wait()
+        if not self.bus.started_running:
+            self.bus.run_in_thread()
+            self.bus.connected_event.wait()
         LOG.info("Connected to Mycroft Core message bus")
 
     def _report_service_state(self, message):

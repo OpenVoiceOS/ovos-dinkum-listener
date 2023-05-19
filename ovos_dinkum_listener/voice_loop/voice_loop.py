@@ -24,7 +24,7 @@ from ovos_utils.log import LOG
 from ovos_bus_client.session import SessionManager
 from ovos_dinkum_listener.transformers import AudioTransformersService
 from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer, HotwordState
-from ovos_dinkum_listener.voice_loop.microphone import Microphone
+from ovos_plugin_manager.templates.microphone import Microphone
 
 
 class ListeningState(str, Enum):
