@@ -189,9 +189,12 @@ class DinkumVoiceLoop(VoiceLoop):
                 if self.listen_mode == ListeningMode.CONTINUOUS:
                     LOG.info(f"Continuous listening mode, updating state")
                     self.state = ListeningState.WAITING_CMD
-                elif not self._detect_ww(chunk):  # check hotwords
-                    if not self._detect_hot(chunk):
-                        self.transformers.feed_audio(chunk)
+                elif self._detect_ww(chunk):
+                    LOG.info("Wakeword detected")
+                elif self._detect_hot(chunk):
+                    LOG.info("Hotword detected")
+                else:
+                    self.transformers.feed_audio(chunk)
 
             if self.state == ListeningState.WAITING_CMD:
                 self._wait_cmd(chunk)
@@ -368,7 +371,7 @@ class DinkumVoiceLoop(VoiceLoop):
 
         return False
 
-    def _wait_cmd(self, chunk):
+    def _wait_cmd(self, chunk: bytes):
         # Recording voice command, but user has not spoken yet
         self._chunk_info.is_speech = not self.vad.is_silence(chunk)
         hot = False

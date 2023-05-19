@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Optional
 
 from ovos_config import Configuration
 from ovos_plugin_manager.wakewords import OVOSWakeWordFactory, HotWordEngine
@@ -172,7 +173,11 @@ class HotwordContainer:
                 not v.get("wakeup") and
                 not v.get("listen")}
 
-    def found(self):
+    def found(self) -> Optional[str]:
+        """
+        Check if a hotword is found in a relevant engine, based on self.state
+        @return: string detected hotword, else None
+        """
         if self.state == HotwordState.LISTEN:
             engines = self.listen_words
         elif self.state == HotwordState.WAKEUP:
@@ -182,13 +187,17 @@ class HotwordContainer:
         else:
             engines = self.hot_words
 
+        if not engines:
+            raise RuntimeError("No hotwords loaded!")
+
         # streaming engines will ignore the byte_data
         audio_data = self.audio_buffer.get()
         for ww_name, engine in engines.items():
             try:
                 assert isinstance(engine, HotWordEngine)
-                # non streaming ww engines expect a 3 second cyclic buffer here
-                # streaming engines will ignore audio_data (got it via self.update)
+                # non-streaming ww engines expect a 3-second cyclic buffer here
+                # streaming engines will ignore audio_data
+                # (got it via self.update)
                 if engine.found_wake_word(audio_data):
                     LOG.debug(f"Detected wake_word: {ww_name}")
                     return ww_name
@@ -199,7 +208,14 @@ class HotwordContainer:
                 LOG.error(e)
         return None
 
-    def get_ww(self, ww):
+    def get_ww(self, ww: str) -> dict:
+        """
+        Get information about the requested wake word
+        @param ww: string wake word to get information for
+        @return: dict wake word information
+        """
+        if ww not in self._plugins:
+            raise ValueError(f"Requested ww not defined: {ww}")
         meta = dict(self._plugins.get(ww))
         plug = meta["engine"]
         assert isinstance(plug, HotWordEngine)
@@ -208,37 +224,50 @@ class HotwordContainer:
         meta["engine"] = plug.__class__.__name__
         return meta
 
-    def update(self, chunk):
-
+    def update(self, chunk: bytes):
+        """
+        Update appropriate engines based on self.state
+        @param chunk: bytes of audio to feed to hotword engines
+        """
         if self.state == HotwordState.LISTEN:
+            LOG.debug(f"Checking listen_words")
             engines = self.listen_words.values()
         elif self.state == HotwordState.WAKEUP:
+            LOG.debug(f"Checking wakeup_words")
             engines = self.wakeup_words.values()
         elif self.state == HotwordState.RECORDING:
+            LOG.debug(f"Checking stop_words")
             engines = self.stop_words.values()
         else:
+            LOG.debug(f"Checking hot_words")
             engines = self.hot_words.values()
 
         for engine in engines:
             try:
                 # old style engines will ignore the update
                 engine.update(chunk)
-            except:
-                pass
+            except Exception as e:
+                LOG.error(e)
 
     def reset(self):
+        """
+        Clear the audio_buffer and reset all hotword engines
+        """
         self.audio_buffer.clear()
         for engine in self.plugins:
             try:
                 engine.reset()
-            except:
-                pass
+            except Exception as e:
+                LOG.error(e)
 
     def shutdown(self):
+        """
+        Shutdown all engines, remove references to plugins
+        """
         for engine in self.plugins:
             try:
                 engine.shutdown()
-            except:
-                pass
+            except Exception as e:
+                LOG.error(e)
         for ww in self.ww_names:
             self._plugins.pop(ww)
