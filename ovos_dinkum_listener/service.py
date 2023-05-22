@@ -187,13 +187,15 @@ class OVOSDinkumVoiceService(Thread):
         """Service entry point"""
         try:
             self._state = ServiceState.NOT_STARTED
-            self._before_start()
+            self._before_start()  # TODO: Is this ever necessary?
             self._start()
             self._state = ServiceState.STARTED
             self._after_start()
+            LOG.debug("Service started")
 
             try:
                 self.status.set_ready()
+                LOG.info("Service ready")
                 self._state = ServiceState.RUNNING
                 self.voice_loop.run()
             except KeyboardInterrupt:
@@ -214,7 +216,10 @@ class OVOSDinkumVoiceService(Thread):
         self._connect_to_bus()
 
     def _start(self):
-
+        """
+        Start microphone and listener loop
+        @return:
+        """
         self.mic.start()
         self.hotwords.load_hotword_engines()
         self.voice_loop.start()
@@ -241,6 +246,8 @@ class OVOSDinkumVoiceService(Thread):
         self.bus.on("opm.stt.query", self._handle_opm_stt_query)
         self.bus.on("opm.ww.query", self._handle_opm_ww_query)
         self.bus.on("opm.vad.query", self._handle_opm_vad_query)
+
+        LOG.debug("Messagebus events registered")
 
     def _after_start(self):
         """Initialization logic called after start()"""
@@ -270,6 +277,7 @@ class OVOSDinkumVoiceService(Thread):
         """Connects to the websocket message bus"""
         self.bus = self.bus or MessageBusClient()
         if not self.bus.started_running:
+            LOG.debug("Starting bus connection")
             self.bus.run_in_thread()
             self.bus.connected_event.wait()
         LOG.info("Connected to Mycroft Core message bus")

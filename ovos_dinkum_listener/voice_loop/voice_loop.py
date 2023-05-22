@@ -128,6 +128,10 @@ class DinkumVoiceLoop(VoiceLoop):
     _chunk_info: ChunkInfo = field(default_factory=ChunkInfo)
 
     def start(self):
+        """
+        Start the Voice Loop; sets the listening mode based on configuration and
+        prepares the loop to be run.
+        """
         self._is_running = True
         self.state = ListeningState.DETECT_WAKEWORD
         self.last_ww = -1
