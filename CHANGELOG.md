@@ -2,7 +2,15 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a16...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a17...HEAD)
+
+**Implemented enhancements:**
+
+- feat/microphone plugins + update logging and documentation [\#20](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/20) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [V0.0.2a17](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a17) (2023-05-07)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a16...V0.0.2a17)
 
 **Implemented enhancements:**
 
