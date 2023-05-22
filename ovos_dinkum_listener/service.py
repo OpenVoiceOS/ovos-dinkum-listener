@@ -141,10 +141,7 @@ class OVOSDinkumVoiceService(Thread):
         # Initialize with default (bundled) plugin
         microphone_config = self.config.get("microphone", {})
         microphone_config.setdefault('module', 'ovos-microphone-plugin-alsa')
-        microphone_config.setdefault('ovos-microphone-plugin-alsa',
-                                     {"sample_width": 2,
-                                      "sample_channels": 1,
-                                      "chunk_size": 4096})
+
         self.mic = mic or OVOSMicrophoneFactory.create(microphone_config)
 
         self.hotwords = HotwordContainer(self.bus)
