@@ -128,7 +128,8 @@ class OVOSDinkumVoiceService(Thread):
                                       on_started=on_started)
         self.bus = bus
         self.service_id = "voice"
-        self.status = ProcessStatus(self.service_id, callback_map=callbacks)
+        self.status = ProcessStatus(self.service_id, self.bus,
+                                    callback_map=callbacks)
         self._watchdog = watchdog
 
         self.status.set_alive()
@@ -280,6 +281,8 @@ class OVOSDinkumVoiceService(Thread):
             LOG.debug("Starting bus connection")
             self.bus.run_in_thread()
             self.bus.connected_event.wait()
+        if not self.status.bus:
+            self.status.bind(self.bus)
         LOG.info("Connected to Mycroft Core message bus")
 
     def _report_service_state(self, message):
