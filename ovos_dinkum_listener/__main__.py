@@ -18,15 +18,7 @@ from ovos_dinkum_listener.service import OVOSDinkumVoiceService
 
 def main():
     """Service entry point"""
-    listener = Configuration().get("listener", {})
-    mic = None
-    # TODO - argparse to allow pyaudio
-    #from ovos_dinkum_listener.voice_loop.pyaudio_microphone import PyAudioMicrophone
-    #mic = PyAudioMicrophone(sample_rate=listener.get("sample_rate", 1600),
-    #                        sample_width=listener.get("sample_width", 2),
-    #                        sample_channels=listener.get("sample_channels", 1),
-    #                        chunk_size=listener.get("chunk_size", 4096))
-    service = OVOSDinkumVoiceService(mic=mic)
+    service = OVOSDinkumVoiceService()
     service.start()
     wait_for_exit_signal()
     service.stop()

@@ -23,6 +23,7 @@ from ovos_bus_client import Message, MessageBusClient
 from ovos_bus_client.session import SessionManager
 from ovos_config import Configuration
 from ovos_config.locations import get_xdg_data_save_path
+from ovos_plugin_manager.microphone import OVOSMicrophoneFactory
 from ovos_plugin_manager.stt import get_stt_lang_configs, get_stt_supported_langs, get_stt_module_configs
 from ovos_plugin_manager.utils.tts_cache import hash_sentence
 from ovos_plugin_manager.vad import OVOSVADFactory
@@ -35,7 +36,7 @@ from ovos_utils.sound import play_audio
 
 from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt
 from ovos_dinkum_listener.transformers import AudioTransformersService
-from ovos_dinkum_listener.voice_loop import AlsaMicrophone, DinkumVoiceLoop, ListeningMode, ListeningState
+from ovos_dinkum_listener.voice_loop import DinkumVoiceLoop, ListeningMode, ListeningState
 from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer
 
 # Seconds between systemd watchdog updates
@@ -111,7 +112,8 @@ class OVOSDinkumVoiceService(Thread):
 
     def __init__(self, on_ready=on_ready, on_error=on_error,
                  on_stopping=on_stopping, on_alive=on_alive,
-                 on_started=on_started, watchdog=lambda: None, mic=None):
+                 on_started=on_started, watchdog=lambda: None, mic=None,
+                 bus=None):
         """
         watchdog: (callable) function to call periodically indicating
           operational status.
@@ -124,8 +126,10 @@ class OVOSDinkumVoiceService(Thread):
                                       on_stopping=on_stopping,
                                       on_alive=on_alive,
                                       on_started=on_started)
+        self.bus = bus
         self.service_id = "voice"
-        self.status = ProcessStatus(self.service_id, callback_map=callbacks)
+        self.status = ProcessStatus(self.service_id, self.bus,
+                                    callback_map=callbacks)
         self._watchdog = watchdog
 
         self.status.set_alive()
@@ -135,18 +139,12 @@ class OVOSDinkumVoiceService(Thread):
         self._before_start()  # connect to bus
         listener = self.config["listener"]
 
-        self.mic = mic or AlsaMicrophone(
-            device=listener.get("device_name") or "default",
-            sample_rate=listener.get("sample_rate", 1600),
-            sample_width=listener.get("sample_width", 2),
-            sample_channels=listener.get("sample_channels", 1),
-            chunk_size=listener.get("chunk_size", 4096),
-            period_size=listener.get("period_size", 1024),
-            multiplier=listener.get("multiplier", 1),
-            timeout=listener.get("audio_timeout", 5),
-            audio_retries=listener.get("audio_retries", 3),
-            audio_retry_delay=listener.get("audio_retry_delay", 1),
-        )
+        # Initialize with default (bundled) plugin
+        microphone_config = self.config.get("microphone", {})
+        microphone_config.setdefault('module', 'ovos-microphone-plugin-alsa')
+
+        self.mic = mic or OVOSMicrophoneFactory.create(microphone_config)
+
         self.hotwords = HotwordContainer(self.bus)
         self.vad = OVOSVADFactory.create()
         self.stt = load_stt_module()
@@ -190,13 +188,15 @@ class OVOSDinkumVoiceService(Thread):
         """Service entry point"""
         try:
             self._state = ServiceState.NOT_STARTED
-            self._before_start()
+            self._before_start()  # TODO: Is this ever necessary?
             self._start()
             self._state = ServiceState.STARTED
             self._after_start()
+            LOG.debug("Service started")
 
             try:
                 self.status.set_ready()
+                LOG.info("Service ready")
                 self._state = ServiceState.RUNNING
                 self.voice_loop.run()
             except KeyboardInterrupt:
@@ -217,7 +217,10 @@ class OVOSDinkumVoiceService(Thread):
         self._connect_to_bus()
 
     def _start(self):
-
+        """
+        Start microphone and listener loop
+        @return:
+        """
         self.mic.start()
         self.hotwords.load_hotword_engines()
         self.voice_loop.start()
@@ -245,6 +248,8 @@ class OVOSDinkumVoiceService(Thread):
         self.bus.on("opm.ww.query", self._handle_opm_ww_query)
         self.bus.on("opm.vad.query", self._handle_opm_vad_query)
 
+        LOG.debug("Messagebus events registered")
+
     def _after_start(self):
         """Initialization logic called after start()"""
         Thread(target=self._pet_the_dog, daemon=True).start()
@@ -271,9 +276,13 @@ class OVOSDinkumVoiceService(Thread):
 
     def _connect_to_bus(self):
         """Connects to the websocket message bus"""
-        self.bus = MessageBusClient()
-        self.bus.run_in_thread()
-        self.bus.connected_event.wait()
+        self.bus = self.bus or MessageBusClient()
+        if not self.bus.started_running:
+            LOG.debug("Starting bus connection")
+            self.bus.run_in_thread()
+            self.bus.connected_event.wait()
+        if not self.status.bus:
+            self.status.bind(self.bus)
         LOG.info("Connected to Mycroft Core message bus")
 
     def _report_service_state(self, message):
@@ -351,6 +360,11 @@ class OVOSDinkumVoiceService(Thread):
         }
 
     def _hotword_audio(self, audio_bytes: bytes, ww_context: dict):
+        """
+        Callback method for when a hotword is detected
+        @param audio_bytes: Audio that triggered detection
+        @param ww_context: Context attached to hotword detection
+        """
         payload = ww_context
         context = {'client_name': 'ovos_dinkum_listener',
                    'source': 'audio',  # default native audio source
@@ -364,7 +378,8 @@ class OVOSDinkumVoiceService(Thread):
             if listener["record_wake_words"]:
                 payload["filename"] = self._save_ww(audio_bytes, ww_context)
 
-            upload_disabled = listener.get('wake_word_upload', {}).get('disable')
+            upload_disabled = listener.get('wake_word_upload',
+                                           {}).get('disable')
             if self.config['opt_in'] and not upload_disabled:
                 self._upload_hotword(audio_bytes, ww_context)
 
@@ -376,7 +391,8 @@ class OVOSDinkumVoiceService(Thread):
                     'utterances': [utterance],
                     "lang": stt_lang or Configuration().get("lang", "en-us")
                 }
-                self.bus.emit(Message("recognizer_loop:utterance", payload, context))
+                self.bus.emit(Message("recognizer_loop:utterance", payload,
+                                      context))
                 return payload
 
             # If enabled, play a wave file with a short sound to audibly
@@ -386,6 +402,7 @@ class OVOSDinkumVoiceService(Thread):
             event = ww_context.get("event")
 
             if sound:
+                LOG.debug(f"Handling listen sound: {sound}")
                 try:
                     sound = resolve_resource_file(sound)
                     if sound:
@@ -395,7 +412,8 @@ class OVOSDinkumVoiceService(Thread):
 
             if listen:
                 msg_type = "recognizer_loop:wakeword"
-                payload["utterance"] = ww_context["key_phrase"].replace("_", " ").replace("-", " ")
+                payload["utterance"] = \
+                    ww_context["key_phrase"].replace("_", " ").replace("-", " ")
             elif event:
                 msg_type = event
             else:
@@ -407,6 +425,7 @@ class OVOSDinkumVoiceService(Thread):
                     wordtype = "hotword"
                 msg_type = f"recognizer_loop:{wordtype}"
 
+            LOG.debug(f"Emitting hotword event: {msg_type}")
             # emit ww event
             self.bus.emit(Message(msg_type, payload, context))
 

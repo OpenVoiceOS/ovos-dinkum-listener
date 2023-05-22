@@ -24,7 +24,7 @@ from ovos_utils.log import LOG
 from ovos_bus_client.session import SessionManager
 from ovos_dinkum_listener.transformers import AudioTransformersService
 from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer, HotwordState
-from ovos_dinkum_listener.voice_loop.microphone import Microphone
+from ovos_plugin_manager.templates.microphone import Microphone
 
 
 class ListeningState(str, Enum):
@@ -75,9 +75,9 @@ class VoiceLoop:
         energy = -audioop.rms(audio_data, sample_width)
         energy_bytes = bytes([energy & 0xFF, (energy >> 8) & 0xFF])
         debiased_energy = audioop.rms(
-            audioop.add(
-                audio_data, energy_bytes * (len(audio_data) // sample_width), sample_width
-            ),
+            audioop.add(audio_data,
+                        energy_bytes * (len(audio_data) // sample_width),
+                        sample_width),
             sample_width,
         )
 
@@ -128,6 +128,10 @@ class DinkumVoiceLoop(VoiceLoop):
     _chunk_info: ChunkInfo = field(default_factory=ChunkInfo)
 
     def start(self):
+        """
+        Start the Voice Loop; sets the listening mode based on configuration and
+        prepares the loop to be run.
+        """
         self._is_running = True
         self.state = ListeningState.DETECT_WAKEWORD
         self.last_ww = -1
@@ -142,6 +146,9 @@ class DinkumVoiceLoop(VoiceLoop):
         LOG.info(f"Listening mode: {self.listen_mode}")
 
     def run(self):
+        """
+        Run the VoiceLoop so long as `self._is_running` is True
+        """
         # Voice command state
         self.speech_seconds_left = self.speech_seconds
         self.silence_seconds_left = self.silence_seconds
@@ -160,7 +167,10 @@ class DinkumVoiceLoop(VoiceLoop):
         else:
             self.stt_chunks: Deque[bytes] = deque(maxlen=n)
 
+        LOG.info(f"Starting loop in mode: {self.listen_mode}")
+
         while self._is_running:
+            # If no audio is provided, raise an exception and stop the loop
             chunk = self.mic.read_chunk()
             assert chunk is not None, "No audio from microphone"
 
@@ -181,10 +191,14 @@ class DinkumVoiceLoop(VoiceLoop):
 
             if self.state == ListeningState.DETECT_WAKEWORD:
                 if self.listen_mode == ListeningMode.CONTINUOUS:
+                    LOG.info(f"Continuous listening mode, updating state")
                     self.state = ListeningState.WAITING_CMD
-                elif not self._detect_ww(chunk):  # check hotwords
-                    if not self._detect_hot(chunk):
-                        self.transformers.feed_audio(chunk)
+                elif self._detect_ww(chunk):
+                    LOG.info("Wakeword detected")
+                elif self._detect_hot(chunk):
+                    LOG.info("Hotword detected")
+                else:
+                    self.transformers.feed_audio(chunk)
 
             if self.state == ListeningState.WAITING_CMD:
                 self._wait_cmd(chunk)
@@ -198,15 +212,20 @@ class DinkumVoiceLoop(VoiceLoop):
                 self._detect_wakeup(chunk)
 
             elif self.state == ListeningState.BEFORE_COMMAND:
+                LOG.debug("waiting for speech")
                 self._before_cmd(chunk)
             elif self.state == ListeningState.IN_COMMAND:
+                LOG.debug("recording speech")
                 self._in_cmd(chunk)
             elif self.state == ListeningState.AFTER_COMMAND:
+                LOG.info("speech finished")
                 self._after_cmd(chunk)
 
             if self.chunk_callback is not None:
-                self._chunk_info.energy = self.debiased_energy(chunk, self.mic.sample_width)
+                self._chunk_info.energy = \
+                    self.debiased_energy(chunk, self.mic.sample_width)
                 self.chunk_callback(self._chunk_info)
+        LOG.info(f"Loop stopped running")
 
     def reset_state(self):
         if self.listen_mode == ListeningMode.CONTINUOUS:
@@ -215,23 +234,28 @@ class DinkumVoiceLoop(VoiceLoop):
         else:
             self.state = ListeningState.DETECT_WAKEWORD
             self.hotwords.state = HotwordState.LISTEN
+        LOG.debug(f"state={self.state}|hotwords.state={self.hotwords.state}")
 
     def go_to_sleep(self):
         self.state = ListeningState.SLEEPING
+        LOG.info("sleeping")
 
     def wakeup(self):
         self.reset_state()
+        LOG.info("wakeup")
 
     def start_recording(self, filename=None):
         self.recording_filename = filename or str(time.time())
+        LOG.debug(f"Recording to {self.recording_filename}")
         self.state = ListeningState.RECORDING
 
     def stop_recording(self):
         #  finished recording
         if self.recording_audio_callback is not None:
             metadata = {"recording_name": self.recording_filename}
-            metadata = self.recording_audio_callback(self.stt_audio_bytes, metadata) or \
-                       metadata
+            metadata = self.recording_audio_callback(self.stt_audio_bytes,
+                                                     metadata) or metadata
+        LOG.debug("Finished recording")
         self.reset_state()
 
     def _in_recording(self, chunk):
@@ -313,7 +337,7 @@ class DinkumVoiceLoop(VoiceLoop):
 
         ww = self.hotwords.found()
         if ww or self.skip_next_wake:
-
+            LOG.debug(f"Wake word detected={ww}")
             # Callback to handle recorded hotword audio
             if (self.listenword_audio_callback is not None) and (
                     not self.skip_next_wake
@@ -351,7 +375,7 @@ class DinkumVoiceLoop(VoiceLoop):
 
         return False
 
-    def _wait_cmd(self, chunk):
+    def _wait_cmd(self, chunk: bytes):
         # Recording voice command, but user has not spoken yet
         self._chunk_info.is_speech = not self.vad.is_silence(chunk)
         hot = False
@@ -447,9 +471,13 @@ class DinkumVoiceLoop(VoiceLoop):
                 # Reset
                 self.silence_seconds_left = self.silence_seconds
 
-    def _validate_lang(self, lang):
-        """ ensure lang classification from speech is one of the valid langs
-        if not then drop classification, as there are no speakers of that language around this device
+    def _validate_lang(self, lang: str) -> str:
+        """
+        ensure lang classification from speech is one of the valid langs
+        if not then drop classification, as there are no speakers of that
+        language around this device
+        @param lang: BCP-47 language code to evaluate
+        @return: validated language (or default)
         """
         default_lang = Configuration().get("lang", "en-us")
         s = SessionManager.get()
@@ -460,7 +488,8 @@ class DinkumVoiceLoop(VoiceLoop):
                 LOG.info(f"replaced {default_lang} with {lang}")
                 return lang
         else:
-            LOG.warning(f"ignoring classification: {lang} is not in enabled languages: {valid_langs}")
+            LOG.warning(f"ignoring classification: {lang} is not in enabled "
+                        f"languages: {valid_langs}")
 
         return default_lang
 
@@ -501,11 +530,13 @@ class DinkumVoiceLoop(VoiceLoop):
 
         if text:
             LOG.debug(f"transformers metadata: {stt_context}")
+            LOG.info(f"transcribed: {text}")
         else:
             LOG.info("nothing transcribed")
         # Voice command has finished recording
         if self.stt_audio_callback is not None:
-            metadata = self.stt_audio_callback(self.stt_audio_bytes, stt_context)
+            metadata = self.stt_audio_callback(self.stt_audio_bytes,
+                                               stt_context)
 
         self.stt_audio_bytes = bytes()
 
