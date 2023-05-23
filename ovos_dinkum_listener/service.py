@@ -259,7 +259,7 @@ class OVOSDinkumVoiceService(Thread):
             finally:
                 LOG.info("Service stopping")
                 self._state = ServiceState.STOPPING
-                self.stop()
+                self._shutdown()
                 self._after_stop()
                 self._state = ServiceState.NOT_STARTED
         except Exception as e:
@@ -314,8 +314,16 @@ class OVOSDinkumVoiceService(Thread):
         self.status.set_started()
 
     def stop(self):
+        """
+        Stop the voice_loop and trigger service shutdown
+        """
         self.voice_loop.stop()
 
+    def _shutdown(self):
+        """
+        Internal method to shutdown any running services. Called after
+        `self.voice_loop` is stopped
+        """
         if hasattr(self.stt, "shutdown"):
             self.stt.shutdown()
 
@@ -328,7 +336,6 @@ class OVOSDinkumVoiceService(Thread):
             self.vad.stop()
 
         self.mic.stop()
-
     def _after_stop(self):
         """Shut down code called after stop()"""
         self.status.set_stopping()
