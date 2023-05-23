@@ -16,7 +16,7 @@ import wave
 from enum import Enum
 from hashlib import md5
 from pathlib import Path
-from threading import Thread
+from threading import Thread, RLock
 
 from ovos_backend_client.api import DatasetApi
 from ovos_bus_client import Message, MessageBusClient
@@ -150,9 +150,11 @@ class OVOSDinkumVoiceService(Thread):
         self.fallback_stt = load_fallback_stt()
         self.transformers = AudioTransformersService(self.bus, self.config)
 
+        self._load_lock = RLock()
         self._applied_config_hash = None
         listener = self.config["listener"]
-        self.voice_loop = self._init_voice_loop(listener)
+        with self._load_lock:
+            self.voice_loop = self._init_voice_loop(listener)
 
     def _config_hash(self):
         config = {
@@ -169,34 +171,36 @@ class OVOSDinkumVoiceService(Thread):
         """
         Initialize a DinkumVoiceLoop object with the specified config
         @param listener_config:
-        @return:
+        @return: Initialized VoiceLoop object
         """
-        self._applied_config_hash = self._config_hash()
-        return DinkumVoiceLoop(
-            mic=self.mic,
-            hotwords=self.hotwords,
-            stt=self.stt,
-            fallback_stt=self.fallback_stt,
-            vad=self.vad,
-            transformers=self.transformers,
-            #
-            speech_seconds=listener_config.get("speech_begin", 0.3),
-            silence_seconds=listener_config.get("silence_end", 0.7),
-            timeout_seconds=listener_config.get("recording_timeout", 10),
-            num_stt_rewind_chunks=listener_config.get(
-                "utterance_chunks_to_rewind", 2),
-            num_hotword_keep_chunks=listener_config.get(
-                "wakeword_chunks_to_save", 15),
-            #
-            wake_callback=self._record_begin,
-            text_callback=self._stt_text,
-            listenword_audio_callback=self._hotword_audio,
-            hotword_audio_callback=self._hotword_audio,
-            stopword_audio_callback=self._hotword_audio,
-            wakeupword_audio_callback=self._hotword_audio,
-            stt_audio_callback=self._stt_audio,
-            recording_audio_callback=self._recording_audio,
-        )
+        with self._load_lock:
+            self._applied_config_hash = self._config_hash()
+            loop = DinkumVoiceLoop(
+                mic=self.mic,
+                hotwords=self.hotwords,
+                stt=self.stt,
+                fallback_stt=self.fallback_stt,
+                vad=self.vad,
+                transformers=self.transformers,
+                #
+                speech_seconds=listener_config.get("speech_begin", 0.3),
+                silence_seconds=listener_config.get("silence_end", 0.7),
+                timeout_seconds=listener_config.get("recording_timeout", 10),
+                num_stt_rewind_chunks=listener_config.get(
+                    "utterance_chunks_to_rewind", 2),
+                num_hotword_keep_chunks=listener_config.get(
+                    "wakeword_chunks_to_save", 15),
+                #
+                wake_callback=self._record_begin,
+                text_callback=self._stt_text,
+                listenword_audio_callback=self._hotword_audio,
+                hotword_audio_callback=self._hotword_audio,
+                stopword_audio_callback=self._hotword_audio,
+                wakeupword_audio_callback=self._hotword_audio,
+                stt_audio_callback=self._stt_audio,
+                recording_audio_callback=self._recording_audio,
+            )
+        return loop
 
     @property
     def default_save_path(self):
@@ -281,7 +285,7 @@ class OVOSDinkumVoiceService(Thread):
     def _after_start(self):
         """Initialization logic called after start()"""
         Thread(target=self._pet_the_dog, daemon=True).start()
-        Configuration.set_config_watcher(self.reload_configuration)
+        self.config.set_config_watcher(self.reload_configuration)
         self.status.set_started()
 
     def stop(self):
@@ -763,18 +767,18 @@ class OVOSDinkumVoiceService(Thread):
         Reload configuration and restart loop. Automatically called when
         Configuration object reports a change
         """
+        with self._load_lock:
+            if self._config_hash() != self._applied_config_hash:
+                LOG.info(f"Listener configuration changed. Reloading")
+            else:
+                LOG.debug("Configuration not changed")
+                return
 
-        if self._config_hash() != self._applied_config_hash:
-            LOG.info(f"Listener configuration changed! reloading voice_loop")
-        else:
-            LOG.debug("Configuration not changed")
-            return
-
-        # Configuration changed, update status and reload
-        self.status.set_alive()
-        self.hotwords.shutdown()
-        self.hotwords.load_hotword_engines()
-        self.voice_loop.stop()
-        self.voice_loop = self._init_voice_loop(self.config.get('listener'))
-        self.voice_loop.start()
-        self.status.set_ready()
+            # Configuration changed, update status and reload
+            self.status.set_alive()
+            self.hotwords.shutdown()
+            self.hotwords.load_hotword_engines()
+            self.voice_loop.stop()
+            self.voice_loop = self._init_voice_loop(self.config.get('listener'))
+            self.voice_loop.start()
+            self.status.set_ready()
