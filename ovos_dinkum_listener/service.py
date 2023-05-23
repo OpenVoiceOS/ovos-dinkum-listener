@@ -231,7 +231,11 @@ class OVOSDinkumVoiceService(Thread):
                 self.voice_loop.run()
             except KeyboardInterrupt:
                 pass
+            except Exception as e:
+                LOG.exception("voice_loop failed")
+                self.status.set_error(str(e))
             finally:
+                LOG.info("Service stopping")
                 self._state = ServiceState.STOPPING
                 self.stop()
                 self._after_stop()
@@ -285,7 +289,6 @@ class OVOSDinkumVoiceService(Thread):
     def _after_start(self):
         """Initialization logic called after start()"""
         Thread(target=self._pet_the_dog, daemon=True).start()
-        self.config.set_config_watcher(self.reload_configuration)
         self.status.set_started()
 
     def stop(self):
@@ -319,6 +322,8 @@ class OVOSDinkumVoiceService(Thread):
             self.bus.connected_event.wait()
         if not self.status.bus:
             self.status.bind(self.bus)
+        self.config.set_config_update_handlers(self.bus)
+        self.config.set_config_watcher(self.reload_configuration)
         LOG.info("Connected to Mycroft Core message bus")
 
     def _report_service_state(self, message):
@@ -771,7 +776,7 @@ class OVOSDinkumVoiceService(Thread):
             if self._config_hash() != self._applied_config_hash:
                 LOG.info(f"Listener configuration changed. Reloading")
             else:
-                LOG.debug("Configuration not changed")
+                LOG.warning("Configuration not changed")
                 return
 
             # Configuration changed, update status and reload
@@ -779,6 +784,33 @@ class OVOSDinkumVoiceService(Thread):
             self.hotwords.shutdown()
             self.hotwords.load_hotword_engines()
             self.voice_loop.stop()
-            self.voice_loop = self._init_voice_loop(self.config.get('listener'))
+
+            # # Reload STT
+            # try:
+            #     if self.stt.config
+            #     if hasattr(self.stt, "shutdown"):
+            #         self.stt.shutdown()
+            #         self.stt = load_stt_module()
+            #     if hasattr(self.fallback_stt, "shutdown"):
+            #         self.fallback_stt.shutdown()
+            #         self.fallback_stt = load_fallback_stt()
+            # except Exception as e:
+            #     LOG.exception(e)
+
+            # Update voice_loop with new parameters
+            listener_config = self.config['listener']
+            self.voice_loop.speech_seconds = listener_config.get("speech_begin",
+                                                                 0.3),
+            self.voice_loop.silence_seconds = listener_config.get("silence_end",
+                                                                  0.7),
+            self.voice_loop.timeout_seconds = listener_config.get(
+                "recording_timeout", 10),
+            self.voice_loop.num_stt_rewind_chunks = listener_config.get(
+                "utterance_chunks_to_rewind", 2),
+            self.voice_loop.num_hotword_keep_chunks = listener_config.get(
+                "wakeword_chunks_to_save", 15),
+            self._applied_config_hash = self._config_hash()
             self.voice_loop.start()
+            self.voice_loop.run()
             self.status.set_ready()
+            LOG.info("Reload Completed")
