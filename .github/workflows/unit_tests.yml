@@ -32,9 +32,8 @@ on:
 jobs:
   unit_tests:
     strategy:
-      max-parallel: 2
       matrix:
-        python-version: [ 3.7, 3.8, 3.9]
+        python-version: [ 3.7, 3.8, 3.9, '3.10' ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -55,11 +54,4 @@ jobs:
           pip install -r requirements/tests.txt
       - name: Run unittests
         run: |
-          pytest --cov=ovos_listener --cov-report xml test/unittests
-          # NOTE: additional pytest invocations should also add the --cov-append flag
-          #       or they will overwrite previous invocations' coverage reports
-          #       (for an example, see OVOS Skill Manager's workflow)
-      - name: Upload coverage
-        env:
-          CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
-        uses: codecov/codecov-action@v2
+          pytest test/unittests
