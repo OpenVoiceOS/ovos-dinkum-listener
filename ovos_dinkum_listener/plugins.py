@@ -1,6 +1,5 @@
 from typing import Any, Dict
 
-from ovos_bus_client import MessageBusClient
 from ovos_plugin_manager.stt import OVOSSTTFactory
 from ovos_plugin_manager.templates.stt import StreamingSTT, StreamThread
 from ovos_plugin_manager.utils import ReadWriteStream
