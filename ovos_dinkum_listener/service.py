@@ -137,7 +137,6 @@ class OVOSDinkumVoiceService(Thread):
         self.config = Configuration()
 
         self._before_start()  # connect to bus
-        listener = self.config["listener"]
 
         # Initialize with default (bundled) plugin
         microphone_config = self.config.get("microphone", {})
@@ -150,7 +149,17 @@ class OVOSDinkumVoiceService(Thread):
         self.stt = load_stt_module()
         self.fallback_stt = load_fallback_stt()
         self.transformers = AudioTransformersService(self.bus, self.config)
-        self.voice_loop = DinkumVoiceLoop(
+
+        listener = self.config["listener"]
+        self.voice_loop = self._init_voice_loop(listener)
+
+    def _init_voice_loop(self, listener_config: dict):
+        """
+        Initialize a DinkumVoiceLoop object with the specified config
+        @param listener_config:
+        @return:
+        """
+        return DinkumVoiceLoop(
             mic=self.mic,
             hotwords=self.hotwords,
             stt=self.stt,
@@ -158,11 +167,13 @@ class OVOSDinkumVoiceService(Thread):
             vad=self.vad,
             transformers=self.transformers,
             #
-            speech_seconds=listener.get("speech_begin", 0.3),
-            silence_seconds=listener.get("silence_end", 0.7),
-            timeout_seconds=listener.get("recording_timeout", 10),
-            num_stt_rewind_chunks=listener.get("utterance_chunks_to_rewind", 2),
-            num_hotword_keep_chunks=listener.get("wakeword_chunks_to_save", 15),
+            speech_seconds=listener_config.get("speech_begin", 0.3),
+            silence_seconds=listener_config.get("silence_end", 0.7),
+            timeout_seconds=listener_config.get("recording_timeout", 10),
+            num_stt_rewind_chunks=listener_config.get(
+                "utterance_chunks_to_rewind", 2),
+            num_hotword_keep_chunks=listener_config.get(
+                "wakeword_chunks_to_save", 15),
             #
             wake_callback=self._record_begin,
             text_callback=self._stt_text,
@@ -257,6 +268,7 @@ class OVOSDinkumVoiceService(Thread):
     def _after_start(self):
         """Initialization logic called after start()"""
         Thread(target=self._pet_the_dog, daemon=True).start()
+        Configuration.set_config_watcher(self.reload_configuration)
         self.status.set_started()
 
     def stop(self):
@@ -733,5 +745,30 @@ class OVOSDinkumVoiceService(Thread):
         }
         self.bus.emit(message.response(data))
 
+    def reload_configuration(self):
+        """
+        Reload configuration and restart loop. Automatically called when
+        Configuration object reports a change
+        """
+        old_config = self.config
+        new_config = Configuration()
 
+        if old_config['listener'] != new_config['listener']:
+            LOG.info(f"Listener configuration changed! reloading voice_loop")
+            self.config = new_config
+        elif old_config['hotwords'] != new_config['hotwords']:
+            LOG.info(f"Hotwords configuration changed! reloading voice_loop")
+            self.config = new_config
+        else:
+            LOG.debug(f"Configuration changes don't affect listener")
+            self.config = new_config
+            return
 
+        # Configuration changed, update status and reload
+        self.status.set_alive()
+        self.hotwords.shutdown()
+        self.hotwords.load_hotword_engines()
+        self.voice_loop.stop()
+        self.voice_loop = self._init_voice_loop(new_config.get('listener'))
+        self.voice_loop.start()
+        self.status.set_ready()
