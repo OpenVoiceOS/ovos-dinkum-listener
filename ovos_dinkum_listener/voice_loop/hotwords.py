@@ -71,7 +71,8 @@ class HotwordState(str, Enum):
 class HotwordContainer:
     _plugins = {}
 
-    def __init__(self, bus=FakeBus(), expected_duration=3, sample_rate=16000, sample_width=2):
+    def __init__(self, bus=FakeBus(), expected_duration=3, sample_rate=16000,
+                 sample_width=2):
         self.bus = bus
         self.state = HotwordState.HOTWORD
         # used for old style non-streaming wakeword (deprecated)

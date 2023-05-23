@@ -12,4 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ovos_dinkum_listener.voice_loop.voice_loop import DinkumVoiceLoop, ListeningMode, ListeningState
+from ovos_dinkum_listener.voice_loop.voice_loop import DinkumVoiceLoop, \
+    ListeningMode, ListeningState
