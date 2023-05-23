@@ -1,10 +1,9 @@
 import shutil
 import unittest
+
 from os import environ, makedirs
 from os.path import join, dirname
 from threading import Event
-
-import ovos_dinkum_listener.service
 from time import sleep
 from unittest.mock import Mock, patch
 
@@ -57,6 +56,7 @@ class TestDinkumVoiceService(unittest.TestCase):
     @patch("ovos_dinkum_listener.plugins.load_fallback_stt")
     @patch("ovos_dinkum_listener.plugins.load_stt_module")
     def test_service_init(self, load_stt, load_fallback, voice_loop):
+        import ovos_dinkum_listener.service
         from ovos_dinkum_listener.service import OVOSDinkumVoiceService
         from ovos_dinkum_listener.service import ServiceState
         from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer
