@@ -150,6 +150,7 @@ class OVOSDinkumVoiceService(Thread):
         self.fallback_stt = load_fallback_stt()
         self.transformers = AudioTransformersService(self.bus, self.config)
 
+        self._applied_listener_config = None
         listener = self.config["listener"]
         self.voice_loop = self._init_voice_loop(listener)
 
@@ -159,6 +160,7 @@ class OVOSDinkumVoiceService(Thread):
         @param listener_config:
         @return:
         """
+        self._applied_listener_config = listener_config
         return DinkumVoiceLoop(
             mic=self.mic,
             hotwords=self.hotwords,
@@ -750,13 +752,12 @@ class OVOSDinkumVoiceService(Thread):
         Reload configuration and restart loop. Automatically called when
         Configuration object reports a change
         """
-        old_config = self.config
         new_config = Configuration()
 
-        if old_config['listener'] != new_config['listener']:
+        if new_config['listener'] != self._applied_listener_config:
             LOG.info(f"Listener configuration changed! reloading voice_loop")
             self.config = new_config
-        elif old_config['hotwords'] != new_config['hotwords']:
+        elif new_config['hotwords'] != self.hotwords.applied_hotwords_config:
             LOG.info(f"Hotwords configuration changed! reloading voice_loop")
             self.config = new_config
         else:
