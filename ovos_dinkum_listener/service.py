@@ -190,6 +190,7 @@ class OVOSDinkumVoiceService(Thread):
         """
         try:
             self._state = ServiceState.NOT_STARTED
+            self._before_start()  # Ensure configuration and bus are initialized
             self._start()
             self._state = ServiceState.STARTED
             self._after_start()
