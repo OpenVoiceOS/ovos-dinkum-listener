@@ -21,6 +21,8 @@ class TestTransformers(unittest.TestCase):
 
     @patch("ovos_plugin_manager.audio_transformers.find_audio_transformer_plugins")
     def test_audio_transformer_service_no_plugins(self, find_transformers):
+        import ovos_dinkum_listener.transformers
+        ovos_dinkum_listener.transformers.find_audio_transformer_plugins = find_transformers
         from ovos_dinkum_listener.transformers import AudioTransformersService
         find_transformers.return_value = {"mock": MockTransformer}
 
@@ -49,6 +51,8 @@ class TestTransformers(unittest.TestCase):
 
     @patch("ovos_plugin_manager.audio_transformers.find_audio_transformer_plugins")
     def test_audio_transformer_service_with_plugin(self, find_transformers):
+        import ovos_dinkum_listener.transformers
+        ovos_dinkum_listener.transformers.find_audio_transformer_plugins = find_transformers
         from ovos_dinkum_listener.transformers import AudioTransformersService
         find_transformers.return_value = {"mock": MockTransformer}
 
