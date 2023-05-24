@@ -2,7 +2,19 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a18...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a19...HEAD)
+
+**Implemented enhancements:**
+
+- Add Configuration change callback handler [\#23](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/23) ([NeonDaniel](https://github.com/NeonDaniel))
+
+**Fixed bugs:**
+
+- feature parity [\#22](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/22)
+
+## [V0.0.2a19](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a19) (2023-05-24)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a18...V0.0.2a19)
 
 **Implemented enhancements:**
 
