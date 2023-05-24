@@ -2,7 +2,15 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a19...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a20...HEAD)
+
+**Fixed bugs:**
+
+- Fix loop reload to keep execution in thread with updated tests [\#25](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/25) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [V0.0.2a20](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a20) (2023-05-24)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a19...V0.0.2a20)
 
 **Implemented enhancements:**
 
