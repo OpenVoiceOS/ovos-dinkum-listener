@@ -16,7 +16,7 @@ import wave
 from enum import Enum
 from hashlib import md5
 from pathlib import Path
-from threading import Thread
+from threading import Thread, RLock, Event
 
 from ovos_backend_client.api import DatasetApi
 from ovos_bus_client import Message, MessageBusClient
@@ -131,13 +131,13 @@ class OVOSDinkumVoiceService(Thread):
         self.status = ProcessStatus(self.service_id, self.bus,
                                     callback_map=callbacks)
         self._watchdog = watchdog
+        self._shutdown_event = Event()
 
         self.status.set_alive()
         self._state: ServiceState = ServiceState.NOT_STARTED
         self.config = Configuration()
 
         self._before_start()  # connect to bus
-        listener = self.config["listener"]
 
         # Initialize with default (bundled) plugin
         microphone_config = self.config.get("microphone", {})
@@ -150,29 +150,79 @@ class OVOSDinkumVoiceService(Thread):
         self.stt = load_stt_module()
         self.fallback_stt = load_fallback_stt()
         self.transformers = AudioTransformersService(self.bus, self.config)
-        self.voice_loop = DinkumVoiceLoop(
-            mic=self.mic,
-            hotwords=self.hotwords,
-            stt=self.stt,
-            fallback_stt=self.fallback_stt,
-            vad=self.vad,
-            transformers=self.transformers,
-            #
-            speech_seconds=listener.get("speech_begin", 0.3),
-            silence_seconds=listener.get("silence_end", 0.7),
-            timeout_seconds=listener.get("recording_timeout", 10),
-            num_stt_rewind_chunks=listener.get("utterance_chunks_to_rewind", 2),
-            num_hotword_keep_chunks=listener.get("wakeword_chunks_to_save", 15),
-            #
-            wake_callback=self._record_begin,
-            text_callback=self._stt_text,
-            listenword_audio_callback=self._hotword_audio,
-            hotword_audio_callback=self._hotword_audio,
-            stopword_audio_callback=self._hotword_audio,
-            wakeupword_audio_callback=self._hotword_audio,
-            stt_audio_callback=self._stt_audio,
-            recording_audio_callback=self._recording_audio,
-        )
+
+        self._load_lock = RLock()
+        self._applied_config_hash = None
+        listener = self.config["listener"]
+        self.voice_loop = self._init_voice_loop(listener)
+
+    def _config_hash(self):
+        lang = self.config.get("lang")
+        stt_module = self.config.get("stt", {}).get("module")
+        fallback_module = self.config.get("stt", {}).get("fallback_module")
+        stt_config = {
+            "lang": lang,
+            "module": stt_module,
+            "config": self.config.get("stt", {}).get(stt_module)
+        }
+        stt_fallback = {
+            "lang": lang,
+            "module": fallback_module,
+            "config": self.config.get("stt", {}).get(fallback_module)
+        }
+        loop_config = {
+            "listener": self.config.get('listener'),
+            "vad": self.config.get("VAD"),
+            "mic": self.config.get("microphone")
+        }
+        hotword_config = {
+            "confirm": self.config.get('confirm_listening'),
+            "sounds": self.config.get("sounds"),
+            "listener": self.config.get('listener'),  # Defaults, save_hotwords
+            "hotwords": self.config.get('hotwords')
+        }
+        config_hashes = {
+            "loop": hash(json.dumps(loop_config)),
+            "hotwords": hash(json.dumps(hotword_config)),
+            "stt": hash(json.dumps(stt_config)),
+            "fallback": hash(json.dumps(stt_fallback)),
+        }
+        return config_hashes
+
+    def _init_voice_loop(self, listener_config: dict):
+        """
+        Initialize a DinkumVoiceLoop object with the specified config
+        @param listener_config:
+        @return: Initialized VoiceLoop object
+        """
+        with self._load_lock:
+            self._applied_config_hash = self._config_hash()
+            loop = DinkumVoiceLoop(
+                mic=self.mic,
+                hotwords=self.hotwords,
+                stt=self.stt,
+                fallback_stt=self.fallback_stt,
+                vad=self.vad,
+                transformers=self.transformers,
+                #
+                speech_seconds=listener_config.get("speech_begin", 0.3),
+                silence_seconds=listener_config.get("silence_end", 0.7),
+                timeout_seconds=listener_config.get("recording_timeout", 10),
+                num_stt_rewind_chunks=listener_config.get(
+                    "utterance_chunks_to_rewind", 2),
+                num_hotword_keep_chunks=listener_config.get(
+                    "wakeword_chunks_to_save", 15),
+                #
+                wake_callback=self._record_begin,
+                text_callback=self._stt_text,
+                listenword_audio_callback=self._hotword_audio,
+                hotword_audio_callback=self._hotword_audio,
+                stopword_audio_callback=self._hotword_audio,
+                wakeupword_audio_callback=self._hotword_audio,
+                stt_audio_callback=self._stt_audio,
+                recording_audio_callback=self._recording_audio,
+            )
+        return loop
 
     @property
     def default_save_path(self):
@@ -203,9 +253,13 @@ class OVOSDinkumVoiceService(Thread):
                 self.voice_loop.run()
             except KeyboardInterrupt:
                 pass
+            except Exception as e:
+                LOG.exception("voice_loop failed")
+                self.status.set_error(str(e))
             finally:
+                LOG.info("Service stopping")
                 self._state = ServiceState.STOPPING
-                self.stop()
+                self._shutdown()
                 self._after_stop()
                 self._state = ServiceState.NOT_STARTED
         except Exception as e:
@@ -260,21 +314,37 @@ class OVOSDinkumVoiceService(Thread):
         self.status.set_started()
 
     def stop(self):
+        """
+        Stop the voice_loop and trigger service shutdown
+        """
+        if not self.voice_loop.running:
+            LOG.debug("voice_loop not running, just shutdown the service")
+            self._shutdown()
+            return
+        self._shutdown_event.clear()
         self.voice_loop.stop()
+        if not self._shutdown_event.wait(30):
+            LOG.error(f"voice_loop didn't call _shutdown")
+            self._shutdown()
 
+    def _shutdown(self):
+        """
+        Internal method to shutdown any running services. Called after
+        `self.voice_loop` is stopped
+        """
         if hasattr(self.stt, "shutdown"):
             self.stt.shutdown()
 
         if hasattr(self.fallback_stt, "shutdown"):
             self.fallback_stt.shutdown()
 
-        if hasattr(self.hotwords, "shutdown"):
-            self.hotwords.shutdown()
+        self.hotwords.shutdown()
 
         if hasattr(self.vad, "stop"):
             self.vad.stop()
 
         self.mic.stop()
+        self._shutdown_event.set()
 
     def _after_stop(self):
         """Shut down code called after stop()"""
@@ -290,6 +360,8 @@ class OVOSDinkumVoiceService(Thread):
             self.bus.connected_event.wait()
         if not self.status.bus:
             self.status.bind(self.bus)
+        self.config.set_config_update_handlers(self.bus)
+        self.config.set_config_watcher(self.reload_configuration)
         LOG.info("Connected to Mycroft Core message bus")
 
     def _report_service_state(self, message):
@@ -733,5 +805,73 @@ class OVOSDinkumVoiceService(Thread):
         }
         self.bus.emit(message.response(data))
 
+    def reload_configuration(self):
+        """
+        Reload configuration and restart loop. Automatically called when
+        Configuration object reports a change
+        """
+        if self._config_hash() == self._applied_config_hash:
+            LOG.info(f"No relevant configuration changed")
+            return
+        LOG.info("Maybe reloading configuration")
+        with self._load_lock:
+            LOG.debug("Lock Acquired")
+            new_hash = self._config_hash()
 
+            # Configuration changed, update status and reload
+            self.status.set_alive()
 
+            if new_hash['stt'] != self._applied_config_hash['stt']:
+                LOG.info(f"Reloading STT")
+                if hasattr(self.stt, "shutdown"):
+                    self.stt.shutdown()
+                del self.stt
+                self.stt = load_stt_module()
+
+            if new_hash['fallback'] != self._applied_config_hash['fallback']:
+                LOG.info(f"Reloading Fallback STT")
+                if hasattr(self.fallback_stt, "shutdown"):
+                    self.fallback_stt.shutdown()
+                del self.fallback_stt
+                self.fallback_stt = load_fallback_stt()
+
+            if new_hash['hotwords'] != self._applied_config_hash['hotwords']:
+                LOG.info(f"Reloading Hotwords")
+                self.hotwords.shutdown()
+                self.hotwords.load_hotword_engines()
+
+            if new_hash['loop'] != self._applied_config_hash['loop']:
+                LOG.info(f"Reloading Listener")
+                self.voice_loop.stop()
+
+                if hasattr(self.vad, "stop"):
+                    self.vad.stop()
+                del self.vad
+                self.vad = OVOSVADFactory.create(self.config)
+
+                self.mic.stop()
+                del self.mic
+                microphone_config = self.config.get("microphone", {})
+                microphone_config.setdefault('module',
+                                             'ovos-microphone-plugin-alsa')
+                self.mic = OVOSMicrophoneFactory.create(microphone_config)
+                self.mic.start()
+
+                # Update voice_loop with new parameters
+                listener_config = self.config['listener']
+                self.voice_loop.speech_seconds = listener_config.get("speech_begin",
+                                                                     0.3),
+                self.voice_loop.silence_seconds = listener_config.get("silence_end",
+                                                                      0.7),
+                self.voice_loop.timeout_seconds = listener_config.get(
+                    "recording_timeout", 10),
+                self.voice_loop.num_stt_rewind_chunks = listener_config.get(
+                    "utterance_chunks_to_rewind", 2),
+                self.voice_loop.num_hotword_keep_chunks = listener_config.get(
+                    "wakeword_chunks_to_save", 15)
+                self.voice_loop.start()
+                self.voice_loop.run()
+
+            self._applied_config_hash = self._config_hash()
+            self.status.set_ready()
+            LOG.info("Reload Completed")

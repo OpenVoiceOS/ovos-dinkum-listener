@@ -79,6 +79,7 @@ class HotwordContainer:
         self.audio_buffer = CyclicAudioBuffer(expected_duration,
                                               sample_rate=sample_rate,
                                               sample_width=sample_width)
+        self.applied_hotwords_config = None
 
     def load_hotword_engines(self):
         """
@@ -88,6 +89,7 @@ class HotwordContainer:
         config_core = Configuration()
         default_lang = config_core.get("lang", "en-us")
         hot_words = config_core.get("hotwords", {})
+        self.applied_hotwords_config = hot_words
         global_listen = config_core.get("confirm_listening")
         global_sounds = config_core.get("sounds", {})
 

@@ -131,9 +131,9 @@ class TestDinkumVoiceService(unittest.TestCase):
 
     def test_service_run(self):
         self.assertIsNotNone(self.service)
-        real_stop = self.service.stop
+        real_shutdown = self.service._shutdown
         real_after_stop = self.service._after_stop
-        self.service.stop = Mock()
+        self.service._shutdown = Mock()
         self.service._after_stop = Mock()
         self.service.voice_loop._is_running = True
 
@@ -176,19 +176,21 @@ class TestDinkumVoiceService(unittest.TestCase):
         while self.service.state != ServiceState.NOT_STARTED:
             sleep(0.5)
         self.assertEqual(self.service.state, ServiceState.NOT_STARTED)
-        self.service.stop.assert_called_once()
+        self.service._shutdown.assert_called_once()
         self.service._after_stop.assert_called_once()
 
-        self.service.stop = real_stop
+        self.service._shutdown = real_shutdown
         self.service._after_stop = real_after_stop
 
     def test_service_stop(self):
         self.assertIsNotNone(self.service)
         real_hotwords_stop = self.service.hotwords.shutdown
         # real_vad_stop = self.service.vad.stop
+        self.service.stt.shutdown = Mock()
+        self.service.fallback_stt.shutdown = Mock()
         self.service.hotwords.shutdown = Mock()
         self.service.vad.stop = Mock()
-        self.service.voice_loop.stop = Mock()
+        self.service.voice_loop.stop = Mock(side_effect=self.service._shutdown)
 
         self.service.stop()
         self.service.voice_loop.stop.assert_called_once()
@@ -344,6 +346,79 @@ class TestDinkumVoiceService(unittest.TestCase):
     def test_handle_opm_vad_query(self):
         # TODO
         pass
+
+    def test_reload_configuration(self):
+        import ovos_dinkum_listener.service
+        mock_create_stt = Mock()
+        mock_create_fallback = Mock()
+        mock_shutdown_hotwords = Mock()
+        mock_create_hotwords = Mock()
+        real_shutdown_hotwords = self.service.hotwords.shutdown
+        self.service.hotwords.shutdown = mock_shutdown_hotwords
+        real_create_hotwords = self.service.hotwords.load_hotword_engines
+        self.service.hotwords.load_hotword_engines = mock_create_hotwords
+
+        ovos_dinkum_listener.service.load_stt_module = mock_create_stt
+        ovos_dinkum_listener.service.load_fallback_stt = mock_create_fallback
+        shutdown = Event()
+        fallback_shutdown = Event()
+        vad_stop = Event()
+        mic_stop = Event()
+        self.service.stt.shutdown = Mock(side_effect=lambda: shutdown.set())
+        self.service.fallback_stt.shutdown = \
+            Mock(side_effect=lambda: fallback_shutdown.set())
+        self.service.vad.stop = Mock(side_effect=lambda: vad_stop.set())
+        self.service.mic.stop = Mock(side_effect=lambda: mic_stop.set())
+
+        # Reload STT
+        self.service.config["stt"]["module"] = "new_module"
+        self.service.reload_configuration()
+        self.assertTrue(shutdown.is_set())
+        mock_create_stt.assert_called_once()
+
+        # Reload Fallback STT
+        self.service.config["stt"]["fallback_module"] = "new_fallback"
+        self.service.reload_configuration()
+        self.assertTrue(fallback_shutdown.is_set())
+        mock_create_fallback.assert_called_once()
+
+        # Reload Hotwords
+        self.service.config["hotwords"]["test"] = {"module": "test"}
+        self.service.reload_configuration()
+        mock_shutdown_hotwords.assert_called_once()
+        mock_create_hotwords.assert_called_once()
+
+        # Reload Listener
+        from ovos_plugin_manager.templates.vad import VADEngine
+        new_mic = Mock()
+        ovos_dinkum_listener.service.OVOSVADFactory.create = \
+            Mock(return_value=VADEngine())
+        ovos_dinkum_listener.service.OVOSMicrophoneFactory.create = \
+            Mock(return_value=new_mic)
+        self.service.config["VAD"] = {'module': 'test'}
+        self.service.config["microphone"] = {'module': 'mock_mic'}
+        self.service.reload_configuration()
+        self.assertTrue(vad_stop.is_set())
+        self.assertIsInstance(self.service.vad, VADEngine)
+        self.assertTrue(mic_stop.is_set())
+        self.assertEqual(self.service.mic, new_mic)
+        self.service.mic.start.assert_called_once()
+
+        # Reload no change
+        config_hash = self.service._config_hash()
+        self.assertEqual(config_hash, self.service._applied_config_hash)
+        self.service.reload_configuration()
+        self.assertEqual(config_hash, self.service._config_hash())
+        self.service.reload_configuration()
+        self.assertEqual(config_hash, self.service._config_hash())
+
+        mock_create_stt.assert_called_once()
+        mock_create_fallback.assert_called_once()
+        mock_shutdown_hotwords.assert_called_once()
+        mock_create_hotwords.assert_called_once()
+
+        self.service.hotwords.shutdown = real_shutdown_hotwords
+        self.service.hotwords.load_hotword_engines = real_create_hotwords
 
 
 if __name__ == '__main__':

@@ -127,6 +127,10 @@ class DinkumVoiceLoop(VoiceLoop):
     _is_running: bool = False
     _chunk_info: ChunkInfo = field(default_factory=ChunkInfo)
 
+    @property
+    def running(self):
+        return self._is_running is True
+
     def start(self):
         """
         Start the Voice Loop; sets the listening mode based on configuration and
