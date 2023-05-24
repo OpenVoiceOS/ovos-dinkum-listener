@@ -132,7 +132,7 @@ class OVOSDinkumVoiceService(Thread):
                                     callback_map=callbacks)
         self._watchdog = watchdog
         self._shutdown_event = Event()
-
+        self._stopping = False
         self.status.set_alive()
         self._state: ServiceState = ServiceState.NOT_STARTED
         self.config = Configuration()
@@ -152,6 +152,8 @@ class OVOSDinkumVoiceService(Thread):
         self.transformers = AudioTransformersService(self.bus, self.config)
 
         self._load_lock = RLock()
+        self._reload_event = Event()
+        self._reload_event.set()
         self._applied_config_hash = None
         listener = self.config["listener"]
         self.voice_loop = self._init_voice_loop(listener)
@@ -249,8 +251,11 @@ class OVOSDinkumVoiceService(Thread):
             try:
                 self.status.set_ready()
                 LOG.info("Service ready")
-                self._state = ServiceState.RUNNING
-                self.voice_loop.run()
+                while not self._stopping:
+                    if not self._reload_event.wait(30):
+                        raise TimeoutError("Timed out waiting for reload")
+                    self._state = ServiceState.RUNNING
+                    self.voice_loop.run()
             except KeyboardInterrupt:
                 pass
             except Exception as e:
@@ -317,6 +322,7 @@ class OVOSDinkumVoiceService(Thread):
         """
         Stop the voice_loop and trigger service shutdown
         """
+        self._stopping = True
         if not self.voice_loop.running:
             LOG.debug("voice_loop not running, just shutdown the service")
             self._shutdown()
@@ -814,7 +820,9 @@ class OVOSDinkumVoiceService(Thread):
             LOG.info(f"No relevant configuration changed")
             return
         LOG.info("Maybe reloading configuration")
-        with self._load_lock:
+        if not self._load_lock.acquire(timeout=30):
+            raise TimeoutError("Lock not acquired after 30 seconds")
+        try:
             LOG.debug("Lock Acquired")
             new_hash = self._config_hash()
 
@@ -841,7 +849,9 @@ class OVOSDinkumVoiceService(Thread):
                 self.hotwords.load_hotword_engines()
 
             if new_hash['loop'] != self._applied_config_hash['loop']:
+                # TODO: This will stop the process in `run`
                 LOG.info(f"Reloading Listener")
+                self._reload_event.clear()
                 self.voice_loop.stop()
 
                 if hasattr(self.vad, "stop"):
@@ -870,8 +880,13 @@ class OVOSDinkumVoiceService(Thread):
                 self.voice_loop.num_hotword_keep_chunks = listener_config.get(
                     "wakeword_chunks_to_save", 15)
                 self.voice_loop.start()
-                self.voice_loop.run()
+                self._reload_event.set()
 
             self._applied_config_hash = self._config_hash()
             self.status.set_ready()
             LOG.info("Reload Completed")
+        except Exception as e:
+            LOG.exception(e)
+            self.status.set_error(e)
+        finally:
+            self._load_lock.release()
