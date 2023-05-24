@@ -833,7 +833,6 @@ class OVOSDinkumVoiceService(Thread):
                 LOG.info(f"Reloading Listener")
                 self.voice_loop.stop()
 
-                # TODO: Restart VAD and microphone
                 if hasattr(self.vad, "stop"):
                     self.vad.stop()
                 del self.vad

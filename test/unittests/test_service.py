@@ -345,6 +345,71 @@ class TestDinkumVoiceService(unittest.TestCase):
         # TODO
         pass
 
+    def test_reload_configuration(self):
+        import ovos_dinkum_listener.service
+        mock_create_stt = Mock()
+        mock_create_fallback = Mock()
+        mock_shutdown_hotwords = Mock()
+        mock_create_hotwords = Mock()
+        real_shutdown_hotwords = self.service.hotwords.shutdown
+        self.service.hotwords.shutdown = mock_shutdown_hotwords
+        real_create_hotwords = self.service.hotwords.load_hotword_engines
+        self.service.hotwords.load_hotword_engines = mock_create_hotwords
+
+        ovos_dinkum_listener.service.load_stt_module = mock_create_stt
+        ovos_dinkum_listener.service.load_fallback_stt = mock_create_fallback
+        shutdown = Event()
+        fallback_shutdown = Event()
+        vad_stop = Event()
+        mic_stop = Event()
+        self.service.stt.shutdown = Mock(side_effect=lambda: shutdown.set())
+        self.service.fallback_stt.shutdown = \
+            Mock(side_effect=lambda: fallback_shutdown.set())
+        self.service.vad.stop = Mock(side_effect=lambda: vad_stop.set())
+        self.service.mic.stop = Mock(side_effect=lambda: mic_stop.set())
+
+        # Reload STT
+        self.service.config["stt"]["module"] = "new_module"
+        self.service.reload_configuration()
+        self.assertTrue(shutdown.is_set())
+        mock_create_stt.assert_called_once()
+
+        # Reload Fallback STT
+        self.service.config["stt"]["fallback_module"] = "new_fallback"
+        self.service.reload_configuration()
+        self.assertTrue(fallback_shutdown.is_set())
+        mock_create_fallback.assert_called_once()
+
+        # Reload Hotwords
+        self.service.config["hotwords"]["test"] = {"module": "test"}
+        self.service.reload_configuration()
+        mock_shutdown_hotwords.assert_called_once()
+        mock_create_hotwords.assert_called_once()
+
+        # Reload Listener
+        new_vad = Mock()
+        new_mic = Mock()
+        ovos_dinkum_listener.service.OVOSVADFactory.create = \
+            Mock(return_value=new_vad)
+        ovos_dinkum_listener.service.OVOSMicrophoneFactory.create = \
+            Mock(return_value=new_mic)
+        self.service.config["VAD"] = {'module': 'test'}
+        self.service.config["microphone"] = {'module': 'mock_mic'}
+        self.service.reload_configuration()
+        self.assertTrue(vad_stop.is_set())
+        self.assertEqual(self.service.vad, new_vad)
+        self.assertTrue(mic_stop.is_set())
+        self.assertEqual(self.service.mic, new_mic)
+        self.service.mic.start.assert_called_once()
+
+        mock_create_stt.assert_called_once()
+        mock_create_fallback.assert_called_once()
+        mock_shutdown_hotwords.assert_called_once()
+        mock_create_hotwords.assert_called_once()
+
+        self.service.hotwords.shutdown = real_shutdown_hotwords
+        self.service.hotwords.load_hotword_engines = real_create_hotwords
+
 
 if __name__ == '__main__':
     unittest.main()
