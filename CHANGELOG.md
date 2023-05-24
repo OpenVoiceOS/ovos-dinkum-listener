@@ -2,7 +2,15 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a17...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a18...HEAD)
+
+**Implemented enhancements:**
+
+- Add Unit Tests [\#24](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/24) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [V0.0.2a18](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a18) (2023-05-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a17...V0.0.2a18)
 
 **Implemented enhancements:**
 
