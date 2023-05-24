@@ -1,8 +1,0 @@
-ovos-backend-client
-ovos-plugin-manager>=0.0.23a19
-ovos-microphone-plugin-alsa
-ovos-utils
-ovos-bus-client
-sdnotify
-pyalsaaudio
-SpeechRecognition

@@ -185,10 +185,12 @@ class OVOSDinkumVoiceService(Thread):
         return self._state
 
     def run(self):
-        """Service entry point"""
+        """
+        Service entry point
+        """
         try:
             self._state = ServiceState.NOT_STARTED
-            self._before_start()  # TODO: Is this ever necessary?
+            self._before_start()  # Ensure configuration and bus are initialized
             self._start()
             self._state = ServiceState.STARTED
             self._after_start()
@@ -211,8 +213,10 @@ class OVOSDinkumVoiceService(Thread):
             self.status.set_error(str(e))
 
     def _before_start(self):
-        """Initialization logic called before start()"""
-        self.config = Configuration()
+        """
+        Initialization logic called on module init
+        """
+        self.config = self.config or Configuration()
         LOG.info("Starting service...")
         self._connect_to_bus()
 
@@ -260,6 +264,9 @@ class OVOSDinkumVoiceService(Thread):
 
         if hasattr(self.stt, "shutdown"):
             self.stt.shutdown()
+
+        if hasattr(self.fallback_stt, "shutdown"):
+            self.fallback_stt.shutdown()
 
         if hasattr(self.hotwords, "shutdown"):
             self.hotwords.shutdown()

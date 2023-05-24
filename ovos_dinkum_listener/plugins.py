@@ -1,6 +1,5 @@
 from typing import Any, Dict
 
-from ovos_bus_client import MessageBusClient
 from ovos_plugin_manager.stt import OVOSSTTFactory
 from ovos_plugin_manager.templates.stt import StreamingSTT, StreamThread
 from ovos_plugin_manager.utils import ReadWriteStream
@@ -50,7 +49,8 @@ class FakeStreamingSTT(StreamingSTT):
         listener = Configuration().get("listener", {})
         sample_rate = listener.get("sample_rate", 16000)
         sample_width = listener.get("sample_width", 2)
-        return FakeStreamThread(self.queue, self.lang, self.engine, sample_rate, sample_width)
+        return FakeStreamThread(self.queue, self.lang, self.engine, sample_rate,
+                                sample_width)
 
 
 def load_stt_module(config: Dict[str, Any] = None) -> StreamingSTT:
