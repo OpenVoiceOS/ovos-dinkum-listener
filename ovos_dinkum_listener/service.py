@@ -16,7 +16,7 @@ import wave
 from enum import Enum
 from hashlib import md5
 from pathlib import Path
-from threading import Thread, RLock
+from threading import Thread, RLock, Event
 
 from ovos_backend_client.api import DatasetApi
 from ovos_bus_client import Message, MessageBusClient
@@ -131,6 +131,7 @@ class OVOSDinkumVoiceService(Thread):
         self.status = ProcessStatus(self.service_id, self.bus,
                                     callback_map=callbacks)
         self._watchdog = watchdog
+        self._shutdown_event = Event()
 
         self.status.set_alive()
         self._state: ServiceState = ServiceState.NOT_STARTED
@@ -317,7 +318,15 @@ class OVOSDinkumVoiceService(Thread):
         """
         Stop the voice_loop and trigger service shutdown
         """
+        if not self.voice_loop.running:
+            LOG.debug("voice_loop not running, just shutdown the service")
+            self._shutdown()
+            return
+        self._shutdown_event.clear()
         self.voice_loop.stop()
+        if not self._shutdown_event.wait(30):
+            LOG.error(f"voice_loop didn't call _shutdown")
+            self._shutdown()
 
     def _shutdown(self):
         """
@@ -336,6 +345,8 @@ class OVOSDinkumVoiceService(Thread):
             self.vad.stop()
 
         self.mic.stop()
+        self._shutdown_event.set()
+
     def _after_stop(self):
         """Shut down code called after stop()"""
         self.status.set_stopping()

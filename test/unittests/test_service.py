@@ -186,6 +186,8 @@ class TestDinkumVoiceService(unittest.TestCase):
         self.assertIsNotNone(self.service)
         real_hotwords_stop = self.service.hotwords.shutdown
         # real_vad_stop = self.service.vad.stop
+        self.service.stt.shutdown = Mock()
+        self.service.fallback_stt.shutdown = Mock()
         self.service.hotwords.shutdown = Mock()
         self.service.vad.stop = Mock()
         self.service.voice_loop.stop = Mock()
