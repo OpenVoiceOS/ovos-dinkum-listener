@@ -131,9 +131,9 @@ class TestDinkumVoiceService(unittest.TestCase):
 
     def test_service_run(self):
         self.assertIsNotNone(self.service)
-        real_stop = self.service.stop
+        real_shutdown = self.service._shutdown
         real_after_stop = self.service._after_stop
-        self.service.stop = Mock()
+        self.service._shutdown = Mock()
         self.service._after_stop = Mock()
         self.service.voice_loop._is_running = True
 
@@ -176,10 +176,10 @@ class TestDinkumVoiceService(unittest.TestCase):
         while self.service.state != ServiceState.NOT_STARTED:
             sleep(0.5)
         self.assertEqual(self.service.state, ServiceState.NOT_STARTED)
-        self.service.stop.assert_called_once()
+        self.service._shutdown.assert_called_once()
         self.service._after_stop.assert_called_once()
 
-        self.service.stop = real_stop
+        self.service._shutdown = real_shutdown
         self.service._after_stop = real_after_stop
 
     def test_service_stop(self):
@@ -190,7 +190,7 @@ class TestDinkumVoiceService(unittest.TestCase):
         self.service.fallback_stt.shutdown = Mock()
         self.service.hotwords.shutdown = Mock()
         self.service.vad.stop = Mock()
-        self.service.voice_loop.stop = Mock()
+        self.service.voice_loop.stop = Mock(side_effect=self.service._shutdown)
 
         self.service.stop()
         self.service.voice_loop.stop.assert_called_once()
@@ -389,17 +389,17 @@ class TestDinkumVoiceService(unittest.TestCase):
         mock_create_hotwords.assert_called_once()
 
         # Reload Listener
-        new_vad = Mock()
+        from ovos_plugin_manager.templates.vad import VADEngine
         new_mic = Mock()
         ovos_dinkum_listener.service.OVOSVADFactory.create = \
-            Mock(return_value=new_vad)
+            Mock(return_value=VADEngine())
         ovos_dinkum_listener.service.OVOSMicrophoneFactory.create = \
             Mock(return_value=new_mic)
         self.service.config["VAD"] = {'module': 'test'}
         self.service.config["microphone"] = {'module': 'mock_mic'}
         self.service.reload_configuration()
         self.assertTrue(vad_stop.is_set())
-        self.assertEqual(self.service.vad, new_vad)
+        self.assertIsInstance(self.service.vad, VADEngine)
         self.assertTrue(mic_stop.is_set())
         self.assertEqual(self.service.mic, new_mic)
         self.service.mic.start.assert_called_once()
