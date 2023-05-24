@@ -3,4 +3,4 @@ ovos-plugin-manager>=0.0.23a20
 ovos-microphone-plugin-alsa>=0.0.0a3
 ovos-utils~=0.0.32
 ovos-bus-client~=0.0.3
-SpeechRecognition~=3.10
+SpeechRecognition~=3.9
