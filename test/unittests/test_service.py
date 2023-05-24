@@ -404,6 +404,14 @@ class TestDinkumVoiceService(unittest.TestCase):
         self.assertEqual(self.service.mic, new_mic)
         self.service.mic.start.assert_called_once()
 
+        # Reload no change
+        config_hash = self.service._config_hash()
+        self.assertEqual(config_hash, self.service._applied_config_hash)
+        self.service.reload_configuration()
+        self.assertEqual(config_hash, self.service._config_hash())
+        self.service.reload_configuration()
+        self.assertEqual(config_hash, self.service._config_hash())
+
         mock_create_stt.assert_called_once()
         mock_create_fallback.assert_called_once()
         mock_shutdown_hotwords.assert_called_once()

@@ -154,8 +154,7 @@ class OVOSDinkumVoiceService(Thread):
         self._load_lock = RLock()
         self._applied_config_hash = None
         listener = self.config["listener"]
-        with self._load_lock:
-            self.voice_loop = self._init_voice_loop(listener)
+        self.voice_loop = self._init_voice_loop(listener)
 
     def _config_hash(self):
         lang = self.config.get("lang")
@@ -811,12 +810,13 @@ class OVOSDinkumVoiceService(Thread):
         Reload configuration and restart loop. Automatically called when
         Configuration object reports a change
         """
+        if self._config_hash() == self._applied_config_hash:
+            LOG.info(f"No relevant configuration changed")
+            return
+        LOG.info("Maybe reloading configuration")
         with self._load_lock:
+            LOG.debug("Lock Acquired")
             new_hash = self._config_hash()
-
-            if new_hash == self._applied_config_hash:
-                LOG.info(f"No relevant configuration changed")
-                return
 
             # Configuration changed, update status and reload
             self.status.set_alive()
