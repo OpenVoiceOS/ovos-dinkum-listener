@@ -869,14 +869,14 @@ class OVOSDinkumVoiceService(Thread):
 
                 # Update voice_loop with new parameters
                 listener_config = self.config['listener']
-                self.voice_loop.speech_seconds = listener_config.get("speech_begin",
-                                                                     0.3),
-                self.voice_loop.silence_seconds = listener_config.get("silence_end",
-                                                                      0.7),
+                self.voice_loop.speech_seconds = \
+                    listener_config.get("speech_begin", 0.3)
+                self.voice_loop.silence_seconds = \
+                    listener_config.get("silence_end", 0.7)
                 self.voice_loop.timeout_seconds = listener_config.get(
-                    "recording_timeout", 10),
+                    "recording_timeout", 10)
                 self.voice_loop.num_stt_rewind_chunks = listener_config.get(
-                    "utterance_chunks_to_rewind", 2),
+                    "utterance_chunks_to_rewind", 2)
                 self.voice_loop.num_hotword_keep_chunks = listener_config.get(
                     "wakeword_chunks_to_save", 15)
                 self.voice_loop.start()
