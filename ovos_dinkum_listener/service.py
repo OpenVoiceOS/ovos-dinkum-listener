@@ -835,6 +835,7 @@ class OVOSDinkumVoiceService(Thread):
                     self.stt.shutdown()
                 del self.stt
                 self.stt = load_stt_module()
+                self.voice_loop.stt = self.stt
 
             if new_hash['fallback'] != self._applied_config_hash['fallback']:
                 LOG.info(f"Reloading Fallback STT")
@@ -842,6 +843,7 @@ class OVOSDinkumVoiceService(Thread):
                     self.fallback_stt.shutdown()
                 del self.fallback_stt
                 self.fallback_stt = load_fallback_stt()
+                self.voice_loop.fallback_stt = self.fallback_stt
 
             if new_hash['hotwords'] != self._applied_config_hash['hotwords']:
                 LOG.info(f"Reloading Hotwords")
@@ -868,6 +870,8 @@ class OVOSDinkumVoiceService(Thread):
                 self.mic.start()
 
                 # Update voice_loop with new parameters
+                self.voice_loop.mic = self.mic
+                self.voice_loop.vad = self.vad
                 listener_config = self.config['listener']
                 self.voice_loop.speech_seconds = \
                     listener_config.get("speech_begin", 0.3)
