@@ -2,7 +2,15 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a20...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a21...HEAD)
+
+**Merged pull requests:**
+
+- Fix copy/paste error in config reload [\#26](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/26) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [V0.0.2a21](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a21) (2023-05-24)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a20...V0.0.2a21)
 
 **Fixed bugs:**
 
