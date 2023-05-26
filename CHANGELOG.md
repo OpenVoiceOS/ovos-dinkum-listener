@@ -2,7 +2,15 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a21...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a22...HEAD)
+
+**Fixed bugs:**
+
+- Fix default mic config handling to prevent overriding configured values [\#29](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/29) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [V0.0.2a22](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a22) (2023-05-25)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a21...V0.0.2a22)
 
 **Merged pull requests:**
 
