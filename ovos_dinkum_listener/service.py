@@ -627,6 +627,13 @@ class OVOSDinkumVoiceService(Thread):
         self.voice_loop.is_muted = False
 
     def _handle_listen(self, message: Message):
+        if self.config.get('confirm_listening'):
+            sound = self.config.get('sounds', {}).get('start_listening')
+            sound = resolve_resource_file(sound)
+            if sound:
+                play_audio(sound)
+            else:
+                LOG.error(f"Requested sound not available: {sound}")
         self.voice_loop.skip_next_wake = True
 
     def _handle_mic_get_status(self, event):
