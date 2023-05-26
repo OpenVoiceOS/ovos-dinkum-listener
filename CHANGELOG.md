@@ -2,7 +2,15 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a22...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a23...HEAD)
+
+**Fixed bugs:**
+
+- Play global listen sound on button press/get\_response [\#31](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/31) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [V0.0.2a23](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a23) (2023-05-26)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a22...V0.0.2a23)
 
 **Fixed bugs:**
 
