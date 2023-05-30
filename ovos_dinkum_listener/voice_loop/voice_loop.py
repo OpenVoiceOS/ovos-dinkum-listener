@@ -288,7 +288,7 @@ class DinkumVoiceLoop(VoiceLoop):
     def _in_recording(self, chunk: bytes):
         """
         Handle a chunk of audio while in the `RECORDING` state
-        (i.e. after wake word detection). Check for hotwords in all cases and
+        (i.e. after wake word detection). Check for stop words in all cases and
         pass audio to any loaded audio transformers.
 
         If a "stop" hotword is detected, the appropriate method is called.
