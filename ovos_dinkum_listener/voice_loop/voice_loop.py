@@ -128,7 +128,10 @@ class DinkumVoiceLoop(VoiceLoop):
     _chunk_info: ChunkInfo = field(default_factory=ChunkInfo)
 
     @property
-    def running(self):
+    def running(self) -> bool:
+        """
+        Return true while the loop is running
+        """
         return self._is_running is True
 
     def start(self):
@@ -232,6 +235,11 @@ class DinkumVoiceLoop(VoiceLoop):
         LOG.info(f"Loop stopped running")
 
     def reset_state(self):
+        """
+        Reset the internal state to the default
+        Continuous Listening -> Waiting for Command
+        Wakeword Listening -> Waiting for WW
+        """
         if self.listen_mode == ListeningMode.CONTINUOUS:
             self.state = ListeningState.WAITING_CMD
             self.hotwords.state = HotwordState.HOTWORD
@@ -241,28 +249,54 @@ class DinkumVoiceLoop(VoiceLoop):
         LOG.debug(f"state={self.state}|hotwords.state={self.hotwords.state}")
 
     def go_to_sleep(self):
+        """
+        Set the Listening State to "Sleeping" until woken
+        """
         self.state = ListeningState.SLEEPING
         LOG.info("sleeping")
 
     def wakeup(self):
+        """
+        Reset the Listening State from "Sleeping" to the default for the current
+        Listening Mode.
+        """
         self.reset_state()
         LOG.info("wakeup")
 
-    def start_recording(self, filename=None):
+    def start_recording(self, filename: Optional[str] = None):
+        """
+        Set the listening state to RECORDING and specify a file to record to
+        @param filename: filename to record mic input to
+        """
         self.recording_filename = filename or str(time.time())
         LOG.debug(f"Recording to {self.recording_filename}")
         self.state = ListeningState.RECORDING
 
     def stop_recording(self):
+        """
+        Stop recording, pass audio and metadata (recording filename) to the
+        `recording_audio_callback` method and reset the Listening State
+        """
         #  finished recording
         if self.recording_audio_callback is not None:
             metadata = {"recording_name": self.recording_filename}
-            metadata = self.recording_audio_callback(self.stt_audio_bytes,
-                                                     metadata) or metadata
+            self.recording_audio_callback(self.stt_audio_bytes, metadata)
         LOG.debug("Finished recording")
         self.reset_state()
 
-    def _in_recording(self, chunk):
+    def _in_recording(self, chunk: bytes):
+        """
+        Handle a chunk of audio as user input
+        (after wake word detection or in continuous listening mode). Check for
+        hotwords in all cases and pass audio to any loaded audio transformers.
+
+        If a "stop" hotword is detected, the appropriate method is called.
+
+        If not hotword is detected, audio is evaluated by VAD and any speech
+        frames are passed to STT.
+
+        @param chunk: bytes of audio captured
+        """
         self.hotwords.state = HotwordState.RECORDING
         self.hotwords.update(chunk)
         ww = self.hotwords.found()
@@ -287,12 +321,24 @@ class DinkumVoiceLoop(VoiceLoop):
 
             self.transformers.feed_speech(chunk)
 
-    def _before_wakeup(self, chunk):
+    def _before_wakeup(self, chunk: bytes):
+        """
+        Handle a chunk of audio as unknown input while sleeping,
+        passing to wakeup word detection.
+        @param chunk: bytes of audio captured
+        """
         self.hotwords.state = HotwordState.LISTEN
         if self._detect_ww(chunk):
             self.state = ListeningState.CHECK_WAKE_UP
 
-    def _detect_wakeup(self, chunk):
+    def _detect_wakeup(self, chunk: bytes) -> bool:
+        """
+        Handle a chunk of audio where a hotword has been detected.
+        Determines if the detected hotword should exit sleeping mode.
+        If a wake word has been spoken multiple times,
+        @param chunk: bytes of audio captured
+        @return: True if wake up word was detected
+        """
         self.hotwords.state = HotwordState.WAKEUP
         self.hotwords.update(chunk)
         ww = self.hotwords.found()
@@ -315,9 +361,16 @@ class DinkumVoiceLoop(VoiceLoop):
             # require wake word again
             self.hotwords.state = HotwordState.LISTEN
             self.state = ListeningState.SLEEPING
+            # TODO: What does this do?
         return False
 
-    def _detect_hot(self, chunk):
+    def _detect_hot(self, chunk: bytes) -> bool:
+        """
+        Check for a hotword in a chunk of unknown audio. If a hotword is
+        detected, call `hotword_audio_callback` and pass audio to transformers.
+        @param chunk: bytes of audio captured
+        @return: True if a hotword was detected
+        """
         self.hotwords.state = HotwordState.HOTWORD
         self.hotwords.update(chunk)
         ww = self.hotwords.found()
@@ -327,13 +380,25 @@ class DinkumVoiceLoop(VoiceLoop):
                 hotword_audio_bytes = bytes()
                 while self.hotword_chunks:
                     hotword_audio_bytes += self.hotword_chunks.popleft()
-                metadata = self.hotword_audio_callback(hotword_audio_bytes,
-                                                       self.hotwords.get_ww(ww))
+                self.hotword_audio_callback(hotword_audio_bytes,
+                                            self.hotwords.get_ww(ww))
                 self.transformers.feed_hotword(chunk)
                 return True
         return False
 
-    def _detect_ww(self, chunk):
+    def _detect_ww(self, chunk: bytes) -> bool:
+        """
+        Check for a wake word in a chunk of unknown audio. Audio is passed to
+        hotwords in all cases. If a wake word is detected OR
+        `self.skip_next_wake` is True, audio is passed to
+        `listenword_audio_callback` and `wake_callback`.
+
+        If WW detected and sleeping, check for wakeup word in next audio chunks
+        else check for speech input for STT.
+
+        @param chunk:bytes of audio captured
+        @return: True if a wakeword was detected
+        """
         self.hotwords.state = HotwordState.LISTEN
         self.hotword_chunks.append(chunk)
         self.stt_chunks.append(chunk)
@@ -350,8 +415,8 @@ class DinkumVoiceLoop(VoiceLoop):
                 while self.hotword_chunks:
                     hotword_audio_bytes += self.hotword_chunks.popleft()
 
-                metadata = self.listenword_audio_callback(hotword_audio_bytes,
-                                                          self.hotwords.get_ww(ww))
+                self.listenword_audio_callback(hotword_audio_bytes,
+                                               self.hotwords.get_ww(ww))
 
             self.skip_next_wake = False
             self.hotword_chunks.clear()
@@ -380,6 +445,11 @@ class DinkumVoiceLoop(VoiceLoop):
         return False
 
     def _wait_cmd(self, chunk: bytes):
+        """
+        Handle audio chunks while in continuous listening mode, before VAD has
+        detected any speech.
+        @param chunk: bytes of audio captured
+        """
         # Recording voice command, but user has not spoken yet
         self._chunk_info.is_speech = not self.vad.is_silence(chunk)
         hot = False
@@ -408,7 +478,12 @@ class DinkumVoiceLoop(VoiceLoop):
                 self.stt_audio_bytes += chunk
                 self.stt_chunks.append(chunk)
 
-    def _before_cmd(self, chunk):
+    def _before_cmd(self, chunk: bytes):
+        """
+        Handle audio chunks after WW detection or listen triggered, before VAD
+        has detected any speech.
+        @param chunk: bytes of audio captured
+        """
         # Recording voice command, but user has not spoken yet
         self.transformers.feed_audio(chunk)
 
@@ -428,8 +503,11 @@ class DinkumVoiceLoop(VoiceLoop):
 
             # Wait for enough speech before looking for the end of the
             # command (silence).
-
-            self._chunk_info.is_speech = not self.vad.is_silence(stt_chunk)
+            try:
+                self._chunk_info.is_speech = not self.vad.is_silence(stt_chunk)
+            except Exception as e:
+                LOG.exception(f"Error processing chunk of "
+                              f"size={len(stt_chunk)}: {e}")
 
             if self._chunk_info.is_speech:
                 self.speech_seconds_left -= self.mic.seconds_per_chunk
@@ -443,7 +521,11 @@ class DinkumVoiceLoop(VoiceLoop):
                 # Reset
                 self.speech_seconds_left = self.speech_seconds
 
-    def _in_cmd(self, chunk):
+    def _in_cmd(self, chunk: bytes):
+        """
+        Handle audio chunks identified as speech by VAD
+        @param chunk: bytes of audio captured
+        """
         self.transformers.feed_speech(chunk)
 
         # Recording voice command until user stops speaking
