@@ -287,14 +287,14 @@ class DinkumVoiceLoop(VoiceLoop):
 
     def _in_recording(self, chunk: bytes):
         """
-        Handle a chunk of audio while in the `RECORDING` state
-        (i.e. after wake word detection). Check for stop words in all cases and
-        pass audio to any loaded audio transformers.
+        Handle a chunk of audio while in the `RECORDING` state.
+        Check for stop words in all cases and pass audio to any loaded audio
+        transformers.
 
         If a "stop" hotword is detected, the appropriate method is called.
 
-        If no "stop" hotword is detected, audio is evaluated by VAD and any
-        speech frames are passed to audio transformers.
+        If no "stop" hotword is detected, audio is evaluated by VAD and all
+        audio frames are passed to audio transformers.
 
         @param chunk: bytes of audio captured
         """
@@ -524,7 +524,8 @@ class DinkumVoiceLoop(VoiceLoop):
 
     def _in_cmd(self, chunk: bytes):
         """
-        Handle audio chunks identified as speech by VAD
+        Handle audio chunks after VAD has identified speech and before the end
+        of user speech is identified
         @param chunk: bytes of audio captured
         """
         self.transformers.feed_speech(chunk)
