@@ -1,8 +1,8 @@
 # Changelog
 
-## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
+## [V0.0.2a26](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a26) (2023-05-30)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a25...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a25...V0.0.2a26)
 
 **Merged pull requests:**
 
