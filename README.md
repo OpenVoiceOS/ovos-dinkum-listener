@@ -33,6 +33,29 @@ ovos exclusive features:
 - XDG path standards for recorded audio data
 - [neon-transformers](https://github.com/NeonGeckoCom/neon-transformers) support
 
+## How does it work
+
+There are 3 modes to run dinkum, wakeword, hybrid, of continuous (VAD only)
+
+Additionally here are 2 temporary modes that can be triggered via bus events / companion skills
+
+### Wake Word mode
+![imagem](https://github.com/OpenVoiceOS/ovos-dinkum-listener/assets/33701864/c55388dc-a7fb-4857-9c35-f4a4223c4145)
+
+### Continuous mode
+![imagem](https://github.com/OpenVoiceOS/ovos-dinkum-listener/assets/33701864/c8820161-9cb8-433f-9380-6d07965c7fa5)
+
+### Hybrid mode
+![imagem](https://github.com/OpenVoiceOS/ovos-dinkum-listener/assets/33701864/b9012663-4f00-47a9-bac4-8b08392da12c)
+
+### Sleep mode
+Can be used via [Naptime skill](https://github.com/OpenVoiceOS/skill-ovos-naptime)
+![imagem](https://github.com/OpenVoiceOS/ovos-dinkum-listener/assets/33701864/24835210-2116-4080-8c2b-fc18eecd923a)
+
+### Recording mode
+Can be used via [Recording skill](https://github.com/NeonGeckoCom/skill-audio-recording)
+![imagem](https://github.com/OpenVoiceOS/ovos-dinkum-listener/assets/33701864/0337b499-3175-4031-a83f-eda352d2197f)
+
 ## Usage
 
 ```
