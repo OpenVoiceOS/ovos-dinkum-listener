@@ -205,12 +205,11 @@ class HotwordContainer:
             engines = self.listen_words
             if not engines:
                 raise RuntimeWarning(
-                    f"Waiting for listen_words but none are Available!")
+                    f"Waiting for listen_words but none are available!")
         elif self.state == HotwordState.WAKEUP:
             engines = self.wakeup_words
             if not engines:
-                raise RuntimeWarning(
-                    f"Waiting for wakeup_words but none are Available!")
+                LOG.warning("Waiting for wakeup_words but none are available!")
         elif self.state == HotwordState.RECORDING:
             engines = self.stop_words
             if not engines:
