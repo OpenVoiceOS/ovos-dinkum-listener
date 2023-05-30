@@ -159,6 +159,13 @@ class HotwordContainer:
             except Exception as e:
                 LOG.error("Failed to load hotword: " + word)
 
+        if not self.listen_words:
+            LOG.error("No listen words loaded")
+        if not self.wakeup_words:
+            LOG.warning("No wakeup words loaded")
+        if not self.stop_words:
+            LOG.warning("No stop words loaded")
+
     @property
     def ww_names(self):
         """ wakeup words exit sleep mode if detected after a listen word"""
@@ -204,15 +211,12 @@ class HotwordContainer:
         if self.state == HotwordState.LISTEN:
             engines = self.listen_words
             if not engines:
-                LOG.debug("No listen_words loaded")
+                raise RuntimeWarning(
+                    f"Waiting for listen_words but none are available!")
         elif self.state == HotwordState.WAKEUP:
             engines = self.wakeup_words
-            if not engines:
-                LOG.debug("No wakeup_words loaded")
         elif self.state == HotwordState.RECORDING:
             engines = self.stop_words
-            if not engines:
-                LOG.debug("No stop_words loaded")
         else:
             engines = self.hot_words
 
