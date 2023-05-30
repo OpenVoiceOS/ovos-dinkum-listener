@@ -294,7 +294,7 @@ class DinkumVoiceLoop(VoiceLoop):
         If a "stop" hotword is detected, the appropriate method is called.
 
         If no "stop" hotword is detected, audio is evaluated by VAD and any
-        speech frames are passed to STT.
+        speech frames are passed to audio transformers.
 
         @param chunk: bytes of audio captured
         """
@@ -315,7 +315,7 @@ class DinkumVoiceLoop(VoiceLoop):
                 self.stopword_audio_callback(hotword_audio_bytes,
                                              self.hotwords.get_ww(ww))
         else:
-            # Recording voice command until user requests stop
+            # Recording audio until user requests stop
             self._chunk_info.is_speech = not self.vad.is_silence(chunk)
             self.stt_audio_bytes += chunk
             self.stt_chunks.append(chunk)
