@@ -12,7 +12,7 @@ is strongly recommended instead of the default webrtcvad plugin
 
 ## Configuration
 
-you can set the VAD, STT and Microphone plugins
+you can set the Wakeword, VAD, STT and Microphone plugins
 
 eg, to run under MacOS you should use https://github.com/OpenVoiceOS/ovos-microphone-plugin-sounddevice
 
@@ -24,8 +24,13 @@ eg, to run under MacOS you should use https://github.com/OpenVoiceOS/ovos-microp
     "ovos-stt-plugin-server": {"url": "https://stt.openvoiceos.com/stt"}
   },
   "listener": {
+    // NOTE, multiple hotwords are supported, these fields define the main wake_word,
+    // this is equivalent to setting "active": true in the "hotwords" section
+    // see "hotwords" section at https://github.com/OpenVoiceOS/ovos-config/blob/dev/ovos_config/mycroft.conf
+    "wake_word": "hey_mycroft",
+    "stand_up_word": "wake_up",
     "microphone": {
-      "module": "ovos-microphone-plugin-sounddevice"
+      "module": "ovos-microphone-plugin-alsa"
     },
     VAD": {
      // Seconds of speech before voice command has begun
