@@ -2,7 +2,21 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a23...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a24...HEAD)
+
+**Fixed bugs:**
+
+- numpy.core.\_exceptions.\_UFuncNoLoopError: ufunc 'add' did not contain a loop with signature matching types \(dtype\('S96000'\), dtype\('float32'\)\) -\> None [\#30](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/30)
+- object has no attribute 'shutdown' [\#28](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/28)
+- Should reconnect/restart when microphone got lost [\#21](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/21)
+
+**Merged pull requests:**
+
+- Add docstrings and type annotations to DinkumVoiceLoop [\#36](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/36) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [V0.0.2a24](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a24) (2023-05-26)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a23...V0.0.2a24)
 
 **Fixed bugs:**
 
