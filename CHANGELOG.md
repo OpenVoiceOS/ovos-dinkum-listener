@@ -1,5 +1,21 @@
 # Changelog
 
+## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a27...HEAD)
+
+**Fixed bugs:**
+
+- "No listen\_words loaded" loop pretty agressive [\#33](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/33)
+
+**Merged pull requests:**
+
+- Raise instead of just logging when no hotword plugin is loaded [\#38](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/38) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [V0.0.2a27](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a27) (2023-05-30)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a26...V0.0.2a27)
+
 ## [V0.0.2a26](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a26) (2023-05-30)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a25...V0.0.2a26)
