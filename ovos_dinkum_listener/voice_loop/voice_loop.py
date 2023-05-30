@@ -287,14 +287,14 @@ class DinkumVoiceLoop(VoiceLoop):
 
     def _in_recording(self, chunk: bytes):
         """
-        Handle a chunk of audio as user input while in the `RECORDING` state
+        Handle a chunk of audio while in the `RECORDING` state
         (i.e. after wake word detection). Check for hotwords in all cases and
         pass audio to any loaded audio transformers.
 
         If a "stop" hotword is detected, the appropriate method is called.
 
-        If not hotword is detected, audio is evaluated by VAD and any speech
-        frames are passed to STT.
+        If no "stop" hotword is detected, audio is evaluated by VAD and any
+        speech frames are passed to STT.
 
         @param chunk: bytes of audio captured
         """
@@ -580,7 +580,12 @@ class DinkumVoiceLoop(VoiceLoop):
 
         return default_lang
 
-    def _get_tx(self, stt_context):
+    def _get_tx(self, stt_context: dict) -> (str, dict):
+        """
+        Get a string transcription of audio that was previously streamed to STT.
+        @param stt_context: dict context determined by transformers service
+        @return: string transcription and dict context
+        """
         # handle lang detection from speech
         if "stt_lang" in stt_context:
             lang = self._validate_lang(stt_context["stt_lang"])
@@ -609,7 +614,14 @@ class DinkumVoiceLoop(VoiceLoop):
         stt_context["transcription"] = text
         return text, stt_context
 
-    def _after_cmd(self, chunk):
+    def _after_cmd(self, chunk: bytes):
+        """
+        Handle audio chunk after VAD has determined a command is ended.
+        Calls `stt_audio_callback` and `text_callback` with finalized utterance
+        recording and transcript. The loop is reset to the appropriate state for
+        the next command.
+        @param chunk: bytes of audio captured
+        """
         # Command has ended, call transformers pipeline before STT
         chunk, stt_context = self.transformers.transform(chunk)
 
@@ -622,8 +634,7 @@ class DinkumVoiceLoop(VoiceLoop):
             LOG.info("nothing transcribed")
         # Voice command has finished recording
         if self.stt_audio_callback is not None:
-            metadata = self.stt_audio_callback(self.stt_audio_bytes,
-                                               stt_context)
+            self.stt_audio_callback(self.stt_audio_bytes, stt_context)
 
         self.stt_audio_bytes = bytes()
 
@@ -653,4 +664,7 @@ class DinkumVoiceLoop(VoiceLoop):
         self.timeout_seconds_left = self.timeout_seconds
 
     def stop(self):
+        """
+        Signal the VoiceLoop to stop processing audio.
+        """
         self._is_running = False
