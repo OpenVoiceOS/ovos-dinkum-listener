@@ -10,6 +10,58 @@ the usual configuration files are loaded, some new params are exposed under the
 using [ovos-vad-plugin-silero](https://github.com/OpenVoiceOS/ovos-vad-plugin-silero) 
 is strongly recommended instead of the default webrtcvad plugin
 
+## Configuration
+
+you can set the VAD, STT and Microphone plugins
+
+eg, to run under MacOS you should use https://github.com/OpenVoiceOS/ovos-microphone-plugin-sounddevice
+
+```
+{
+  "stt": {
+    "module": "ovos-stt-plugin-server",
+    "fallback_module": "",
+    "ovos-stt-plugin-server": {"url": "https://stt.openvoiceos.com/stt"}
+  },
+  "listener": {
+    "microphone": {
+      "module": "ovos-microphone-plugin-sounddevice"
+    },
+    VAD": {
+     // Seconds of speech before voice command has begun
+     "speech_seconds": 0.1,
+     // Seconds of silence before a voice command has finished
+     "silence_seconds": 0.5,
+     // Seconds of audio to keep before voice command has begun
+     "before_seconds": 0.5,
+     // Minimum length of voice command (seconds)
+     // NOTE: max_seconds uses recording_timeout listener setting
+     "min_seconds": 1,
+     // recommended plugin: "ovos-vad-plugin-silero"
+     "module": "ovos-vad-plugin-webrtcvad",
+     "ovos-vad-plugin-silero": {"threshold": 0.2},
+     "ovos-vad-plugin-webrtcvad": {"vad_mode": 3}
+    },
+    // Settings used by microphone to set recording timeout
+    "recording_timeout": 10.0,
+    "recording_timeout_with_silence": 3.0,
+
+    // continuous listen is an experimental setting, it removes the need for
+    // wake words and uses VAD only, a streaming STT is strongly recommended
+    // NOTE: depending on hardware this may cause mycroft to hear its own TTS responses as questions
+    "continuous_listen": false,
+
+    // hybrid listen is an experimental setting,
+    // it will not require a wake word for X seconds after a user interaction
+    // this means you dont need to say "hey mycroft" for follow up questions
+    "hybrid_listen": false,
+    // number of seconds to wait for an interaction before requiring wake word again
+    "listen_timeout": 45
+  }
+}
+```
+
+
 ## mycroft-dinkum vs ovos-dinkum-listener
 
 - release 0.0.0 is the extracted dinkum listener, plugins are hardcoded options
@@ -32,6 +84,29 @@ ovos exclusive features:
 - sample upload (DatasetApi ovos-backend-client)
 - XDG path standards for recorded audio data
 - [neon-transformers](https://github.com/NeonGeckoCom/neon-transformers) support
+
+## How does it work
+
+There are 3 modes to run dinkum, wakeword, hybrid, of continuous (VAD only)
+
+Additionally here are 2 temporary modes that can be triggered via bus events / companion skills
+
+### Wake Word mode
+![imagem](https://github.com/OpenVoiceOS/ovos-dinkum-listener/assets/33701864/c55388dc-a7fb-4857-9c35-f4a4223c4145)
+
+### Continuous mode
+![imagem](https://github.com/OpenVoiceOS/ovos-dinkum-listener/assets/33701864/c8820161-9cb8-433f-9380-6d07965c7fa5)
+
+### Hybrid mode
+![imagem](https://github.com/OpenVoiceOS/ovos-dinkum-listener/assets/33701864/b9012663-4f00-47a9-bac4-8b08392da12c)
+
+### Sleep mode
+Can be used via [Naptime skill](https://github.com/OpenVoiceOS/skill-ovos-naptime)
+![imagem](https://github.com/OpenVoiceOS/ovos-dinkum-listener/assets/33701864/24835210-2116-4080-8c2b-fc18eecd923a)
+
+### Recording mode
+Can be used via [Recording skill](https://github.com/NeonGeckoCom/skill-audio-recording)
+![imagem](https://github.com/OpenVoiceOS/ovos-dinkum-listener/assets/33701864/0337b499-3175-4031-a83f-eda352d2197f)
 
 ## Usage
 
