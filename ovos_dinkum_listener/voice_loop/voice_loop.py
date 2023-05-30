@@ -239,6 +239,7 @@ class DinkumVoiceLoop(VoiceLoop):
         Reset the internal state to the default
         Continuous Listening -> Waiting for Command
         Wakeword Listening -> Waiting for WW
+        Hybrid Listening -> Waiting for WW
         """
         if self.listen_mode == ListeningMode.CONTINUOUS:
             self.state = ListeningState.WAITING_CMD
@@ -286,9 +287,9 @@ class DinkumVoiceLoop(VoiceLoop):
 
     def _in_recording(self, chunk: bytes):
         """
-        Handle a chunk of audio as user input
-        (after wake word detection or in continuous listening mode). Check for
-        hotwords in all cases and pass audio to any loaded audio transformers.
+        Handle a chunk of audio as user input while in the `RECORDING` state
+        (i.e. after wake word detection). Check for hotwords in all cases and
+        pass audio to any loaded audio transformers.
 
         If a "stop" hotword is detected, the appropriate method is called.
 
