@@ -10,6 +10,7 @@ from ovos_utils.messagebus import FakeBus
 class HotWordException(RuntimeWarning):
     """Exception related to HotWords"""
 
+
 class CyclicAudioBuffer:
     def __init__(self, duration=0.98, initial_data=None,
                  sample_rate=16000, sample_width=2):
