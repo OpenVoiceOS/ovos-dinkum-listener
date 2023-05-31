@@ -2,7 +2,15 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a27...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a28...HEAD)
+
+**Fixed bugs:**
+
+- Acquire lock during service shutdown to prevent reload race condition [\#39](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/39) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [V0.0.2a28](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a28) (2023-05-30)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a27...V0.0.2a28)
 
 **Fixed bugs:**
 
