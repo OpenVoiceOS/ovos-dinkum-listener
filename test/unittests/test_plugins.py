@@ -31,7 +31,7 @@ class TestPlugins(unittest.TestCase):
         from ovos_dinkum_listener.plugins import FakeStreamingSTT
         # TODO
 
-    @patch("ovos_config.config.Configuration")
+    @patch("ovos_dinkum_listener.plugins.Configuration")
     @patch("ovos_plugin_manager.stt.OVOSSTTFactory.create")
     def test_load_stt_module(self, create, config):
         config.return_value = _MOCK_CONFIG
@@ -53,7 +53,7 @@ class TestPlugins(unittest.TestCase):
         # Test module init raises exception
         # TODO
 
-    @patch("ovos_config.config.Configuration")
+    @patch("ovos_dinkum_listener.plugins.Configuration")
     @patch("ovos_plugin_manager.stt.OVOSSTTFactory.create")
     def test_load_fallback_stt(self, create, config):
         config.return_value = _MOCK_CONFIG
