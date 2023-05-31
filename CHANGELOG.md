@@ -2,7 +2,16 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a29...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a30...HEAD)
+
+**Fixed bugs:**
+
+- "log\_level" option not honorred [\#34](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/34)
+- Add call to `init_service_logger` to load LOG configuration [\#44](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/44) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [V0.0.2a30](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a30) (2023-05-31)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a29...V0.0.2a30)
 
 **Fixed bugs:**
 
