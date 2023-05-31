@@ -58,7 +58,9 @@ def load_stt_module(config: Dict[str, Any] = None) -> StreamingSTT:
     @param config: STT or global configuration or None (uses Configuration)
     @return: Initialized StreamingSTT plugin
     """
+    lang = Configuration().get('lang')
     stt_config = config or Configuration()["stt"]
+    stt_config.setdefault("lang", lang)
     plug = OVOSSTTFactory.create(stt_config)
     if not isinstance(plug, StreamingSTT):
         LOG.debug(f"Using FakeStreamingSTT wrapper with config={config}")
@@ -72,12 +74,14 @@ def load_fallback_stt(cfg: Dict[str, Any] = None) -> Optional[StreamingSTT]:
     @param cfg: STT or global configuration or None (uses Configuration)
     @return: Initialized StreamingSTT plugin if configured, else None
     """
+    lang = Configuration().get('lang')
     cfg = cfg or Configuration().get("stt", {})
     fbm = cfg.get("fallback_module")
     if not fbm:
         return None
     try:
         config = cfg.get(fbm, {})
+        config.setdefault("lang", lang)
         plug = OVOSSTTFactory.create({"stt": {"module": fbm, fbm: config}})
         if not isinstance(plug, StreamingSTT):
             LOG.debug(f"Using FakeStreamingSTT wrapper with config={config}")
