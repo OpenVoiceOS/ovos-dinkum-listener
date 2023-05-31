@@ -11,6 +11,7 @@
 # limitations under the License.
 
 from ovos_utils import wait_for_exit_signal
+from ovos_utils.log import init_service_logger
 
 from ovos_dinkum_listener.service import OVOSDinkumVoiceService, on_ready, \
     on_error, on_stopping
@@ -19,6 +20,7 @@ from ovos_dinkum_listener.service import OVOSDinkumVoiceService, on_ready, \
 def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping,
          watchdog=lambda: None):
     """Service entry point"""
+    init_service_logger("voice")
     service = OVOSDinkumVoiceService(on_ready=ready_hook, on_error=error_hook,
                                      on_stopping=stopping_hook,
                                      watchdog=watchdog)
