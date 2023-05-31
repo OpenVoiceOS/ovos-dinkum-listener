@@ -887,7 +887,6 @@ class OVOSDinkumVoiceService(Thread):
                 LOG.debug(f"new={self.hotwords.applied_hotwords_config}")
 
             if new_hash['loop'] != self._applied_config_hash['loop']:
-                # TODO: This will stop the process in `run`
                 LOG.info(f"Reloading Listener")
                 self._reload_event.clear()
                 self.voice_loop.stop()
