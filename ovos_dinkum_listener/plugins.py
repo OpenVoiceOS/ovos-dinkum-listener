@@ -2,7 +2,7 @@ from typing import Any, Dict, Optional
 from ovos_plugin_manager.stt import OVOSSTTFactory
 from ovos_plugin_manager.templates.stt import StreamingSTT, StreamThread
 from ovos_plugin_manager.utils import ReadWriteStream
-from ovos_config import Configuration
+from ovos_config.config import Configuration
 from ovos_utils.log import LOG
 from speech_recognition import AudioData
 
@@ -58,8 +58,8 @@ def load_stt_module(config: Dict[str, Any] = None) -> StreamingSTT:
     @param config: STT or global configuration or None (uses Configuration)
     @return: Initialized StreamingSTT plugin
     """
-    lang = Configuration().get('lang')
     stt_config = config or Configuration()["stt"]
+    lang = stt_config.get('lang') or Configuration().get('lang')
     stt_config.setdefault("lang", lang)
     plug = OVOSSTTFactory.create(stt_config)
     if not isinstance(plug, StreamingSTT):
@@ -74,15 +74,15 @@ def load_fallback_stt(cfg: Dict[str, Any] = None) -> Optional[StreamingSTT]:
     @param cfg: STT or global configuration or None (uses Configuration)
     @return: Initialized StreamingSTT plugin if configured, else None
     """
-    lang = Configuration().get('lang')
     cfg = cfg or Configuration().get("stt", {})
+    lang = cfg.get('lang') or Configuration().get('lang')
     fbm = cfg.get("fallback_module")
     if not fbm:
         return None
     try:
         config = cfg.get(fbm, {})
         config.setdefault("lang", lang)
-        plug = OVOSSTTFactory.create({"stt": {"module": fbm, fbm: config}})
+        plug = OVOSSTTFactory.create({"module": fbm, fbm: config})
         if not isinstance(plug, StreamingSTT):
             LOG.debug(f"Using FakeStreamingSTT wrapper with config={config}")
             return FakeStreamingSTT(plug, config)
