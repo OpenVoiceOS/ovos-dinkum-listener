@@ -180,7 +180,10 @@ class HotwordContainer:
 
     @property
     def plugins(self):
-        return [v["engine"] for k, v in self._plugins.items()]
+        try:
+            return [v["engine"] for k, v in self._plugins.items()]
+        except KeyError:
+            raise HotWordException("Expected engine not loaded")
 
     @property
     def wakeup_words(self):
