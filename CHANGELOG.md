@@ -2,7 +2,19 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a28...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a29...HEAD)
+
+**Fixed bugs:**
+
+- Update `main` method to match ovos-listener for compatibility [\#43](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/43) ([NeonDaniel](https://github.com/NeonDaniel))
+
+**Closed issues:**
+
+- systemd notify: Fail to understand how to properly launch this service through systemd [\#42](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/42)
+
+## [V0.0.2a29](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a29) (2023-05-31)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a28...V0.0.2a29)
 
 **Fixed bugs:**
 
