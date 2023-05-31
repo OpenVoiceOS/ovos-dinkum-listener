@@ -411,6 +411,14 @@ class TestDinkumVoiceService(unittest.TestCase):
         self.assertEqual(self.service.mic, new_mic)
         self.service.mic.start.assert_called_once()
 
+        # Reload no relevant change
+        config_hash = self.service._config_hash()
+        self.service.config['new_section'] = {'test': True}
+        self.assertEqual(config_hash, self.service._applied_config_hash)
+        self.service.reload_configuration()
+        self.assertTrue(self.service.config['new_section']['test'])
+        self.assertEqual(config_hash, self.service._config_hash())
+
         # Reload no change
         config_hash = self.service._config_hash()
         self.assertEqual(config_hash, self.service._applied_config_hash)
