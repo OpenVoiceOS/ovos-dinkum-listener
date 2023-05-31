@@ -853,24 +853,36 @@ class OVOSDinkumVoiceService(Thread):
 
             if new_hash['stt'] != self._applied_config_hash['stt']:
                 LOG.info(f"Reloading STT")
+                if self.stt:
+                    LOG.debug(f"old={self.stt.__class__}: {self.stt.config}")
                 if hasattr(self.stt, "shutdown"):
                     self.stt.shutdown()
                 del self.stt
                 self.stt = load_stt_module()
                 self.voice_loop.stt = self.stt
+                if self.stt:
+                    LOG.debug(f"new={self.stt.__class__}: {self.stt.config}")
 
             if new_hash['fallback'] != self._applied_config_hash['fallback']:
                 LOG.info(f"Reloading Fallback STT")
+                if self.fallback_stt:
+                    LOG.debug(f"old={self.fallback_stt.__class__}: "
+                              f"{self.fallback_stt.config}")
                 if hasattr(self.fallback_stt, "shutdown"):
                     self.fallback_stt.shutdown()
                 del self.fallback_stt
                 self.fallback_stt = load_fallback_stt()
                 self.voice_loop.fallback_stt = self.fallback_stt
+                if self.fallback_stt:
+                    LOG.debug(f"new={self.fallback_stt.__class__}: "
+                              f"{self.fallback_stt.config}")
 
             if new_hash['hotwords'] != self._applied_config_hash['hotwords']:
                 LOG.info(f"Reloading Hotwords")
+                LOG.debug(f"old={self.hotwords.applied_hotwords_config}")
                 self.hotwords.shutdown()
                 self.hotwords.load_hotword_engines()
+                LOG.debug(f"new={self.hotwords.applied_hotwords_config}")
 
             if new_hash['loop'] != self._applied_config_hash['loop']:
                 # TODO: This will stop the process in `run`
