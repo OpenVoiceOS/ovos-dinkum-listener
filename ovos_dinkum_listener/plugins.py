@@ -1,5 +1,4 @@
-from typing import Any, Dict
-
+from typing import Any, Dict, Optional
 from ovos_plugin_manager.stt import OVOSSTTFactory
 from ovos_plugin_manager.templates.stt import StreamingSTT, StreamThread
 from ovos_plugin_manager.utils import ReadWriteStream
@@ -54,25 +53,36 @@ class FakeStreamingSTT(StreamingSTT):
 
 
 def load_stt_module(config: Dict[str, Any] = None) -> StreamingSTT:
+    """
+    Load an STT module based on configuration
+    @param config: STT or global configuration or None (uses Configuration)
+    @return: Initialized StreamingSTT plugin
+    """
     stt_config = config or Configuration()["stt"]
     plug = OVOSSTTFactory.create(stt_config)
     if not isinstance(plug, StreamingSTT):
-        LOG.debug("Using FakeStreamingSTT wrapper")
+        LOG.debug(f"Using FakeStreamingSTT wrapper with config={config}")
         return FakeStreamingSTT(plug, config)
     return plug
 
 
-def load_fallback_stt(cfg: Dict[str, Any] = None) -> StreamingSTT:
+def load_fallback_stt(cfg: Dict[str, Any] = None) -> Optional[StreamingSTT]:
+    """
+    Load a fallback STT module based on configuration
+    @param cfg: STT or global configuration or None (uses Configuration)
+    @return: Initialized StreamingSTT plugin if configured, else None
+    """
     cfg = cfg or Configuration().get("stt", {})
     fbm = cfg.get("fallback_module")
-    if fbm:
-        try:
-            config = cfg.get(fbm, {})
-            plug = OVOSSTTFactory.create({"stt": {"module": fbm, fbm: config}})
-            if not isinstance(plug, StreamingSTT):
-                LOG.debug("Using FakeStreamingSTT wrapper")
-                return FakeStreamingSTT(plug, config)
-            return plug
-        except:
-            LOG.exception("Failed to load fallback STT")
-    return None
+    if not fbm:
+        return None
+    try:
+        config = cfg.get(fbm, {})
+        plug = OVOSSTTFactory.create({"stt": {"module": fbm, fbm: config}})
+        if not isinstance(plug, StreamingSTT):
+            LOG.debug(f"Using FakeStreamingSTT wrapper with config={config}")
+            return FakeStreamingSTT(plug, config)
+        return plug
+    except:
+        LOG.exception("Failed to load fallback STT")
+        return None
