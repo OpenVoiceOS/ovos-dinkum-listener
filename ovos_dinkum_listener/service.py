@@ -336,22 +336,29 @@ class OVOSDinkumVoiceService(Thread):
 
     def _shutdown(self):
         """
-        Internal method to shutdown any running services. Called after
+        Internal method to shut down any running services. Called after
         `self.voice_loop` is stopped
         """
-        if hasattr(self.stt, "shutdown"):
-            self.stt.shutdown()
+        if not self._load_lock.acquire(timeout=30):
+            LOG.warning("Lock not acquired after 30 seconds; "
+                        "shutting down anyways")
+        try:
+            if hasattr(self.stt, "shutdown"):
+                self.stt.shutdown()
 
-        if hasattr(self.fallback_stt, "shutdown"):
-            self.fallback_stt.shutdown()
+            if hasattr(self.fallback_stt, "shutdown"):
+                self.fallback_stt.shutdown()
 
-        self.hotwords.shutdown()
+            self.hotwords.shutdown()
 
-        if hasattr(self.vad, "stop"):
-            self.vad.stop()
+            if hasattr(self.vad, "stop"):
+                self.vad.stop()
 
-        self.mic.stop()
+            self.mic.stop()
+        except Exception as e:
+            LOG.exception(f"Shutdown failed with: {e}")
         self._shutdown_event.set()
+        self._load_lock.release()
 
     def _after_stop(self):
         """Shut down code called after stop()"""
@@ -833,6 +840,10 @@ class OVOSDinkumVoiceService(Thread):
         LOG.info("Maybe reloading configuration")
         if not self._load_lock.acquire(timeout=30):
             raise TimeoutError("Lock not acquired after 30 seconds")
+        if self._shutdown_event.is_set():
+            LOG.info("Shutting down, skipping config reload")
+            self._load_lock.release()
+            return
         try:
             LOG.debug("Lock Acquired")
             new_hash = self._config_hash()
