@@ -7,6 +7,9 @@ from ovos_utils.log import LOG
 from ovos_utils.messagebus import FakeBus
 
 
+class HotWordException(RuntimeWarning):
+    """Exception related to HotWords"""
+
 class CyclicAudioBuffer:
     def __init__(self, duration=0.98, initial_data=None,
                  sample_rate=16000, sample_width=2):
@@ -79,6 +82,7 @@ class HotwordContainer:
         self.audio_buffer = CyclicAudioBuffer(expected_duration,
                                               sample_rate=sample_rate,
                                               sample_width=sample_width)
+        self.reload_on_failure = False
         self.applied_hotwords_config = None
 
     def load_hotword_engines(self):
@@ -161,6 +165,8 @@ class HotwordContainer:
 
         if not self.listen_words:
             LOG.error("No listen words loaded")
+        else:
+            self.reload_on_failure = True
         if not self.wakeup_words:
             LOG.warning("No wakeup words loaded")
         if not self.stop_words:
@@ -211,7 +217,7 @@ class HotwordContainer:
         if self.state == HotwordState.LISTEN:
             engines = self.listen_words
             if not engines:
-                raise RuntimeWarning(
+                raise HotWordException(
                     f"Waiting for listen_words but none are available!")
         elif self.state == HotwordState.WAKEUP:
             engines = self.wakeup_words
