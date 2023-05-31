@@ -880,6 +880,8 @@ class OVOSDinkumVoiceService(Thread):
             if new_hash['hotwords'] != self._applied_config_hash['hotwords']:
                 LOG.info(f"Reloading Hotwords")
                 LOG.debug(f"old={self.hotwords.applied_hotwords_config}")
+                self._reload_event.clear()
+                self.voice_loop.stop()
                 self.hotwords.shutdown()
                 self.hotwords.load_hotword_engines()
                 LOG.debug(f"new={self.hotwords.applied_hotwords_config}")
@@ -917,6 +919,7 @@ class OVOSDinkumVoiceService(Thread):
                     "utterance_chunks_to_rewind", 2)
                 self.voice_loop.num_hotword_keep_chunks = listener_config.get(
                     "wakeword_chunks_to_save", 15)
+            if not self.voice_loop.running:
                 self.voice_loop.start()
                 self._reload_event.set()
 
