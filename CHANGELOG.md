@@ -2,7 +2,16 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a31...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a32...HEAD)
+
+**Fixed bugs:**
+
+- Exception raised when \(re-\)loading hotwords [\#46](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/46)
+- Handle reloading hotwords on raised runtime exception [\#40](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/40) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [V0.0.2a32](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a32) (2023-05-31)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a31...V0.0.2a32)
 
 **Fixed bugs:**
 
