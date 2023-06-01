@@ -1,3 +1,4 @@
+from copy import copy
 from typing import Any, Dict, Optional
 from ovos_plugin_manager.stt import OVOSSTTFactory
 from ovos_plugin_manager.templates.stt import StreamingSTT, StreamThread
@@ -58,7 +59,8 @@ def load_stt_module(config: Dict[str, Any] = None) -> StreamingSTT:
     @param config: STT or global configuration or None (uses Configuration)
     @return: Initialized StreamingSTT plugin
     """
-    stt_config = config or Configuration()["stt"]
+    # Create a copy because we're setting default values here
+    stt_config = copy(config or Configuration().get("stt", {}))
     lang = stt_config.get('lang') or Configuration().get('lang')
     stt_config.setdefault("lang", lang)
     if stt_config['lang'] != Configuration().get('lang'):

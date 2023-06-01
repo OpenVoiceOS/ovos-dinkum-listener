@@ -34,6 +34,7 @@ class TestPlugins(unittest.TestCase):
     @patch("ovos_dinkum_listener.plugins.Configuration")
     @patch("ovos_plugin_manager.stt.OVOSSTTFactory.create")
     def test_load_stt_module(self, create, config):
+        original_config = copy(_MOCK_CONFIG)
         config.return_value = _MOCK_CONFIG
         create.return_value = MockStreamingSTT()
         from ovos_dinkum_listener.plugins import load_stt_module
@@ -49,13 +50,15 @@ class TestPlugins(unittest.TestCase):
         create.assert_called_with(
             {"lang": "global", **_MOCK_CONFIG['stt']})
         self.assertIsInstance(stt, StreamingSTT)
-
+        # Assert configuration was not changed
+        self.assertEqual(original_config, _MOCK_CONFIG)
         # Test module init raises exception
         # TODO
 
     @patch("ovos_dinkum_listener.plugins.Configuration")
     @patch("ovos_plugin_manager.stt.OVOSSTTFactory.create")
     def test_load_fallback_stt(self, create, config):
+        original_config = copy(_MOCK_CONFIG)
         config.return_value = _MOCK_CONFIG
         create.return_value = MockStreamingSTT()
         from ovos_dinkum_listener.plugins import load_fallback_stt
@@ -92,6 +95,8 @@ class TestPlugins(unittest.TestCase):
         self.assertIsNone(stt)
         create.assert_not_called()
 
+        # Assert configuration was not changed
+        self.assertEqual(original_config, _MOCK_CONFIG)
         # Test module init raises exception
         # TODO
 
