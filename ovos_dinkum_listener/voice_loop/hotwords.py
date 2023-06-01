@@ -1,4 +1,5 @@
 from enum import Enum
+from threading import Event
 from typing import Optional
 
 from ovos_config import Configuration
@@ -85,11 +86,13 @@ class HotwordContainer:
                                               sample_width=sample_width)
         self.reload_on_failure = False
         self.applied_hotwords_config = None
+        self._loaded = Event()
 
     def load_hotword_engines(self):
         """
         Load hotword objects from configuration
         """
+        self._loaded.clear()
         LOG.info("creating hotword engines")
         config_core = Configuration()
         default_lang = config_core.get("lang", "en-us")
@@ -173,6 +176,8 @@ class HotwordContainer:
         if not self.stop_words:
             LOG.warning("No stop words loaded")
 
+        self._loaded.set()
+
     @property
     def ww_names(self):
         """ wakeup words exit sleep mode if detected after a listen word"""
@@ -180,6 +185,8 @@ class HotwordContainer:
 
     @property
     def plugins(self):
+        if not self._loaded.wait(30):
+            raise TimeoutError("Timed out waiting for hotwords to load")
         try:
             return [v["engine"] for k, v in self._plugins.items()]
         except KeyError:
