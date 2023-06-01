@@ -73,8 +73,21 @@ class HotwordState(str, Enum):
     WAKEUP = "wakeup"
 
 
+def _safe_get_plugins(func):
+    def wrapped(*args, **kwargs):
+        if not HotwordContainer._loaded.wait(30):
+            raise TimeoutError("Timed out waiting for Hotwords load")
+        try:
+            return func(*args, **kwargs)
+        except KeyError:
+            raise HotWordException("Expected engine not loaded")
+
+    return wrapped
+
+
 class HotwordContainer:
     _plugins = {}
+    _loaded = Event()
 
     def __init__(self, bus=FakeBus(), expected_duration=3, sample_rate=16000,
                  sample_width=2):
@@ -86,7 +99,6 @@ class HotwordContainer:
                                               sample_width=sample_width)
         self.reload_on_failure = False
         self.applied_hotwords_config = None
-        self._loaded = Event()
 
     def load_hotword_engines(self):
         """
@@ -167,6 +179,8 @@ class HotwordContainer:
             except Exception as e:
                 LOG.error("Failed to load hotword: " + word)
 
+        self._loaded.set()
+
         if not self.listen_words:
             LOG.error("No listen words loaded")
         else:
@@ -176,41 +190,39 @@ class HotwordContainer:
         if not self.stop_words:
             LOG.warning("No stop words loaded")
 
-        self._loaded.set()
-
     @property
     def ww_names(self):
         """ wakeup words exit sleep mode if detected after a listen word"""
         return list(self._plugins.keys())
 
     @property
+    @_safe_get_plugins
     def plugins(self):
-        if not self._loaded.wait(30):
-            raise TimeoutError("Timed out waiting for hotwords to load")
-        try:
-            return [v["engine"] for k, v in self._plugins.items()]
-        except KeyError:
-            raise HotWordException("Expected engine not loaded")
+        return [v["engine"] for k, v in self._plugins.items()]
 
     @property
+    @_safe_get_plugins
     def wakeup_words(self):
         """ wakeup words exit sleep mode if detected after a listen word"""
         return {k: v["engine"] for k, v in self._plugins.items()
                 if v.get("wakeup")}
 
     @property
+    @_safe_get_plugins
     def listen_words(self):
         """ listen words trigger the VAD/STT stages"""
         return {k: v["engine"] for k, v in self._plugins.items()
                 if v.get("listen")}
 
     @property
+    @_safe_get_plugins
     def stop_words(self):
         """ stop only work during recording mode, they exit recording mode"""
         return {k: v["engine"] for k, v in self._plugins.items()
                 if v.get("stopword")}
 
     @property
+    @_safe_get_plugins
     def hot_words(self):
         """ hotwords only emit bus events / play sounds, they do not affect listening loop"""
         return {k: v["engine"] for k, v in self._plugins.items()
