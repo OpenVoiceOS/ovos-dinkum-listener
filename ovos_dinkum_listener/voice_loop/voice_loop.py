@@ -23,7 +23,7 @@ from ovos_plugin_manager.vad import VADEngine
 from ovos_utils.log import LOG
 from ovos_bus_client.session import SessionManager
 from ovos_dinkum_listener.transformers import AudioTransformersService
-from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer, HotwordState
+from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer, HotwordState, HotWordException
 from ovos_plugin_manager.templates.microphone import Microphone
 
 
@@ -98,19 +98,19 @@ ChunkCallback = Callable[[ChunkInfo], None]
 
 @dataclass
 class DinkumVoiceLoop(VoiceLoop):
-    speech_seconds: float
-    silence_seconds: float
-    timeout_seconds: float
-    num_stt_rewind_chunks: int
-    num_hotword_keep_chunks: int
+    speech_seconds: float = 0.3
+    silence_seconds: float = 0.7
+    timeout_seconds: float = 10.0
+    num_stt_rewind_chunks: int = 2
+    num_hotword_keep_chunks: int = 15
     skip_next_wake: bool = False
     hotword_chunks: Deque = field(default_factory=deque)
     stt_chunks: Deque = field(default_factory=deque)
     stt_audio_bytes: bytes = bytes()
-    last_ww: float = -1
-    speech_seconds_left: float = 0
-    silence_seconds_left: float = 0
-    timeout_seconds_left: float = 0
+    last_ww: float = -1.0
+    speech_seconds_left: float = 0.0
+    silence_seconds_left: float = 0.0
+    timeout_seconds_left: float = 0.0
     state: ListeningState = ListeningState.DETECT_WAKEWORD
     listen_mode: ListeningMode = ListeningMode.WAKEWORD
     wake_callback: Optional[WakeCallback] = None
@@ -197,15 +197,22 @@ class DinkumVoiceLoop(VoiceLoop):
             #
 
             if self.state == ListeningState.DETECT_WAKEWORD:
-                if self.listen_mode == ListeningMode.CONTINUOUS:
-                    LOG.info(f"Continuous listening mode, updating state")
-                    self.state = ListeningState.WAITING_CMD
-                elif self._detect_ww(chunk):
-                    LOG.info("Wakeword detected")
-                elif self._detect_hot(chunk):
-                    LOG.info("Hotword detected")
-                else:
-                    self.transformers.feed_audio(chunk)
+                try:
+                    if self.listen_mode == ListeningMode.CONTINUOUS:
+                        LOG.info(f"Continuous listening mode, updating state")
+                        self.state = ListeningState.WAITING_CMD
+                    elif self._detect_ww(chunk):
+                        LOG.info("Wakeword detected")
+                    elif self._detect_hot(chunk):
+                        LOG.info("Hotword detected")
+                    else:
+                        self.transformers.feed_audio(chunk)
+                except HotWordException as e:
+                    if self.hotwords.reload_on_failure:
+                        LOG.warning(e)
+                        self.hotwords.load_hotword_engines()
+                    else:
+                        raise e
 
             if self.state == ListeningState.WAITING_CMD:
                 self._wait_cmd(chunk)

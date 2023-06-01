@@ -1,10 +1,15 @@
 from enum import Enum
+from threading import Event
 from typing import Optional
 
 from ovos_config import Configuration
 from ovos_plugin_manager.wakewords import OVOSWakeWordFactory, HotWordEngine
 from ovos_utils.log import LOG
 from ovos_utils.messagebus import FakeBus
+
+
+class HotWordException(RuntimeWarning):
+    """Exception related to HotWords"""
 
 
 class CyclicAudioBuffer:
@@ -68,8 +73,21 @@ class HotwordState(str, Enum):
     WAKEUP = "wakeup"
 
 
+def _safe_get_plugins(func):
+    def wrapped(*args, **kwargs):
+        if not HotwordContainer._loaded.wait(30):
+            raise TimeoutError("Timed out waiting for Hotwords load")
+        try:
+            return func(*args, **kwargs)
+        except KeyError:
+            raise HotWordException("Expected engine not loaded")
+
+    return wrapped
+
+
 class HotwordContainer:
     _plugins = {}
+    _loaded = Event()
 
     def __init__(self, bus=FakeBus(), expected_duration=3, sample_rate=16000,
                  sample_width=2):
@@ -79,12 +97,14 @@ class HotwordContainer:
         self.audio_buffer = CyclicAudioBuffer(expected_duration,
                                               sample_rate=sample_rate,
                                               sample_width=sample_width)
+        self.reload_on_failure = False
         self.applied_hotwords_config = None
 
     def load_hotword_engines(self):
         """
         Load hotword objects from configuration
         """
+        self._loaded.clear()
         LOG.info("creating hotword engines")
         config_core = Configuration()
         default_lang = config_core.get("lang", "en-us")
@@ -159,8 +179,12 @@ class HotwordContainer:
             except Exception as e:
                 LOG.error("Failed to load hotword: " + word)
 
+        self._loaded.set()
+
         if not self.listen_words:
             LOG.error("No listen words loaded")
+        else:
+            self.reload_on_failure = True
         if not self.wakeup_words:
             LOG.warning("No wakeup words loaded")
         if not self.stop_words:
@@ -172,28 +196,33 @@ class HotwordContainer:
         return list(self._plugins.keys())
 
     @property
+    @_safe_get_plugins
     def plugins(self):
         return [v["engine"] for k, v in self._plugins.items()]
 
     @property
+    @_safe_get_plugins
     def wakeup_words(self):
         """ wakeup words exit sleep mode if detected after a listen word"""
         return {k: v["engine"] for k, v in self._plugins.items()
                 if v.get("wakeup")}
 
     @property
+    @_safe_get_plugins
     def listen_words(self):
         """ listen words trigger the VAD/STT stages"""
         return {k: v["engine"] for k, v in self._plugins.items()
                 if v.get("listen")}
 
     @property
+    @_safe_get_plugins
     def stop_words(self):
         """ stop only work during recording mode, they exit recording mode"""
         return {k: v["engine"] for k, v in self._plugins.items()
                 if v.get("stopword")}
 
     @property
+    @_safe_get_plugins
     def hot_words(self):
         """ hotwords only emit bus events / play sounds, they do not affect listening loop"""
         return {k: v["engine"] for k, v in self._plugins.items()
@@ -211,7 +240,7 @@ class HotwordContainer:
         if self.state == HotwordState.LISTEN:
             engines = self.listen_words
             if not engines:
-                raise RuntimeWarning(
+                raise HotWordException(
                     f"Waiting for listen_words but none are available!")
         elif self.state == HotwordState.WAKEUP:
             engines = self.wakeup_words
