@@ -61,9 +61,9 @@ def load_stt_module(config: Dict[str, Any] = None) -> StreamingSTT:
     # Create a copy because we're setting default values here
     stt_config = config or Configuration().get("stt", {})
     stt_config = dict(stt_config)
-    lang = stt_config.get('lang') or Configuration().get('lang')
-    stt_config.setdefault("lang", lang)
-    if stt_config['lang'] != Configuration().get('lang'):
+    default_lang = Configuration().get('lang')
+    stt_config.setdefault("lang", default_lang)
+    if stt_config['lang'] != default_lang:
         LOG.warning(f"STT lang ({stt_config['lang']} differs from global "
                     f"({Configuration.get('lang')}")
     plug = OVOSSTTFactory.create(stt_config)
@@ -80,16 +80,16 @@ def load_fallback_stt(cfg: Dict[str, Any] = None) -> Optional[StreamingSTT]:
     @return: Initialized StreamingSTT plugin if configured, else None
     """
     cfg = cfg or Configuration().get("stt", {})
-    lang = cfg.get('lang') or Configuration().get('lang')
-    if lang != Configuration().get('lang'):
-        LOG.warning(f"STT lang ({lang} differs from global "
-                    f"({Configuration.get('lang')}")
+    default_lang = Configuration().get('lang')
     fbm = cfg.get("fallback_module")
     if not fbm:
         return None
     try:
         config = cfg.get(fbm, {})
-        config.setdefault("lang", lang)
+        config.setdefault("lang", default_lang)
+        if config['lang'] != default_lang:
+            LOG.warning(f"Fallback STT lang ({config['lang']} differs from "
+                        f"global ({Configuration.get('lang')}")
         plug = OVOSSTTFactory.create({"module": fbm, fbm: config})
         if not isinstance(plug, StreamingSTT):
             LOG.debug(f"Using FakeStreamingSTT wrapper with config={config}")

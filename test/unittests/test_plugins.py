@@ -50,8 +50,24 @@ class TestPlugins(unittest.TestCase):
         create.assert_called_with(
             {"lang": "global", **_MOCK_CONFIG['stt']})
         self.assertIsInstance(stt, StreamingSTT)
+
         # Assert configuration was not changed
         self.assertEqual(original_config, _MOCK_CONFIG)
+
+        # Test configuration uses default lang
+        global_lang_config = copy(_MOCK_CONFIG)
+        global_lang_config['stt']['test_module'].pop('lang')
+        global_lang_config['stt'].pop('fallback_module')
+        config.return_value = global_lang_config
+        stt = load_stt_module()
+        create.assert_called_with(
+            {"module": "test_module",
+             "lang": global_lang_config['lang'],
+             "test_module": global_lang_config["stt"]["test_module"]})
+        self.assertIsNone(global_lang_config['stt']['test_module'].get('lang'))
+        self.assertIsNone(global_lang_config['stt'].get('lang'))
+        self.assertIsInstance(stt, StreamingSTT)
+
         # Test module init raises exception
         # TODO
 

@@ -858,7 +858,7 @@ class OVOSDinkumVoiceService(Thread):
                 if hasattr(self.stt, "shutdown"):
                     self.stt.shutdown()
                 del self.stt
-                self.stt = load_stt_module(self.config)
+                self.stt = load_stt_module(self.config['stt'])
                 self.voice_loop.stt = self.stt
                 if self.stt:
                     LOG.debug(f"new={self.stt.__class__}: {self.stt.config}")
@@ -871,7 +871,7 @@ class OVOSDinkumVoiceService(Thread):
                 if hasattr(self.fallback_stt, "shutdown"):
                     self.fallback_stt.shutdown()
                 del self.fallback_stt
-                self.fallback_stt = load_fallback_stt(self.config)
+                self.fallback_stt = load_fallback_stt(self.config['stt'])
                 self.voice_loop.fallback_stt = self.fallback_stt
                 if self.fallback_stt:
                     LOG.debug(f"new={self.fallback_stt.__class__}: "
