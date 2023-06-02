@@ -837,7 +837,7 @@ class OVOSDinkumVoiceService(Thread):
         if self._config_hash() == self._applied_config_hash:
             LOG.info(f"No relevant configuration changed")
             return
-        LOG.info("Maybe reloading configuration")
+        LOG.info("Reloading changed configuration")
         if not self._load_lock.acquire(timeout=30):
             raise TimeoutError("Lock not acquired after 30 seconds")
         if self._shutdown_event.is_set():
@@ -858,7 +858,7 @@ class OVOSDinkumVoiceService(Thread):
                 if hasattr(self.stt, "shutdown"):
                     self.stt.shutdown()
                 del self.stt
-                self.stt = load_stt_module()
+                self.stt = load_stt_module(self.config['stt'])
                 self.voice_loop.stt = self.stt
                 if self.stt:
                     LOG.debug(f"new={self.stt.__class__}: {self.stt.config}")
@@ -871,7 +871,7 @@ class OVOSDinkumVoiceService(Thread):
                 if hasattr(self.fallback_stt, "shutdown"):
                     self.fallback_stt.shutdown()
                 del self.fallback_stt
-                self.fallback_stt = load_fallback_stt()
+                self.fallback_stt = load_fallback_stt(self.config['stt'])
                 self.voice_loop.fallback_stt = self.fallback_stt
                 if self.fallback_stt:
                     LOG.debug(f"new={self.fallback_stt.__class__}: "
