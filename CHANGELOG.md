@@ -1,8 +1,17 @@
 # Changelog
 
-## [Unreleased](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/HEAD)
+## [0.0.2](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.2) (2023-06-05)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a34...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a35...0.0.2)
+
+**Merged pull requests:**
+
+- Remove unused Docker automation [\#49](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/49) ([NeonDaniel](https://github.com/NeonDaniel))
+- Update release automation to current best practice [\#48](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/48) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [V0.0.2a35](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a35) (2023-06-03)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a34...V0.0.2a35)
 
 **Merged pull requests:**
 
