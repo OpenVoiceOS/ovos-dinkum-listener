@@ -42,7 +42,7 @@ def required(requirements_file):
 def get_version():
     """ Find the version of ovos-core"""
     version = None
-    version_file = os.path.join(BASEDIR, 'mycroft_dinkum_listener', 'version.py')
+    version_file = os.path.join(BASEDIR, 'ovos_dinkum_listener', 'version.py')
     major, minor, build, alpha = (None, None, None, None)
     with open(version_file) as f:
         for line in f:
@@ -65,13 +65,15 @@ def get_version():
 
 
 setup(
-    name='mycroft-dinkum-listener',
+    name='ovos-dinkum-listener',
     version=get_version(),
     license='Apache-2.0',
-    url='https://github.com/OpenVoiceOS/mycroft-dinkum-listener',
+    url='https://github.com/OpenVoiceOS/ovos-dinkum-listener',
     description='ovos-core listener daemon client',
+    packages=['ovos_dinkum_listener'],
+    package_data={'': package_files('ovos_dinkum_listener')},
     include_package_data=True,
-    install_requires=required('requirements.txt'),
+    install_requires=required('requirements/requirements.txt'),
     classifiers=[
         "Development Status :: 4 - Beta",
         "Programming Language :: Python :: 3",
@@ -79,7 +81,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'mycroft-dinkum-listener=mycroft_dinkum_listener.__main__:main'
+            'ovos-dinkum-listener=ovos_dinkum_listener.__main__:main'
         ]
     }
 )

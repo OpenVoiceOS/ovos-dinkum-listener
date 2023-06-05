@@ -1,4 +1,0 @@
-ovos-plugin-manager
-ovos-utils
-ovos-bus-client
-sdnotify
