@@ -9,7 +9,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
+
 import json
 import time
 import wave
@@ -30,8 +30,8 @@ from ovos_plugin_manager.vad import OVOSVADFactory
 from ovos_plugin_manager.vad import get_vad_configs
 from ovos_plugin_manager.wakewords import get_ww_lang_configs, get_ww_supported_langs, get_ww_module_configs
 from ovos_utils.file_utils import resolve_resource_file
-from ovos_utils.log import LOG
-from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap
+from ovos_utils.log import LOG, log_deprecation
+from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessState
 from ovos_utils.sound import play_audio
 
 from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt
@@ -134,7 +134,6 @@ class OVOSDinkumVoiceService(Thread):
         self._shutdown_event = Event()
         self._stopping = False
         self.status.set_alive()
-        self._state: ServiceState = ServiceState.NOT_STARTED
         self.config = Configuration()
 
         self._before_start()  # connect to bus
@@ -235,17 +234,27 @@ class OVOSDinkumVoiceService(Thread):
 
     @property
     def state(self):
-        return self._state
+        log_deprecation("This property is deprecated, reference `status.state`",
+                        "0.1.0")
+        if self.status.state in (ProcessState.NOT_STARTED, ProcessState.ALIVE):
+            return ServiceState.NOT_STARTED
+        if self.status.state == ProcessState.STARTED:
+            return ServiceState.STARTED
+        if self.status.state == ProcessState.READY:
+            return ServiceState.RUNNING
+        if self.status.state in (ProcessState.ERROR, ProcessState.STOPPING):
+            return ServiceState.STOPPING
+        return self.status.state
 
     def run(self):
         """
         Service entry point
         """
         try:
-            self._state = ServiceState.NOT_STARTED
+            self.status.set_alive()
             self._before_start()  # Ensure configuration and bus are initialized
             self._start()
-            self._state = ServiceState.STARTED
+            self.status.set_started()
             self._after_start()
             LOG.debug("Service started")
 
@@ -255,19 +264,18 @@ class OVOSDinkumVoiceService(Thread):
                 while not self._stopping:
                     if not self._reload_event.wait(30):
                         raise TimeoutError("Timed out waiting for reload")
-                    self._state = ServiceState.RUNNING
                     self.voice_loop.run()
+                self.status.set_stopping()
             except KeyboardInterrupt:
-                pass
+                self.status.set_stopping()
             except Exception as e:
                 LOG.exception("voice_loop failed")
                 self.status.set_error(str(e))
             finally:
                 LOG.info("Service stopping")
-                self._state = ServiceState.STOPPING
                 self._shutdown()
                 self._after_stop()
-                self._state = ServiceState.NOT_STARTED
+                self.status.state = ProcessState.NOT_STARTED
         except Exception as e:
             LOG.exception("Service failed to start")
             self.status.set_error(str(e))
@@ -362,7 +370,7 @@ class OVOSDinkumVoiceService(Thread):
 
     def _after_stop(self):
         """Shut down code called after stop()"""
-        self.status.set_stopping()
+        # self.status.set_stopping()
         self.bus.close()
 
     def _connect_to_bus(self):

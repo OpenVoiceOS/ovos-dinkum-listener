@@ -515,7 +515,8 @@ class DinkumVoiceLoop(VoiceLoop):
                 self._chunk_info.is_speech = not self.vad.is_silence(stt_chunk)
             except Exception as e:
                 LOG.exception(f"Error processing chunk of "
-                              f"size={len(stt_chunk)}: {e}")
+                              f"size={len(stt_chunk)} with "
+                              f"SR={self.vad.sample_rate}: {e}")
 
             if self._chunk_info.is_speech:
                 self.speech_seconds_left -= self.mic.seconds_per_chunk
