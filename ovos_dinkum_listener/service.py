@@ -257,28 +257,32 @@ class OVOSDinkumVoiceService(Thread):
             self.status.set_started()
             self._after_start()
             LOG.debug("Service started")
-
-            try:
-                self.status.set_ready()
-                LOG.info("Service ready")
-                while not self._stopping:
-                    if not self._reload_event.wait(30):
-                        raise TimeoutError("Timed out waiting for reload")
-                    self.voice_loop.run()
-                self.status.set_stopping()
-            except KeyboardInterrupt:
-                self.status.set_stopping()
-            except Exception as e:
-                LOG.exception("voice_loop failed")
-                self.status.set_error(str(e))
-            finally:
-                LOG.info("Service stopping")
-                self._shutdown()
-                self._after_stop()
-                self.status.state = ProcessState.NOT_STARTED
         except Exception as e:
             LOG.exception("Service failed to start")
             self.status.set_error(str(e))
+            return
+
+        try:
+            self.status.set_ready()
+            LOG.info("Service ready")
+            while not self._stopping:
+                if not self._reload_event.wait(30):
+                    raise TimeoutError("Timed out waiting for reload")
+                self.voice_loop.run()
+            self.status.set_stopping()
+        except KeyboardInterrupt:
+            self.status.set_stopping()
+        except Exception as e:
+            LOG.exception("voice_loop failed")
+            self.status.set_error(str(e))
+        finally:
+            LOG.info("Service stopping")
+            self._shutdown()
+            LOG.debug("shutdown done")
+            self._after_stop()
+            LOG.debug("stopped")
+            if self.status.state != ProcessState.ERROR:
+                self.status.state = ProcessState.NOT_STARTED
 
     def _before_start(self):
         """
