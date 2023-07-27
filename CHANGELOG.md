@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.3a2](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a2) (2023-07-27)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a1...0.0.3a2)
+
+**Merged pull requests:**
+
+- Add missing setup.py contents [\#56](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/56) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.0.3a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a1) (2023-07-27)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2...0.0.3a1)
