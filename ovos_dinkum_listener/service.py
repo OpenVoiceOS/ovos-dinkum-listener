@@ -497,7 +497,7 @@ class OVOSDinkumVoiceService(Thread):
             if sound:
                 LOG.debug(f"Handling listen sound: {sound}")
                 try:
-                    sound = resolve_resource_file(sound)
+                    sound = resolve_resource_file(sound, config=self.config)
                     if sound:
                         play_audio(sound)
                 except Exception as e:
@@ -637,7 +637,7 @@ class OVOSDinkumVoiceService(Thread):
         instant_listen = self.config.get('listener', {}).get('instant_listen')
         if self.config.get('confirm_listening'):
             sound = self.config.get('sounds', {}).get('start_listening')
-            sound = resolve_resource_file(sound)
+            sound = resolve_resource_file(sound, config=self.config)
             if sound:
                 play = play_audio(sound)
                 if not instant_listen:
