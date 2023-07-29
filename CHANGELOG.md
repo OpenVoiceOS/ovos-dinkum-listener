@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.3a3](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a3) (2023-07-29)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a2...0.0.3a3)
+
+**Merged pull requests:**
+
+- Refactor service state handling [\#53](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/53) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.0.3a2](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a2) (2023-07-27)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a1...0.0.3a2)
