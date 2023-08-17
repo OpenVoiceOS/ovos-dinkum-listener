@@ -27,10 +27,6 @@ from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer, HotwordSt
 from ovos_plugin_manager.templates.microphone import Microphone
 
 
-
-
-
-
 class ListeningState(str, Enum):
     DETECT_WAKEWORD = "wakeword"
     WAITING_CMD = "continuous"
