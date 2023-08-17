@@ -27,6 +27,22 @@ from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer, HotwordSt
 from ovos_plugin_manager.templates.microphone import Microphone
 
 
+
+def __HACK_preload():  # TODO - remove me soon, make resolve_ovos_resource_file FAST
+    """ there is some latency on initial wake word detection without this,
+     checks several ovos packages and needs to import them,
+     this method is speeding things up as a workaround,
+    main culprit is ovos_workshop which causes a scan of all OCP plugins (bug ?)"""
+    try:
+        import ovos_workshop
+    except ImportError:
+        pass
+    try:
+        import ovos_gui
+    except ImportError:
+        pass
+
+
 class ListeningState(str, Enum):
     DETECT_WAKEWORD = "wakeword"
     WAITING_CMD = "continuous"
@@ -139,6 +155,7 @@ class DinkumVoiceLoop(VoiceLoop):
         Start the Voice Loop; sets the listening mode based on configuration and
         prepares the loop to be run.
         """
+        __HACK_preload()  # workaround so resolve_resource_file doesnt take forever on 1st wakeword
         self._is_running = True
         self.state = ListeningState.DETECT_WAKEWORD
         self.last_ww = -1
