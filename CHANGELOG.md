@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.3a4](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a4) (2023-08-17)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a3...0.0.3a4)
+
+**Fixed bugs:**
+
+- fix 1st ww slowness [\#57](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/57) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.3a3](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a3) (2023-07-29)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a2...0.0.3a3)
