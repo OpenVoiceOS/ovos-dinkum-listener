@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.3a5](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a5) (2023-08-18)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a4...0.0.3a5)
+
+**Merged pull requests:**
+
+- update backend-client to fix ww upload [\#58](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/58) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.3a4](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a4) (2023-08-17)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a3...0.0.3a4)
