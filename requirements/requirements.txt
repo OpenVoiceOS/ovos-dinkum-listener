@@ -1,4 +1,4 @@
-ovos-backend-client~=0.0.6
+ovos-backend-client>=0.1.0a7
 ovos-plugin-manager~=0.0.23
 ovos-microphone-plugin-alsa~=0.0.0
 ovos-utils>=0.0.36a3
