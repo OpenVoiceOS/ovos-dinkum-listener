@@ -101,6 +101,7 @@ class DinkumVoiceLoop(VoiceLoop):
     speech_seconds: float = 0.3
     silence_seconds: float = 0.7
     timeout_seconds: float = 10.0
+    timeout_seconds_with_silence: float = 5.0    
     num_stt_rewind_chunks: int = 2
     num_hotword_keep_chunks: int = 15
     skip_next_wake: bool = False
@@ -111,6 +112,7 @@ class DinkumVoiceLoop(VoiceLoop):
     speech_seconds_left: float = 0.0
     silence_seconds_left: float = 0.0
     timeout_seconds_left: float = 0.0
+    timeout_seconds_with_silence_left: float = 0.0    
     state: ListeningState = ListeningState.DETECT_WAKEWORD
     listen_mode: ListeningMode = ListeningMode.WAKEWORD
     wake_callback: Optional[WakeCallback] = None
@@ -171,6 +173,7 @@ class DinkumVoiceLoop(VoiceLoop):
         self.speech_seconds_left = self.speech_seconds
         self.silence_seconds_left = self.silence_seconds
         self.timeout_seconds_left = self.timeout_seconds
+        self.timeout_seconds_with_silence_left = self.timeout_seconds_with_silence        
         self.state = ListeningState.DETECT_WAKEWORD
 
         # Keep hotword/STT audio so they can (optionally) be saved to disk
@@ -452,6 +455,7 @@ class DinkumVoiceLoop(VoiceLoop):
                 self.state = ListeningState.BEFORE_COMMAND
                 self.speech_seconds_left = self.speech_seconds
                 self.timeout_seconds_left = self.timeout_seconds
+                self.timeout_seconds_with_silence_left = self.timeout_seconds_with_silence                
                 self.stt_audio_bytes = bytes()
                 self.stt.stream_start()
                 if self.fallback_stt is not None:
@@ -515,7 +519,8 @@ class DinkumVoiceLoop(VoiceLoop):
                 self.fallback_stt.stream_data(stt_chunk)
 
             self.timeout_seconds_left -= self.mic.seconds_per_chunk
-            if self.timeout_seconds_left <= 0:
+            self.timeout_seconds_with_silence_left -= self.mic.seconds_per_chunk
+            if self.timeout_seconds_with_silence_left <= 0 or self.timeout_seconds_left <= 0:
                 # Recording has timed out
                 self.state = ListeningState.AFTER_COMMAND
                 break
@@ -682,7 +687,8 @@ class DinkumVoiceLoop(VoiceLoop):
             self.vad.reset()
 
         self.timeout_seconds_left = self.timeout_seconds
-
+        self.timeout_seconds_with_silence_left = self.timeout_seconds_with_silence
+        
     def stop(self):
         """
         Signal the VoiceLoop to stop processing audio.
