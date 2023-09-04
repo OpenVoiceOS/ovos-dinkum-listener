@@ -210,6 +210,7 @@ class OVOSDinkumVoiceService(Thread):
                 speech_seconds=listener_config.get("speech_begin", 0.3),
                 silence_seconds=listener_config.get("silence_end", 0.7),
                 timeout_seconds=listener_config.get("recording_timeout", 10),
+                timeout_seconds_with_silence=listener_config.get("recording_timeout_with_silence", 5),                
                 num_stt_rewind_chunks=listener_config.get(
                     "utterance_chunks_to_rewind", 2),
                 num_hotword_keep_chunks=listener_config.get(
