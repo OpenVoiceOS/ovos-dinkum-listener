@@ -33,24 +33,19 @@ eg, to run under MacOS you should use https://github.com/OpenVoiceOS/ovos-microp
       "module": "ovos-microphone-plugin-alsa"
     },
     VAD": {
-     // Seconds of speech before voice command has begun
-     "speech_seconds": 0.1,
-     // Seconds of silence before a voice command has finished
-     "silence_seconds": 0.5,
-     // Seconds of audio to keep before voice command has begun
-     "before_seconds": 0.5,
-     // Minimum length of voice command (seconds)
-     // NOTE: max_seconds uses recording_timeout listener setting
-     "min_seconds": 1,
      // recommended plugin: "ovos-vad-plugin-silero"
-     "module": "ovos-vad-plugin-webrtcvad",
+     "module": "ovos-vad-plugin-silero",
      "ovos-vad-plugin-silero": {"threshold": 0.2},
      "ovos-vad-plugin-webrtcvad": {"vad_mode": 3}
     },
-    // Settings used by microphone to set recording timeout
+    // Seconds of speech before voice command has begun
+    "speech_begin": 0.1,
+    // Seconds of silence before a voice command has finished
+    "silence_end": 0.5,
+    // Settings used by microphone to set recording timeout with and without speech detected
     "recording_timeout": 10.0,
+    // Settings used by microphone to set recording timeout without speech detected.
     "recording_timeout_with_silence": 3.0,
-
     // continuous listen is an experimental setting, it removes the need for
     // wake words and uses VAD only, a streaming STT is strongly recommended
     // NOTE: depending on hardware this may cause mycroft to hear its own TTS responses as questions
