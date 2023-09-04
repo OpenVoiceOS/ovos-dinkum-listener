@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.3a6](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a6) (2023-09-04)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a5...0.0.3a6)
+
+**Implemented enhancements:**
+
+- Fix README.MD and Added Timeout\_Seconds\_With\_Silence [\#59](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/59) ([madgrizzle](https://github.com/madgrizzle))
+
 ## [0.0.3a5](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a5) (2023-08-18)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a4...0.0.3a5)
