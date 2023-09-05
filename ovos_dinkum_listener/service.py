@@ -29,10 +29,8 @@ from ovos_plugin_manager.utils.tts_cache import hash_sentence
 from ovos_plugin_manager.vad import OVOSVADFactory
 from ovos_plugin_manager.vad import get_vad_configs
 from ovos_plugin_manager.wakewords import get_ww_lang_configs, get_ww_supported_langs, get_ww_module_configs
-from ovos_utils.file_utils import resolve_resource_file
 from ovos_utils.log import LOG, log_deprecation
 from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessState
-from ovos_utils.sound import play_audio
 
 from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt
 from ovos_dinkum_listener.transformers import AudioTransformersService
@@ -508,12 +506,7 @@ class OVOSDinkumVoiceService(Thread):
 
             if sound:
                 LOG.debug(f"Handling listen sound: {sound}")
-                try:
-                    sound = resolve_resource_file(sound, config=self.config)
-                    if sound:
-                        play_audio(sound)
-                except Exception as e:
-                    LOG.warning(e)
+                self.bus.emit(Message("mycroft.audio.play_sound", {"uri": sound}))
 
             if listen:
                 msg_type = "recognizer_loop:wakeword"
@@ -646,16 +639,11 @@ class OVOSDinkumVoiceService(Thread):
         self.voice_loop.is_muted = False
 
     def _handle_listen(self, message: Message):
-        instant_listen = self.config.get('listener', {}).get('instant_listen')
         if self.config.get('confirm_listening'):
             sound = self.config.get('sounds', {}).get('start_listening')
-            sound = resolve_resource_file(sound, config=self.config)
             if sound:
-                play = play_audio(sound)
-                if not instant_listen:
-                    play.wait(10)
-            else:
-                LOG.error(f"Requested sound not available: {sound}")
+                self.bus.emit(message.forward("mycroft.audio.play_sound", {"uri": sound}))
+
         self.voice_loop.skip_next_wake = True
 
     def _handle_mic_get_status(self, event):
