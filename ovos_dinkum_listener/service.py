@@ -647,6 +647,7 @@ class OVOSDinkumVoiceService(Thread):
         if self.config.get('confirm_listening'):
             sound = self.config.get('sounds', {}).get('start_listening')
             if sound:
+                message = message or Message("")  # might be None
                 self.bus.emit(message.forward("mycroft.audio.play_sound", {"uri": sound}))
 
         self.voice_loop.skip_next_wake = True
