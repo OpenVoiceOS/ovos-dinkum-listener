@@ -505,8 +505,13 @@ class OVOSDinkumVoiceService(Thread):
             event = ww_context.get("event")
 
             if sound:
+                context = {'client_name': 'ovos_dinkum_listener',
+                           'source': 'audio',  # default native audio source
+                           'destination': ["skills"]  # really should be renamed to "core"
+                           }
                 LOG.debug(f"Handling listen sound: {sound}")
-                self.bus.emit(Message("mycroft.audio.play_sound", {"uri": sound}))
+                self.bus.emit(Message("mycroft.audio.play_sound",
+                                      {"uri": sound}, context))
 
             if listen:
                 msg_type = "recognizer_loop:wakeword"
