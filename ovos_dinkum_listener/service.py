@@ -646,33 +646,31 @@ class OVOSDinkumVoiceService(Thread):
 
         self.voice_loop.skip_next_wake = True
 
-    def _handle_mic_get_status(self, event):
+    def _handle_mic_get_status(self,  message: Message):
         """Query microphone mute status."""
         data = {'muted': self.voice_loop.is_muted}
-        self.bus.emit(event.response(data))
+        self.bus.emit(message.response(data))
 
-    def _handle_audio_start(self, event):
-        """Mute voice loop."""
+    def _handle_audio_start(self,  message: Message):
+        """audio output started"""
         if self.config.get("listener").get("mute_during_output"):
             self.voice_loop.is_muted = True
 
-    def _handle_audio_end(self, event):
-        """Request unmute, if more sources have requested the mic to be muted
-        it will remain muted.
-        """
+    def _handle_audio_end(self,  message: Message):
+        """audio output ended"""
         if self.config.get("listener").get("mute_during_output"):
             self.voice_loop.is_muted = False  # restore
 
-    def _handle_stop(self, event):
+    def _handle_stop(self,  message: Message):
         """Handler for mycroft.stop, i.e. button press."""
         self.voice_loop.is_muted = False  # restore
 
     # state events
-    def _handle_change_state(self, event):
+    def _handle_change_state(self,  message: Message):
         """Set listening state."""
         # TODO - unify this api, should match ovos-listener exactly
-        state = event.data.get("state")
-        mode = event.data.get("mode")
+        state = message.data.get("state")
+        mode = message.data.get("mode")
 
         # NOTE: the enums are also strings and will match
         if state:
@@ -681,7 +679,7 @@ class OVOSDinkumVoiceService(Thread):
             elif state == ListeningState.DETECT_WAKEWORD or state == ListeningState.WAITING_CMD:  # "continuous"
                 self.voice_loop.reset_state()
             elif state == ListeningState.RECORDING:  # "recording"
-                self.voice_loop.start_recording(event.data.get("recording_name"))
+                self.voice_loop.start_recording(message.data.get("recording_name"))
             else:
                 LOG.error(f"Invalid listening state: {state}")
 
@@ -697,33 +695,36 @@ class OVOSDinkumVoiceService(Thread):
             else:
                 LOG.error(f"Invalid listen mode: {mode}")
 
-        self._handle_get_state(event)
+        self._handle_get_state(message)
 
-    def _handle_get_state(self, event):
+    def _handle_get_state(self, message: Message):
         """Query listening state"""
         # TODO - unify this api, should match ovos-listener exactly
         data = {'mode': self.voice_loop.listen_mode,
                 "state": self.voice_loop.state}
-        self.bus.emit(event.reply("recognizer_loop:state", data))
+        self.bus.emit(message.reply("recognizer_loop:state", data))
 
-    def _handle_stop_recording(self, event):
+    def _handle_stop_recording(self, message: Message):
         """Stop current recording session """
         self.voice_loop.stop_recording()
+        sound = self.config.get('sounds', {}).get('end_listening')
+        if sound:
+            self.bus.emit(message.forward("mycroft.audio.play_sound", {"uri": sound}))
 
-    def _handle_extend_listening(self, event):
+    def _handle_extend_listening(self,  message: Message):
         """ when a skill is activated (converse) reset the timeout until wakeword is needed again
         only used when in hybrid listening mode """
         if self.voice_loop.listen_mode == ListeningMode.HYBRID:
             self.voice_loop.last_ww = time.time()
 
-    def _handle_sleep(self, event):
+    def _handle_sleep(self,  message: Message):
         """Put the voice loop to sleep."""
         self.voice_loop.go_to_sleep()
 
-    def _handle_wake_up(self, event):
+    def _handle_wake_up(self,  message: Message):
         """Wake up the voice loop."""
         self.voice_loop.wakeup()
-        self.bus.emit(Message("mycroft.awoken"))
+        self.bus.emit(message.forward("mycroft.awoken"))
 
     # OPM bus api
     def _handle_get_languages_stt(self, message):
