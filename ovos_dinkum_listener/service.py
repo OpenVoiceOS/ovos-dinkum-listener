@@ -729,7 +729,7 @@ class OVOSDinkumVoiceService(Thread):
     def _handle_wake_up(self,  message: Message):
         """Wake up the voice loop."""
         self.voice_loop.wakeup()
-        self.bus.emit(message.forward("mycroft.awoken"))
+        self.bus.emit(message.reply("mycroft.awoken"))
 
     # OPM bus api
     def _handle_get_languages_stt(self, message):
