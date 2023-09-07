@@ -506,8 +506,8 @@ class OVOSDinkumVoiceService(Thread):
 
             if sound:
                 context = {'client_name': 'ovos_dinkum_listener',
-                           'source': 'audio',  # default native audio source
-                           'destination': ["skills"]  # really should be renamed to "core"
+                           'source': 'listener',
+                           'destination': ["audio"]  # default native-source
                            }
                 LOG.debug(f"Handling listen sound: {sound}")
                 self.bus.emit(Message("mycroft.audio.play_sound",
@@ -648,8 +648,8 @@ class OVOSDinkumVoiceService(Thread):
             sound = self.config.get('sounds', {}).get('start_listening')
             if sound:
                 context = {'client_name': 'ovos_dinkum_listener',
-                           'source': 'audio',  # default native audio source
-                           'destination': ["skills"]  # really should be renamed to "core"
+                           'source': 'listener',
+                           'destination': ["audio"]  # default native-source
                            }
                 message = message or Message("", context=context)  # might be None
                 self.bus.emit(message.forward("mycroft.audio.play_sound", {"uri": sound}))
