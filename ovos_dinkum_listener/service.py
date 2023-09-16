@@ -213,6 +213,8 @@ class OVOSDinkumVoiceService(Thread):
                     "utterance_chunks_to_rewind", 2),
                 num_hotword_keep_chunks=listener_config.get(
                     "wakeword_chunks_to_save", 15),
+                remove_silence=listener_config.get(
+                    "remove_silence", False),
                 #
                 wake_callback=self._record_begin,
                 text_callback=self._stt_text,
