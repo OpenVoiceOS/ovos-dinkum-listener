@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.3a9](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a9) (2023-09-16)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a8...0.0.3a9)
+
+**Implemented enhancements:**
+
+- feat extract speech [\#62](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/62) ([emphasize](https://github.com/emphasize))
+
 ## [0.0.3a8](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a8) (2023-09-14)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a7...0.0.3a8)
