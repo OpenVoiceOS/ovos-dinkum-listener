@@ -26,6 +26,8 @@ from ovos_dinkum_listener.transformers import AudioTransformersService
 from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer, HotwordState, HotWordException
 from ovos_plugin_manager.templates.microphone import Microphone
 
+from ovos_dinkum_listener.plugins import FakeStreamingSTT
+
 
 class ListeningState(str, Enum):
     DETECT_WAKEWORD = "wakeword"
@@ -104,6 +106,7 @@ class DinkumVoiceLoop(VoiceLoop):
     timeout_seconds_with_silence: float = 5.0    
     num_stt_rewind_chunks: int = 2
     num_hotword_keep_chunks: int = 15
+    remove_silence: bool = False
     skip_next_wake: bool = False
     hotword_chunks: Deque = field(default_factory=deque)
     stt_chunks: Deque = field(default_factory=deque)
@@ -649,6 +652,15 @@ class DinkumVoiceLoop(VoiceLoop):
         """
         # Command has ended, call transformers pipeline before STT
         chunk, stt_context = self.transformers.transform(chunk)
+
+        if isinstance(self.stt, FakeStreamingSTT) and self.remove_silence:
+            # NOTE: This is using the FS-STT buffer directly, not the S-STT queue
+            self.stt.stream.buffer.clear()
+            extracted_speech = self.vad.extract_speech(self.stt_audio_bytes)
+            # only deposit non empty audio
+            if extracted_speech:
+                LOG.debug("removed silence from utterance")
+                self.stt.stream.update(extracted_speech)
 
         text, stt_context = self._get_tx(stt_context)
 

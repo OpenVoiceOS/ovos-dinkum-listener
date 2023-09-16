@@ -46,6 +46,8 @@ eg, to run under MacOS you should use https://github.com/OpenVoiceOS/ovos-microp
     "recording_timeout": 10.0,
     // Settings used by microphone to set recording timeout without speech detected.
     "recording_timeout_with_silence": 3.0,
+    // Setting to remove all silence/noise from start and end of recorded speech (only non-streaming)
+    "remove_silence": true,
     // continuous listen is an experimental setting, it removes the need for
     // wake words and uses VAD only, a streaming STT is strongly recommended
     // NOTE: depending on hardware this may cause mycroft to hear its own TTS responses as questions
