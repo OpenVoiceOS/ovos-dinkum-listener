@@ -12,6 +12,10 @@
 
 - set `_applied_config_hash` earlier [\#63](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/63)
 
+**Merged pull requests:**
+
+- drop out before stt on empty buffer [\#65](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/65) ([emphasize](https://github.com/emphasize))
+
 ## [0.0.3a9](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a9) (2023-09-16)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a8...0.0.3a9)
