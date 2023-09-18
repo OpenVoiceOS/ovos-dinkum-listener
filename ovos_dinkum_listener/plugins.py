@@ -18,7 +18,11 @@ class FakeStreamThread(StreamThread):
 
     def finalize(self):
         """ return final transcription """
-        try:
+        
+        if not self.buffer: 
+            return ""
+
+        try:            
             # plugins expect AudioData objects
             audio = AudioData(self.buffer.read(),
                               sample_rate=self.sample_rate,
