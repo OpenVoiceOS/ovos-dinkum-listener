@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.3a10](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a10) (2023-09-18)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a9...0.0.3a10)
+
+**Fixed bugs:**
+
+- fix config hash not set [\#64](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/64) ([emphasize](https://github.com/emphasize))
+
+**Closed issues:**
+
+- set `_applied_config_hash` earlier [\#63](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/63)
+
 ## [0.0.3a9](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a9) (2023-09-16)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a8...0.0.3a9)
