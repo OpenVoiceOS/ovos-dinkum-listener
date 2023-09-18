@@ -133,6 +133,7 @@ class OVOSDinkumVoiceService(Thread):
         self._stopping = False
         self.status.set_alive()
         self.config = Configuration()
+        self._applied_config_hash = self._config_hash()
 
         self._before_start()  # connect to bus
 
@@ -152,7 +153,6 @@ class OVOSDinkumVoiceService(Thread):
         self._load_lock = RLock()
         self._reload_event = Event()
         self._reload_event.set()
-        self._applied_config_hash = None
         listener = self.config["listener"]
         self.voice_loop = self._init_voice_loop(listener)
 
@@ -196,7 +196,6 @@ class OVOSDinkumVoiceService(Thread):
         @return: Initialized VoiceLoop object
         """
         with self._load_lock:
-            self._applied_config_hash = self._config_hash()
             loop = DinkumVoiceLoop(
                 mic=self.mic,
                 hotwords=self.hotwords,
@@ -936,7 +935,7 @@ class OVOSDinkumVoiceService(Thread):
                 self.voice_loop.start()
                 self._reload_event.set()
 
-            self._applied_config_hash = self._config_hash()
+            self._applied_config_hash = new_hash
             self.status.set_ready()
             LOG.info("Reload Completed")
         except Exception as e:
