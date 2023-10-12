@@ -1,0 +1,2 @@
+ovos-backend-client>=0.1.0a7
+ovos-microphone-plugin-alsa~=0.0.0

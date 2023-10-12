@@ -7,7 +7,14 @@ the usual configuration files are loaded, some new params are exposed under the
 
 ## Install
 
-using [ovos-vad-plugin-silero](https://github.com/OpenVoiceOS/ovos-vad-plugin-silero) 
+`pip install ovos-dinkum-listener[extras]` to install this package and the default
+ALSA microphone plugin.
+
+Without `extras`, wakeword and STT audio upload will be 
+disabled unless you install 
+[`ovos-backend-client`](https://github.com/OpenVoiceOS/ovos-backend-client) separately.
+
+Using [ovos-vad-plugin-silero](https://github.com/OpenVoiceOS/ovos-vad-plugin-silero) 
 is strongly recommended instead of the default webrtcvad plugin
 
 ## Configuration
