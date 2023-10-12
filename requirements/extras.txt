@@ -1,2 +1,5 @@
 ovos-backend-client>=0.1.0a7
 ovos-microphone-plugin-alsa~=0.0.0
+ovos-stt-plugin-server~=0.0.3
+ovos-ww-plugin-precise-lite[full]~=0.1
+ovos-vad-plugin-webrtcvad~=0.0.1
