@@ -8,7 +8,8 @@ the usual configuration files are loaded, some new params are exposed under the
 ## Install
 
 `pip install ovos-dinkum-listener[extras]` to install this package and the default
-plugins.
+plugins. Note that by default, either `tensorflow` or `tflite-runtime` will need
+to be installed separately for wakeword detection.
 
 Without `extras`, wakeword and STT audio upload will be disabled unless you install 
 [`ovos-backend-client`](https://github.com/OpenVoiceOS/ovos-backend-client) separately. You will also need to manually install,
