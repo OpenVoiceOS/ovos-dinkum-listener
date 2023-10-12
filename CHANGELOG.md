@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.0.3a12](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a12) (2023-10-12)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a11...0.0.3a12)
+
+**Fixed bugs:**
+
+- Fails with ovos-ww-plugin-openwakeword [\#51](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/51)
+- Multiple connections to the bus [\#32](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/32)
+
+**Merged pull requests:**
+
+- Remove extra call to `_before_start()` [\#68](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/68) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [0.0.3a11](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a11) (2023-09-18)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a10...0.0.3a11)
+
 ## [0.0.3a10](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a10) (2023-09-18)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a9...0.0.3a10)
