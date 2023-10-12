@@ -252,7 +252,6 @@ class OVOSDinkumVoiceService(Thread):
         """
         try:
             self.status.set_alive()
-            self._before_start()  # Ensure configuration and bus are initialized
             self._start()
             self.status.set_started()
             self._after_start()
