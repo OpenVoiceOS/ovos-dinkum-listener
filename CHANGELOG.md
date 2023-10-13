@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.0.3a13](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a13) (2023-10-13)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a12...0.0.3a13)
+
+**Fixed bugs:**
+
+- ovos-microphone-plugin-alsa requirement fails on Mac OS [\#52](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/52)
+
+**Closed issues:**
+
+- Missing requirements [\#13](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/13)
+
+**Merged pull requests:**
+
+- Add optional dependencies and make backend optional [\#67](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/67) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.0.3a12](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a12) (2023-10-12)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a11...0.0.3a12)
