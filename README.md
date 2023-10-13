@@ -7,7 +7,19 @@ the usual configuration files are loaded, some new params are exposed under the
 
 ## Install
 
-using [ovos-vad-plugin-silero](https://github.com/OpenVoiceOS/ovos-vad-plugin-silero) 
+`pip install ovos-dinkum-listener[extras]` to install this package and the default
+plugins. Note that by default, either `tensorflow` or `tflite_runtime` will need
+to be installed separately for wakeword detection.
+
+> If unable to install tflite_runtime in your platform, you can find wheels
+> here https://whl.smartgic.io/. eg, for pyhon 3.11 in x86
+> `pip install https://whl.smartgic.io/tflite_runtime-2.13.0-cp311-cp311-linux_x86_64.whl`
+
+Without `extras`, wakeword and STT audio upload will be disabled unless you install 
+[`ovos-backend-client`](https://github.com/OpenVoiceOS/ovos-backend-client) separately. You will also need to manually install,
+and possibly configure STT, WW, and VAD modules as described below.
+
+Using [ovos-vad-plugin-silero](https://github.com/OpenVoiceOS/ovos-vad-plugin-silero) 
 is strongly recommended instead of the default webrtcvad plugin
 
 ## Configuration

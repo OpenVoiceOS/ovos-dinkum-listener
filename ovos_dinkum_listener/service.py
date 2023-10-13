@@ -18,7 +18,6 @@ from hashlib import md5
 from pathlib import Path
 from threading import Thread, RLock, Event
 
-from ovos_backend_client.api import DatasetApi
 from ovos_bus_client import Message, MessageBusClient
 from ovos_bus_client.session import SessionManager
 from ovos_config import Configuration
@@ -36,6 +35,12 @@ from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt
 from ovos_dinkum_listener.transformers import AudioTransformersService
 from ovos_dinkum_listener.voice_loop import DinkumVoiceLoop, ListeningMode, ListeningState
 from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer
+
+try:
+    from ovos_backend_client.api import DatasetApi
+except ImportError:
+    LOG.info("`ovos-backend-client` is not installed. Upload is disabled")
+    DatasetApi = None
 
 # Seconds between systemd watchdog updates
 WATCHDOG_DELAY = 0.5
@@ -445,8 +450,11 @@ class OVOSDinkumVoiceService(Thread):
             DatasetApi().upload_wake_word(wav_data,
                                           metadata,
                                           upload_url=upload_url)
-
-        Thread(target=upload, daemon=True, args=(wav_data, metadata)).start()
+        if DatasetApi is not None:
+            Thread(target=upload, daemon=True,
+                   args=(wav_data, metadata)).start()
+        else:
+            LOG.debug("`pip install ovos-backend-client` to enable upload")
 
     @staticmethod
     def _compile_ww_context(key_phrase, ww_module):
@@ -586,13 +594,13 @@ class OVOSDinkumVoiceService(Thread):
         upload_url = Configuration().get("listener", {}).get('stt_upload', {}).get('url')
 
         def upload(wav_data, metadata):
-            # TODO - not yet merged in backend-client
-            try:
-                DatasetApi().upload_stt(wav_data, metadata, upload_url=upload_url)
-            except:
-                pass
+            DatasetApi().upload_stt(wav_data, metadata, upload_url=upload_url)
 
-        Thread(target=upload, daemon=True, args=(wav_data, metadata)).start()
+        if DatasetApi:
+            Thread(target=upload, daemon=True,
+                   args=(wav_data, metadata)).start()
+        else:
+            LOG.debug("`pip install ovos-backend-client` to enable upload")
 
     def _stt_audio(self, audio_bytes: bytes, stt_context: dict):
         try:
