@@ -15,9 +15,6 @@ import time
 import wave
 from enum import Enum
 from hashlib import md5
-from pathlib import Path
-from threading import Thread, RLock, Event
-
 from ovos_bus_client import Message, MessageBusClient
 from ovos_bus_client.session import SessionManager
 from ovos_config import Configuration
@@ -30,6 +27,8 @@ from ovos_plugin_manager.vad import get_vad_configs
 from ovos_plugin_manager.wakewords import get_ww_lang_configs, get_ww_supported_langs, get_ww_module_configs
 from ovos_utils.log import LOG, log_deprecation
 from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessState
+from pathlib import Path
+from threading import Thread, RLock, Event
 
 from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt
 from ovos_dinkum_listener.transformers import AudioTransformersService
@@ -116,7 +115,7 @@ class OVOSDinkumVoiceService(Thread):
     def __init__(self, on_ready=on_ready, on_error=on_error,
                  on_stopping=on_stopping, on_alive=on_alive,
                  on_started=on_started, watchdog=lambda: None, mic=None,
-                 bus=None):
+                 bus=None, validate_source=True):
         """
         watchdog: (callable) function to call periodically indicating
           operational status.
@@ -131,6 +130,7 @@ class OVOSDinkumVoiceService(Thread):
                                       on_started=on_started)
         self.bus = bus
         self.service_id = "voice"
+        self.validate_source = validate_source
         self.status = ProcessStatus(self.service_id, self.bus,
                                     callback_map=callbacks)
         self._watchdog = watchdog
@@ -160,6 +160,24 @@ class OVOSDinkumVoiceService(Thread):
         self._reload_event.set()
         listener = self.config["listener"]
         self.voice_loop = self._init_voice_loop(listener)
+
+    def _validate_message_context(self, message, native_sources=None):
+        """ used to determine if a message should be processed or ignored
+        only native sources should trigger on mycroft.mic.listen
+        """
+        if not message or not self.validate_source:
+            return True
+        destination = message.context.get("destination")
+        if destination:
+            native_sources = native_sources or Configuration()["Audio"].get(
+                "native_sources", ["debug_cli", "audio"]) or []
+            if any(s in destination for s in native_sources):
+                # request from device
+                return True
+            # external request, do not handle
+            return False
+        # broadcast for everyone
+        return True
 
     def _config_hash(self):
         lang = self.config.get("lang")
@@ -212,7 +230,7 @@ class OVOSDinkumVoiceService(Thread):
                 speech_seconds=listener_config.get("speech_begin", 0.3),
                 silence_seconds=listener_config.get("silence_end", 0.7),
                 timeout_seconds=listener_config.get("recording_timeout", 10),
-                timeout_seconds_with_silence=listener_config.get("recording_timeout_with_silence", 5),                
+                timeout_seconds_with_silence=listener_config.get("recording_timeout_with_silence", 5),
                 num_stt_rewind_chunks=listener_config.get(
                     "utterance_chunks_to_rewind", 2),
                 num_hotword_keep_chunks=listener_config.get(
@@ -450,6 +468,7 @@ class OVOSDinkumVoiceService(Thread):
             DatasetApi().upload_wake_word(wav_data,
                                           metadata,
                                           upload_url=upload_url)
+
         if DatasetApi is not None:
             Thread(target=upload, daemon=True,
                    args=(wav_data, metadata)).start()
@@ -653,6 +672,10 @@ class OVOSDinkumVoiceService(Thread):
         self.voice_loop.is_muted = False
 
     def _handle_listen(self, message: Message):
+        if not self._validate_message_context(message):
+            # ignore mycroft.mic.listen, it is targeted to an external client
+            return
+
         if self.config.get('confirm_listening'):
             sound = self.config.get('sounds', {}).get('start_listening')
             if sound:
@@ -665,27 +688,27 @@ class OVOSDinkumVoiceService(Thread):
 
         self.voice_loop.skip_next_wake = True
 
-    def _handle_mic_get_status(self,  message: Message):
+    def _handle_mic_get_status(self, message: Message):
         """Query microphone mute status."""
         data = {'muted': self.voice_loop.is_muted}
         self.bus.emit(message.response(data))
 
-    def _handle_audio_start(self,  message: Message):
+    def _handle_audio_start(self, message: Message):
         """audio output started"""
         if self.config.get("listener").get("mute_during_output"):
             self.voice_loop.is_muted = True
 
-    def _handle_audio_end(self,  message: Message):
+    def _handle_audio_end(self, message: Message):
         """audio output ended"""
         if self.config.get("listener").get("mute_during_output"):
             self.voice_loop.is_muted = False  # restore
 
-    def _handle_stop(self,  message: Message):
+    def _handle_stop(self, message: Message):
         """Handler for mycroft.stop, i.e. button press."""
         self.voice_loop.is_muted = False  # restore
 
     # state events
-    def _handle_change_state(self,  message: Message):
+    def _handle_change_state(self, message: Message):
         """Set listening state."""
         # TODO - unify this api, should match ovos-listener exactly
         state = message.data.get("state")
@@ -730,17 +753,17 @@ class OVOSDinkumVoiceService(Thread):
         if sound:
             self.bus.emit(message.forward("mycroft.audio.play_sound", {"uri": sound}))
 
-    def _handle_extend_listening(self,  message: Message):
+    def _handle_extend_listening(self, message: Message):
         """ when a skill is activated (converse) reset the timeout until wakeword is needed again
         only used when in hybrid listening mode """
         if self.voice_loop.listen_mode == ListeningMode.HYBRID:
             self.voice_loop.last_ww = time.time()
 
-    def _handle_sleep(self,  message: Message):
+    def _handle_sleep(self, message: Message):
         """Put the voice loop to sleep."""
         self.voice_loop.go_to_sleep()
 
-    def _handle_wake_up(self,  message: Message):
+    def _handle_wake_up(self, message: Message):
         """Wake up the voice loop."""
         self.voice_loop.wakeup()
         self.bus.emit(message.reply("mycroft.awoken"))
