@@ -169,8 +169,9 @@ class OVOSDinkumVoiceService(Thread):
             return True
         destination = message.context.get("destination")
         if destination:
-            native_sources = native_sources or Configuration()["Audio"].get(
-                "native_sources", ["debug_cli", "audio"]) or []
+            native_sources = native_sources or \
+                             Configuration()["Audio"].get("native_sources",
+                                                          ["debug_cli", "audio"]) or []
             if any(s in destination for s in native_sources):
                 # request from device
                 return True
@@ -500,7 +501,7 @@ class OVOSDinkumVoiceService(Thread):
         context = {'client_name': 'ovos_dinkum_listener',
                    'source': 'audio',  # default native audio source
                    'destination': ["skills"]}
-        stt_lang = ww_context.get("lang")
+        stt_lang = ww_context.get("lang")  # per wake word lang override in mycroft.conf
         if stt_lang:
             context["lang"] = stt_lang
 
@@ -522,7 +523,8 @@ class OVOSDinkumVoiceService(Thread):
                     'utterances': [utterance],
                     "lang": stt_lang or Configuration().get("lang", "en-us")
                 }
-                self.bus.emit(Message("recognizer_loop:utterance", payload,
+                self.bus.emit(Message("recognizer_loop:utterance",
+                                      payload,
                                       context))
                 return payload
 
@@ -574,9 +576,10 @@ class OVOSDinkumVoiceService(Thread):
 
         # Report utterance to intent service
         if text:
+            lang = stt_context.get("lang") or Configuration().get("lang", "en-us")
             LOG.debug(f"STT: {text}")
-            payload = stt_context
-            payload["utterances"] = [text]
+            payload = {"utterances": [text],
+                       "lang": lang}
             self.bus.emit(Message("recognizer_loop:utterance", payload, stt_context))
         elif self.voice_loop.listen_mode == ListeningMode.CONTINUOUS:
             LOG.debug("ignoring transcription failure")
