@@ -347,6 +347,8 @@ class OVOSDinkumVoiceService(Thread):
         self.bus.on("opm.ww.query", self._handle_opm_ww_query)
         self.bus.on("opm.vad.query", self._handle_opm_vad_query)
 
+        self.bus.on("mycroft.audio.play_sound.response", self._handle_sound_played)
+
         LOG.debug("Messagebus events registered")
 
     def _after_start(self):
@@ -541,7 +543,10 @@ class OVOSDinkumVoiceService(Thread):
                            }
                 LOG.debug(f"Handling listen sound: {sound}")
                 self.bus.emit(Message("mycroft.audio.play_sound",
-                                      {"uri": sound}, context))
+                                                   {"uri": sound,
+                                                    "force_unmute": True}, context))
+            else:
+                self.voice_loop.cmd_ready = True
 
             if listen:
                 msg_type = "recognizer_loop:wakeword"
@@ -770,6 +775,11 @@ class OVOSDinkumVoiceService(Thread):
         """Wake up the voice loop."""
         self.voice_loop.wakeup()
         self.bus.emit(message.reply("mycroft.awoken"))
+    
+    def _handle_sound_played(self, message: Message):
+        """Handle cmd_ready message from audio service."""
+        if message.context.get("destination") == 'listener':
+            self.voice_loop.cmd_ready = True
 
     # OPM bus api
     def _handle_get_languages_stt(self, message):

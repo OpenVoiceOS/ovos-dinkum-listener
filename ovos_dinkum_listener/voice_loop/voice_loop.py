@@ -178,6 +178,7 @@ class DinkumVoiceLoop(VoiceLoop):
         self.timeout_seconds_left = self.timeout_seconds
         self.timeout_seconds_with_silence_left = self.timeout_seconds_with_silence        
         self.state = ListeningState.DETECT_WAKEWORD
+        self.cmd_ready = False
 
         # Keep hotword/STT audio so they can (optionally) be saved to disk
         self.hotword_chunks = deque(maxlen=self.num_hotword_keep_chunks)
@@ -242,7 +243,7 @@ class DinkumVoiceLoop(VoiceLoop):
             elif self.state == ListeningState.CHECK_WAKE_UP:
                 self._detect_wakeup(chunk)
 
-            elif self.state == ListeningState.BEFORE_COMMAND:
+            elif self.state == ListeningState.BEFORE_COMMAND and self.cmd_ready:
                 LOG.debug("waiting for speech")
                 self._before_cmd(chunk)
             elif self.state == ListeningState.IN_COMMAND:
@@ -250,6 +251,7 @@ class DinkumVoiceLoop(VoiceLoop):
                 self._in_cmd(chunk)
             elif self.state == ListeningState.AFTER_COMMAND:
                 LOG.info("speech finished")
+                self.cmd_ready = False
                 self._after_cmd(chunk)
 
             if self.chunk_callback is not None:
