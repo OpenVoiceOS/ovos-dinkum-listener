@@ -13,6 +13,7 @@
 import json
 import time
 import wave
+from threading import Timer, Event
 from enum import Enum
 from hashlib import md5
 from ovos_bus_client import Message, MessageBusClient
@@ -543,10 +544,11 @@ class OVOSDinkumVoiceService(Thread):
                            }
                 LOG.debug(f"Handling listen sound: {sound}")
                 self.bus.emit(Message("mycroft.audio.play_sound",
-                                                   {"uri": sound,
-                                                    "force_unmute": True}, context))
-            else:
-                self.voice_loop.cmd_ready = True
+                                      {"uri": sound, "force_unmute": True},
+                                      context))
+                self.voice_loop.state == ListeningState.CONFIRMATION
+                self.voice_loop.confirmation_event.clear()
+                Timer(0.5, lambda: self.voice_loop.confirmation_event.set()).start()
 
             if listen:
                 msg_type = "recognizer_loop:wakeword"
@@ -777,9 +779,9 @@ class OVOSDinkumVoiceService(Thread):
         self.bus.emit(message.reply("mycroft.awoken"))
     
     def _handle_sound_played(self, message: Message):
-        """Handle cmd_ready message from audio service."""
-        if message.context.get("destination") == 'listener':
-            self.voice_loop.cmd_ready = True
+        """Handle response message from audio service."""
+        if self.voice_loop.state == ListeningState.CONFIRMATION:
+            self.voice_loop.confirmation_event.set()
 
     # OPM bus api
     def _handle_get_languages_stt(self, message):
