@@ -246,7 +246,7 @@ class DinkumVoiceLoop(VoiceLoop):
             elif self.state == ListeningState.CHECK_WAKE_UP:
                 self._detect_wakeup(chunk)
             
-            # set 
+            # set either by timeout (0.5) or by ovos-audio response
             elif self.state == ListeningState.CONFIRMATION and \
                     self.confirmation_event.is_set():
                 self.state = ListeningState.BEFORE_COMMAND
