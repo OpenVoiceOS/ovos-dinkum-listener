@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.3a17](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a17) (2023-11-23)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a16...0.0.3a17)
+
+**Implemented enhancements:**
+
+- unmute on hotword [\#73](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/73) ([emphasize](https://github.com/emphasize))
+
+**Fixed bugs:**
+
+- Mark2 Listen Button not working [\#72](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/72)
+
 ## [0.0.3a16](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a16) (2023-10-26)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a15...0.0.3a16)
