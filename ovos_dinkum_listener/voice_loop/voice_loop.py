@@ -15,6 +15,7 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
+from threading import Event
 from typing import Callable, Deque, Optional
 
 from ovos_config import Configuration
@@ -37,6 +38,8 @@ class ListeningState(str, Enum):
 
     SLEEPING = "sleeping"
     CHECK_WAKE_UP = "wake_up"
+
+    CONFIRMATION = "confirmation"
 
     BEFORE_COMMAND = "before_cmd"
     IN_COMMAND = "in_cmd"
@@ -178,6 +181,7 @@ class DinkumVoiceLoop(VoiceLoop):
         self.timeout_seconds_left = self.timeout_seconds
         self.timeout_seconds_with_silence_left = self.timeout_seconds_with_silence        
         self.state = ListeningState.DETECT_WAKEWORD
+        self.confirmation_event = Event()
 
         # Keep hotword/STT audio so they can (optionally) be saved to disk
         self.hotword_chunks = deque(maxlen=self.num_hotword_keep_chunks)
@@ -241,6 +245,11 @@ class DinkumVoiceLoop(VoiceLoop):
                 self._before_wakeup(chunk)
             elif self.state == ListeningState.CHECK_WAKE_UP:
                 self._detect_wakeup(chunk)
+            
+            # set either by timeout (0.5) or by ovos-audio response
+            elif self.state == ListeningState.CONFIRMATION and \
+                    self.confirmation_event.is_set():
+                self.state = ListeningState.BEFORE_COMMAND
 
             elif self.state == ListeningState.BEFORE_COMMAND:
                 LOG.debug("waiting for speech")
@@ -455,7 +464,8 @@ class DinkumVoiceLoop(VoiceLoop):
                 self.state = ListeningState.CHECK_WAKE_UP
             else:
                 # Wake word detected, begin recording voice command
-                self.state = ListeningState.BEFORE_COMMAND
+                if not self.state == ListeningState.CONFIRMATION:
+                    self.state = ListeningState.BEFORE_COMMAND
                 self.speech_seconds_left = self.speech_seconds
                 self.timeout_seconds_left = self.timeout_seconds
                 self.timeout_seconds_with_silence_left = self.timeout_seconds_with_silence                
