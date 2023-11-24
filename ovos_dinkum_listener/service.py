@@ -546,7 +546,7 @@ class OVOSDinkumVoiceService(Thread):
                 self.bus.emit(Message("mycroft.audio.play_sound",
                                       {"uri": sound, "force_unmute": True},
                                       context))
-                self.voice_loop.state == ListeningState.CONFIRMATION
+                self.voice_loop.state = ListeningState.CONFIRMATION
                 self.voice_loop.confirmation_event.clear()
                 Timer(0.5, lambda: self.voice_loop.confirmation_event.set()).start()
 
