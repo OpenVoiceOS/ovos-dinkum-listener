@@ -9,13 +9,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import base64
 import json
+import subprocess
 import time
 import wave
 from threading import Timer, Event
+from distutils.spawn import find_executable
 from enum import Enum
 from hashlib import md5
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+from threading import Thread, RLock, Event
+
+import speech_recognition as sr
 from ovos_bus_client import Message, MessageBusClient
 from ovos_bus_client.session import SessionManager
 from ovos_config import Configuration
@@ -28,8 +35,6 @@ from ovos_plugin_manager.vad import get_vad_configs
 from ovos_plugin_manager.wakewords import get_ww_lang_configs, get_ww_supported_langs, get_ww_module_configs
 from ovos_utils.log import LOG, log_deprecation
 from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessState
-from pathlib import Path
-from threading import Thread, RLock, Event
 
 from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt
 from ovos_dinkum_listener.transformers import AudioTransformersService
@@ -44,6 +49,26 @@ except ImportError:
 
 # Seconds between systemd watchdog updates
 WATCHDOG_DELAY = 0.5
+
+
+def bytes2audiodata(data):
+    recognizer = sr.Recognizer()
+    with NamedTemporaryFile() as fp:
+        fp.write(data)
+
+        if find_executable("ffmpeg"):
+            p = fp.name + "converted.wav"
+            # ensure file format
+            cmd = ["ffmpeg", "-i", fp.name, "-acodec", "pcm_s16le", "-ar",
+                   "16000", "-ac", "1", "-f", "wav", p, "-y"]
+            subprocess.call(cmd)
+        else:
+            LOG.warning("ffmpeg not found, please ensure audio is in a valid format")
+            p = fp.name
+
+        with sr.AudioFile(p) as source:
+            audio = recognizer.record(source)
+    return audio
 
 
 class ServiceState(str, Enum):
@@ -338,6 +363,7 @@ class OVOSDinkumVoiceService(Thread):
 
         self.bus.on('recognizer_loop:sleep', self._handle_sleep)
         self.bus.on('recognizer_loop:wake_up', self._handle_wake_up)
+        self.bus.on('recognizer_loop:b64_audio', self._handle_b64_audio)
         self.bus.on('recognizer_loop:record_stop', self._handle_stop_recording)
         self.bus.on('recognizer_loop:state.set', self._handle_change_state)
         self.bus.on('recognizer_loop:state.get', self._handle_get_state)
@@ -777,11 +803,30 @@ class OVOSDinkumVoiceService(Thread):
         """Wake up the voice loop."""
         self.voice_loop.wakeup()
         self.bus.emit(message.reply("mycroft.awoken"))
-    
+
     def _handle_sound_played(self, message: Message):
         """Handle response message from audio service."""
         if self.voice_loop.state == ListeningState.CONFIRMATION:
             self.voice_loop.confirmation_event.set()
+
+    def _handle_b64_audio(self, message: Message):
+        """ transcribe base64 encoded audio """
+        b64audio = message.data["audio"]
+        lang = message.data.get("lang", self.voice_loop.stt.lang)
+
+        wav_data = base64.b64decode(b64audio)
+
+        audio = bytes2audiodata(wav_data)
+
+        utterance = self.voice_loop.stt.engine.execute(audio, lang)
+
+        if utterance:
+            self.bus.emit(message.forward(
+                "recognizer_loop:utterance",
+                {"utterances": [utterance], "lang": lang}))
+        else:
+            self.bus.emit(message.forward(
+                "recognizer_loop:speech.recognition.unknown"))
 
     # OPM bus api
     def _handle_get_languages_stt(self, message):
