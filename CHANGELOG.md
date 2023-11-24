@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.3a18](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a18) (2023-11-24)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a17...0.0.3a18)
+
+**Fixed bugs:**
+
+- fix assignment [\#74](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/74) ([emphasize](https://github.com/emphasize))
+
 ## [0.0.3a17](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a17) (2023-11-23)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a16...0.0.3a17)
