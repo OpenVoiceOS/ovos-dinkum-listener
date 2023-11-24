@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.3a19](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a19) (2023-11-24)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a18...0.0.3a19)
+
+**Implemented enhancements:**
+
+- feat/base64\_stt\_bus\_api [\#75](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/75) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.3a18](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a18) (2023-11-24)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a17...0.0.3a18)
