@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.3a20](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a20) (2023-12-01)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a19...0.0.3a20)
+
+**Fixed bugs:**
+
+- confirmation state: add handle\_listen [\#76](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/76) ([emphasize](https://github.com/emphasize))
+
 ## [0.0.3a19](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a19) (2023-11-24)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a18...0.0.3a19)
