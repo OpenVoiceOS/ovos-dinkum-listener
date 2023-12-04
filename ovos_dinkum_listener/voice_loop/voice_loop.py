@@ -141,6 +141,12 @@ class DinkumVoiceLoop(VoiceLoop):
         Return true while the loop is running
         """
         return self._is_running is True
+    
+    @property
+    def reset_speech_timer(self):
+        self.speech_seconds_left = self.speech_seconds
+        self.timeout_seconds_left = self.timeout_seconds
+        self.timeout_seconds_with_silence_left = self.timeout_seconds_with_silence  
 
     def start(self):
         """
@@ -423,9 +429,8 @@ class DinkumVoiceLoop(VoiceLoop):
     def _detect_ww(self, chunk: bytes) -> bool:
         """
         Check for a wake word in a chunk of unknown audio. Audio is passed to
-        hotwords in all cases. If a wake word is detected OR
-        `self.skip_next_wake` is True, audio is passed to
-        `listenword_audio_callback` and `wake_callback`.
+        hotwords in all cases. If a wake word is detected
+        audio is passed to `listenword_audio_callback` and `wake_callback`.
 
         If WW detected and sleeping, check for wakeup word in next audio chunks
         else check for speech input for STT.
@@ -439,12 +444,10 @@ class DinkumVoiceLoop(VoiceLoop):
         self.hotwords.update(chunk)
 
         ww = self.hotwords.found()
-        if ww or self.skip_next_wake:
+        if ww:
             LOG.debug(f"Wake word detected={ww}")
             # Callback to handle recorded hotword audio
-            if (self.listenword_audio_callback is not None) and (
-                    not self.skip_next_wake
-            ):
+            if self.listenword_audio_callback is not None:
                 hotword_audio_bytes = bytes()
                 while self.hotword_chunks:
                     hotword_audio_bytes += self.hotword_chunks.popleft()
@@ -452,7 +455,6 @@ class DinkumVoiceLoop(VoiceLoop):
                 self.listenword_audio_callback(hotword_audio_bytes,
                                                self.hotwords.get_ww(ww))
 
-            self.skip_next_wake = False
             self.hotword_chunks.clear()
 
             # Callback to handle wake up
@@ -466,9 +468,7 @@ class DinkumVoiceLoop(VoiceLoop):
                 # Wake word detected, begin recording voice command
                 if not self.state == ListeningState.CONFIRMATION:
                     self.state = ListeningState.BEFORE_COMMAND
-                self.speech_seconds_left = self.speech_seconds
-                self.timeout_seconds_left = self.timeout_seconds
-                self.timeout_seconds_with_silence_left = self.timeout_seconds_with_silence                
+                self.reset_speech_timer()              
                 self.stt_audio_bytes = bytes()
                 self.stt.stream_start()
                 if self.fallback_stt is not None:
