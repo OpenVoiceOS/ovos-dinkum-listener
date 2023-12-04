@@ -468,7 +468,7 @@ class DinkumVoiceLoop(VoiceLoop):
                 # Wake word detected, begin recording voice command
                 if not self.state == ListeningState.CONFIRMATION:
                     self.state = ListeningState.BEFORE_COMMAND
-                self.reset_speech_timer()              
+                self.reset_speech_timer             
                 self.stt_audio_bytes = bytes()
                 self.stt.stream_start()
                 if self.fallback_stt is not None:
