@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.3a21](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a21) (2023-12-06)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a20...0.0.3a21)
+
+**Fixed bugs:**
+
+- decouple listen\_event and wakeword handling [\#77](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/77) ([emphasize](https://github.com/emphasize))
+
 ## [0.0.3a20](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a20) (2023-12-01)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a19...0.0.3a20)
