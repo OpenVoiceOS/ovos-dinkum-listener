@@ -712,7 +712,7 @@ class OVOSDinkumVoiceService(Thread):
             # ignore mycroft.mic.listen, it is targeted to an external client
             return
 
-        self.voice_loop.reset_speech_timer
+        self.voice_loop.reset_speech_timer()
         self.voice_loop.stt_audio_bytes = bytes()
         self.voice_loop.stt.stream_start()
         if self.voice_loop.fallback_stt is not None:

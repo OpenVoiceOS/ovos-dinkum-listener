@@ -142,7 +142,6 @@ class DinkumVoiceLoop(VoiceLoop):
         """
         return self._is_running is True
     
-    @property
     def reset_speech_timer(self):
         self.speech_seconds_left = self.speech_seconds
         self.timeout_seconds_left = self.timeout_seconds
@@ -468,7 +467,7 @@ class DinkumVoiceLoop(VoiceLoop):
                 # Wake word detected, begin recording voice command
                 if not self.state == ListeningState.CONFIRMATION:
                     self.state = ListeningState.BEFORE_COMMAND
-                self.reset_speech_timer             
+                self.reset_speech_timer()
                 self.stt_audio_bytes = bytes()
                 self.stt.stream_start()
                 if self.fallback_stt is not None:
