@@ -708,9 +708,15 @@ class OVOSDinkumVoiceService(Thread):
         self.voice_loop.is_muted = False
 
     def _handle_listen(self, message: Message):
-        if not self._validate_message_context(message):
+        if not self._validate_message_context(message) or not self.voice_loop.running:
             # ignore mycroft.mic.listen, it is targeted to an external client
             return
+
+        self.voice_loop.reset_speech_timer()
+        self.voice_loop.stt_audio_bytes = bytes()
+        self.voice_loop.stt.stream_start()
+        if self.voice_loop.fallback_stt is not None:
+            self.voice_loop.fallback_stt.stream_start()
 
         if self.config.get('confirm_listening'):
             sound = self.config.get('sounds', {}).get('start_listening')
@@ -724,8 +730,8 @@ class OVOSDinkumVoiceService(Thread):
                 self.voice_loop.state = ListeningState.CONFIRMATION
                 self.voice_loop.confirmation_event.clear()
                 Timer(0.5, lambda: self.voice_loop.confirmation_event.set()).start()
-
-        self.voice_loop.skip_next_wake = True
+        else:
+            self.voice_loop.state = ListeningState.BEFORE_COMMAND
 
     def _handle_mic_get_status(self, message: Message):
         """Query microphone mute status."""

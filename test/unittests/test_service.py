@@ -285,9 +285,37 @@ class TestDinkumVoiceService(unittest.TestCase):
         self.assertFalse(self.service.voice_loop.is_muted)
 
     def test_handle_listen(self):
-        self.service.voice_loop.skip_next_wake = False
+        from ovos_dinkum_listener.voice_loop import ListeningState
+        orig_reset = self.service.voice_loop.reset_speech_timer
+        self.service.voice_loop.stt.stream_start = Mock()
+        self.service.voice_loop.reset_speech_timer = Mock()
+        self.service.voice_loop.confirmation_event = Event()
+
         self.service._handle_listen(None)
-        self.assertTrue(self.service.voice_loop.skip_next_wake)
+        self.assertEqual(self.service.voice_loop.confirmation_event.is_set(), False)
+        self.service.voice_loop.reset_speech_timer.assert_called_once()
+        self.service.voice_loop.reset_speech_timer.reset_mock()
+        self.assertEqual(self.service.config["confirm_listening"], True)
+        self.assertEqual(self.service.voice_loop.stt_audio_bytes, bytes())
+        self.service.voice_loop.stt.stream_start.assert_called_once()
+        self.service.voice_loop.stt.stream_start.reset_mock()
+        self.assertEqual(self.service.voice_loop.state, ListeningState.CONFIRMATION)
+        sleep(1)
+        self.assertEqual(self.service.voice_loop.confirmation_event.is_set(), True)
+
+        self.service.voice_loop.state = ListeningState.DETECT_WAKEWORD
+        self.service.config["confirm_listening"] = False
+        
+        self.service._handle_listen(None)
+        self.assertEqual(self.service.config["confirm_listening"], False)
+        self.service.voice_loop.reset_speech_timer.assert_called_once()
+        self.service.voice_loop.reset_speech_timer.reset_mock()
+        self.assertEqual(self.service.voice_loop.stt_audio_bytes, bytes())
+        self.service.voice_loop.stt.stream_start.assert_called_once()
+        self.service.voice_loop.stt.stream_start.reset_mock()
+        self.assertEqual(self.service.voice_loop.state, ListeningState.BEFORE_COMMAND)    
+
+        self.service.voice_loop.reset_speech_timer = orig_reset
 
     def test_handle_mic_get_status(self):
         # TODO
