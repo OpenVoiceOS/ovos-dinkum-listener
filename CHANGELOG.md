@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.0.3a22](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a22) (2023-12-07)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a21...0.0.3a22)
+
+**Fixed bugs:**
+
+- fix lang detect [\#80](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/80) ([JarbasAl](https://github.com/JarbasAl))
+
+**Closed issues:**
+
+- AttributeError: 'Session' object has no attribute 'valid\_languages' [\#79](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/79)
+- "nothing transcribed" since version 0.0.3a18 [\#78](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/78)
+
 ## [0.0.3a21](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a21) (2023-12-06)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a20...0.0.3a21)
