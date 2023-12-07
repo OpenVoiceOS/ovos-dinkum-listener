@@ -604,8 +604,7 @@ class DinkumVoiceLoop(VoiceLoop):
         @return: validated language (or default)
         """
         default_lang = Configuration().get("lang", "en-us")
-        s = SessionManager.get()
-        valid_langs = [l.lower().split("-")[0] for l in s.valid_languages]
+        valid_langs = [l.lower().split("-")[0] for l in [ [default_lang] + Configuration().get("secondary_langs", [])]
         l2 = lang.lower().split("-")[0]
         if l2 in valid_langs:
             if l2 != default_lang.lower().split("-")[0]:
