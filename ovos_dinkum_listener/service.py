@@ -732,6 +732,8 @@ class OVOSDinkumVoiceService(Thread):
                     self.voice_loop.state = ListeningState.CONFIRMATION
                     self.voice_loop.confirmation_event.clear()
                     Timer(0.5, lambda: self.voice_loop.confirmation_event.set()).start()
+                else:
+                    self.voice_loop.state = ListeningState.BEFORE_COMMAND
         else:
             self.voice_loop.state = ListeningState.BEFORE_COMMAND
 
