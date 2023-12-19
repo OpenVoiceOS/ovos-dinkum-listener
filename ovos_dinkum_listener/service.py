@@ -572,9 +572,10 @@ class OVOSDinkumVoiceService(Thread):
                 self.bus.emit(Message("mycroft.audio.play_sound",
                                       {"uri": sound, "force_unmute": True},
                                       context))
-                self.voice_loop.state = ListeningState.CONFIRMATION
-                self.voice_loop.confirmation_event.clear()
-                Timer(0.5, lambda: self.voice_loop.confirmation_event.set()).start()
+                if not listener.get("instant_listen"):
+                    self.voice_loop.state = ListeningState.CONFIRMATION
+                    self.voice_loop.confirmation_event.clear()
+                    Timer(0.5, lambda: self.voice_loop.confirmation_event.set()).start()
 
             if listen:
                 msg_type = "recognizer_loop:wakeword"
@@ -727,9 +728,10 @@ class OVOSDinkumVoiceService(Thread):
                            }
                 message = message or Message("", context=context)  # might be None
                 self.bus.emit(message.forward("mycroft.audio.play_sound", {"uri": sound}))
-                self.voice_loop.state = ListeningState.CONFIRMATION
-                self.voice_loop.confirmation_event.clear()
-                Timer(0.5, lambda: self.voice_loop.confirmation_event.set()).start()
+                if not self.config["listener"].get("instant_listen"):
+                    self.voice_loop.state = ListeningState.CONFIRMATION
+                    self.voice_loop.confirmation_event.clear()
+                    Timer(0.5, lambda: self.voice_loop.confirmation_event.set()).start()
         else:
             self.voice_loop.state = ListeningState.BEFORE_COMMAND
 
