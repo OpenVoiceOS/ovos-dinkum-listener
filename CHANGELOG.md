@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.3a24](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a24) (2023-12-29)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a23...0.0.3a24)
+
+**Merged pull requests:**
+
+- packaging/update requirements [\#83](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/83) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.3a23](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a23) (2023-12-29)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a22...0.0.3a23)
