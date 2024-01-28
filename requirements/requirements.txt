@@ -2,4 +2,4 @@ ovos-plugin-manager<0.1.0, >=0.0.24
 ovos-utils>=0.0.38
 ovos-config<0.1.0, >=0.0.12
 ovos-bus-client<0.1.0, >=0.0.7
-SpeechRecognition~=3.9
+SpeechRecognition~=3.10
