@@ -1,2 +1,2 @@
-pytest~=7.1
+pytest~=8.0
 ovos-vad-plugin-webrtcvad
