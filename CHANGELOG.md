@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.3a28](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a28) (2024-02-24)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a27...0.0.3a28)
+
+**Fixed bugs:**
+
+- fix: per wake word lang [\#92](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/92) ([JarbasAl](https://github.com/JarbasAl))
+
+## [0.0.3a27](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a27) (2024-01-13)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a26...0.0.3a27)
+
 ## [0.0.3a26](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a26) (2024-01-08)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a25...0.0.3a26)
