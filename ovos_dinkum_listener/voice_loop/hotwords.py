@@ -133,7 +133,6 @@ class HotwordContainer:
                 listen = data.get("listen", False) or word == main_ww
                 wakeup = data.get("wakeup", False)
                 stopword = data.get("stopword", False)
-                trigger = data.get("trigger", False)
                 lang = data.get("stt_lang", default_lang)
                 enabled = data.get("active")
                 event = data.get("bus_event")
@@ -170,7 +169,6 @@ class HotwordContainer:
                     self._plugins[word] = {"engine": engine,
                                            "sound": sound,
                                            "bus_event": event,
-                                           "trigger": trigger,
                                            "utterance": utterance,
                                            "stt_lang": lang,
                                            "listen": listen,

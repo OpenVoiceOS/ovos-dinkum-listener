@@ -530,7 +530,7 @@ class OVOSDinkumVoiceService(Thread):
         context = {'client_name': 'ovos_dinkum_listener',
                    'source': 'audio',  # default native audio source
                    'destination': ["skills"]}
-        stt_lang = ww_context.get("lang")  # per wake word lang override in mycroft.conf
+        stt_lang = ww_context.get("stt_lang")  # per wake word lang override in mycroft.conf
         if stt_lang:
             context["lang"] = stt_lang
 
