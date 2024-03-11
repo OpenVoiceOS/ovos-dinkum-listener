@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.3a30](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a30) (2024-03-11)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a29...0.0.3a30)
+
+**Fixed bugs:**
+
+- fix/allow service to exit [\#94](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/94) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.3a29](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a29) (2024-02-25)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a28...0.0.3a29)
