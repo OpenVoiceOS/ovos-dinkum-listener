@@ -192,7 +192,7 @@ class TestDinkumVoiceService(unittest.TestCase):
         self.service.fallback_stt.shutdown = Mock()
         self.service.hotwords.shutdown = Mock()
         self.service.vad.stop = Mock()
-        self.service.voice_loop.stop = Mock(side_effect=self.service._shutdown)
+        self.service.voice_loop.stop = Mock()
 
         self.service.stop()
         self.service.voice_loop.stop.assert_called_once()
