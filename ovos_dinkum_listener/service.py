@@ -327,7 +327,6 @@ class OVOSDinkumVoiceService(Thread):
             LOG.info("Service stopping")
             self.stop()
             LOG.debug("shutdown done")
-            self._after_stop()
             LOG.debug("stopped")
             if self.status.state != ProcessState.ERROR:
                 self.status.state = ProcessState.NOT_STARTED
@@ -388,15 +387,9 @@ class OVOSDinkumVoiceService(Thread):
         """
         self.status.set_stopping()
         self._stopping = True
-        if not self.voice_loop.running:
-            LOG.debug("voice_loop not running, just shutdown the service")
-            self._shutdown()
-            return
-        self._shutdown_event.clear()
-        self.voice_loop.stop()
-        if not self._shutdown_event.wait(30):
-            LOG.error(f"voice_loop didn't call _shutdown")
-            self._shutdown()
+        if self.voice_loop.running:
+            self.voice_loop.stop()
+        self._shutdown()
 
     def _shutdown(self):
         """
@@ -419,15 +412,12 @@ class OVOSDinkumVoiceService(Thread):
                 self.vad.stop()
 
             self.mic.stop()
+
+            self.bus.close()
         except Exception as e:
             LOG.exception(f"Shutdown failed with: {e}")
         self._shutdown_event.set()
         self._load_lock.release()
-
-    def _after_stop(self):
-        """Shut down code called after stop()"""
-        # self.status.set_stopping()
-        self.bus.close()
 
     def _connect_to_bus(self):
         """Connects to the websocket message bus"""

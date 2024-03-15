@@ -132,13 +132,11 @@ class TestDinkumVoiceService(unittest.TestCase):
     def test_service_run(self):
         self.assertIsNotNone(self.service)
         real_shutdown = self.service._shutdown
-        real_after_stop = self.service._after_stop
 
         def _shutdown():
             self.service._shutdown_event.set()
 
         self.service._shutdown = Mock(side_effect=_shutdown)
-        self.service._after_stop = Mock()
         self.service.voice_loop._is_running = True
 
         def _run_loop():
@@ -182,12 +180,9 @@ class TestDinkumVoiceService(unittest.TestCase):
         # Stop loop
         self.service.stop()
         self.service.voice_loop.stop.assert_called_once()
-        self.assertEqual(self.service.state, ServiceState.NOT_STARTED)
+        self.assertEqual(self.service.state, ServiceState.STOPPING)
         self.service._shutdown.assert_called_once()
-        self.service._after_stop.assert_called_once()
-
         self.service._shutdown = real_shutdown
-        self.service._after_stop = real_after_stop
 
     def test_service_stop(self):
         self.assertIsNotNone(self.service)
