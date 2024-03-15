@@ -141,12 +141,12 @@ class OVOSDinkumVoiceService(Thread):
     def __init__(self, on_ready=on_ready, on_error=on_error,
                  on_stopping=on_stopping, on_alive=on_alive,
                  on_started=on_started, watchdog=lambda: None, mic=None,
-                 bus=None, validate_source=True):
+                 bus=None, validate_source=True, *args, **kwargs):
         """
         watchdog: (callable) function to call periodically indicating
           operational status.
         """
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
         LOG.info("Starting Voice Service")
         callbacks = StatusCallbackMap(on_ready=on_ready,
