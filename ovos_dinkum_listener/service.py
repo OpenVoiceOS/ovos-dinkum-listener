@@ -318,15 +318,14 @@ class OVOSDinkumVoiceService(Thread):
                 if not self._reload_event.wait(30):
                     raise TimeoutError("Timed out waiting for reload")
                 self.voice_loop.run()
-            self.status.set_stopping()
         except KeyboardInterrupt:
-            self.status.set_stopping()
+            LOG.debug("Exit via CTRL+C")
         except Exception as e:
             LOG.exception("voice_loop failed")
             self.status.set_error(str(e))
         finally:
             LOG.info("Service stopping")
-            self._shutdown()
+            self.stop()
             LOG.debug("shutdown done")
             self._after_stop()
             LOG.debug("stopped")
@@ -387,6 +386,7 @@ class OVOSDinkumVoiceService(Thread):
         """
         Stop the voice_loop and trigger service shutdown
         """
+        self.status.set_stopping()
         self._stopping = True
         if not self.voice_loop.running:
             LOG.debug("voice_loop not running, just shutdown the service")

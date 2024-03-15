@@ -23,9 +23,7 @@ def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping,
                                      on_stopping=stopping_hook,
                                      watchdog=watchdog, daemon=False)
     service.start()
-             
     # wait until services exits by itself, or crashes
-    service.stop()
 
 
 if __name__ == "__main__":
