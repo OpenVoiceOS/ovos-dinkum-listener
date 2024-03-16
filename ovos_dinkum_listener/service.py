@@ -319,7 +319,7 @@ class OVOSDinkumVoiceService(Thread):
                     raise TimeoutError("Timed out waiting for reload")
                 self.voice_loop.run()
         except KeyboardInterrupt:
-            LOG.debug("Exit via CTRL+C")
+            LOG.info("Exit via CTRL+C")
         except Exception as e:
             LOG.exception("voice_loop failed")
             self.status.set_error(str(e))
