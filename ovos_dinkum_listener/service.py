@@ -141,12 +141,12 @@ class OVOSDinkumVoiceService(Thread):
     def __init__(self, on_ready=on_ready, on_error=on_error,
                  on_stopping=on_stopping, on_alive=on_alive,
                  on_started=on_started, watchdog=lambda: None, mic=None,
-                 bus=None, validate_source=True):
+                 bus=None, validate_source=True, *args, **kwargs):
         """
         watchdog: (callable) function to call periodically indicating
           operational status.
         """
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
         LOG.info("Starting Voice Service")
         callbacks = StatusCallbackMap(on_ready=on_ready,
@@ -318,17 +318,15 @@ class OVOSDinkumVoiceService(Thread):
                 if not self._reload_event.wait(30):
                     raise TimeoutError("Timed out waiting for reload")
                 self.voice_loop.run()
-            self.status.set_stopping()
         except KeyboardInterrupt:
-            self.status.set_stopping()
+            LOG.debug("Exit via CTRL+C")
         except Exception as e:
             LOG.exception("voice_loop failed")
             self.status.set_error(str(e))
         finally:
             LOG.info("Service stopping")
-            self._shutdown()
+            self.stop()
             LOG.debug("shutdown done")
-            self._after_stop()
             LOG.debug("stopped")
             if self.status.state != ProcessState.ERROR:
                 self.status.state = ProcessState.NOT_STARTED
@@ -387,16 +385,11 @@ class OVOSDinkumVoiceService(Thread):
         """
         Stop the voice_loop and trigger service shutdown
         """
+        self.status.set_stopping()
         self._stopping = True
-        if not self.voice_loop.running:
-            LOG.debug("voice_loop not running, just shutdown the service")
-            self._shutdown()
-            return
-        self._shutdown_event.clear()
-        self.voice_loop.stop()
-        if not self._shutdown_event.wait(30):
-            LOG.error(f"voice_loop didn't call _shutdown")
-            self._shutdown()
+        if self.voice_loop.running:
+            self.voice_loop.stop()
+        self._shutdown()
 
     def _shutdown(self):
         """
@@ -419,15 +412,12 @@ class OVOSDinkumVoiceService(Thread):
                 self.vad.stop()
 
             self.mic.stop()
+
+            self.bus.close()
         except Exception as e:
             LOG.exception(f"Shutdown failed with: {e}")
         self._shutdown_event.set()
         self._load_lock.release()
-
-    def _after_stop(self):
-        """Shut down code called after stop()"""
-        # self.status.set_stopping()
-        self.bus.close()
 
     def _connect_to_bus(self):
         """Connects to the websocket message bus"""
