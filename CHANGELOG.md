@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.3a33](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a33) (2024-03-21)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a32...0.0.3a33)
+
+**Implemented enhancements:**
+
+- feat/"mycroft.mic.mute.toggle" [\#99](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/99) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.3a32](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a32) (2024-03-16)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a31...0.0.3a32)
