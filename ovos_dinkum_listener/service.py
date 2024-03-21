@@ -353,6 +353,8 @@ class OVOSDinkumVoiceService(Thread):
         # Register events
         self.bus.on("mycroft.mic.mute", self._handle_mute)
         self.bus.on("mycroft.mic.unmute", self._handle_unmute)
+        self.bus.on("mycroft.mic.mute.toggle", self._handle_mute_toggle)
+
         self.bus.on("mycroft.mic.listen", self._handle_listen)
         self.bus.on('mycroft.mic.get_status', self._handle_mic_get_status)
         self.bus.on('recognizer_loop:audio_output_start', self._handle_audio_start)
@@ -692,11 +694,14 @@ class OVOSDinkumVoiceService(Thread):
         return stt_context
 
     # mic bus api
-    def _handle_mute(self, _message: Message):
+    def _handle_mute(self, message: Message):
         self.voice_loop.is_muted = True
 
-    def _handle_unmute(self, _message: Message):
+    def _handle_unmute(self, message: Message):
         self.voice_loop.is_muted = False
+
+    def _handle_mute_toggle(self, message: Message):
+        self.voice_loop.is_muted = not self.voice_loop.is_muted
 
     def _handle_listen(self, message: Message):
         if not self._validate_message_context(message) or not self.voice_loop.running:
