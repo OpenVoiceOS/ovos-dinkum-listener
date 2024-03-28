@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.3a34](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a34) (2024-03-28)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a33...0.0.3a34)
+
+**Fixed bugs:**
+
+- Can't wake up after go to sleep [\#100](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/100)
+- fix\(voice\_loop\): add wakeup callback and improve state logging [\#101](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/101) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.3a33](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a33) (2024-03-21)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a32...0.0.3a33)
