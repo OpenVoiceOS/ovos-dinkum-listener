@@ -23,7 +23,8 @@ from tempfile import NamedTemporaryFile
 from threading import Thread, RLock, Event
 
 import speech_recognition as sr
-from ovos_bus_client import Message, MessageBusClient
+from ovos_bus_client import MessageBusClient
+from ovos_bus_client.message import Message, dig_for_message
 from ovos_bus_client.session import SessionManager
 from ovos_config import Configuration
 from ovos_config.locations import get_xdg_data_save_path
@@ -273,6 +274,7 @@ class OVOSDinkumVoiceService(Thread):
                 wakeupword_audio_callback=self._hotword_audio,
                 stt_audio_callback=self._stt_audio,
                 recording_audio_callback=self._recording_audio,
+                wakeup_callback=self._wakeup
             )
         return loop
 
@@ -450,6 +452,10 @@ class OVOSDinkumVoiceService(Thread):
                 LOG.exception("Unexpected error in watchdog thread")
 
     # callbacks
+    def _wakeup(self):
+        """ callback when voice loop exits SLEEP mode"""
+        self.bus.emit(Message("mycroft.awoken"))
+
     def _record_begin(self):
         LOG.debug("Record begin")
         self.bus.emit(Message("recognizer_loop:record_begin"))
@@ -809,8 +815,8 @@ class OVOSDinkumVoiceService(Thread):
 
     def _handle_wake_up(self, message: Message):
         """Wake up the voice loop."""
+        LOG.debug("SLEEP - wake up triggered from bus event")
         self.voice_loop.wakeup()
-        self.bus.emit(message.reply("mycroft.awoken"))
 
     def _handle_sound_played(self, message: Message):
         """Handle response message from audio service."""

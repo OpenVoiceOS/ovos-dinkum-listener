@@ -123,6 +123,7 @@ class DinkumVoiceLoop(VoiceLoop):
     listen_mode: ListeningMode = ListeningMode.WAKEWORD
     wake_callback: Optional[WakeCallback] = None
     text_callback: Optional[TextCallback] = None
+    wakeup_callback: Optional[WakeCallback] = None
     listenword_audio_callback: Optional[AudioCallback] = None
     hotword_audio_callback: Optional[AudioCallback] = None
     stopword_audio_callback: Optional[AudioCallback] = None
@@ -152,16 +153,6 @@ class DinkumVoiceLoop(VoiceLoop):
         Start the Voice Loop; sets the listening mode based on configuration and
         prepares the loop to be run.
         """
-        def _HACK_preload():  # TODO - remove me soon, make resolve_ovos_resource_file FAST
-            """ there is some latency on resolve_ovos_resource_file without this,
-            checks several ovos packages and needs to import them, this method is speeding things up as a workaround,
-            main culprit is ovos_workshop which causes a scan of all OCP plugins (bug ?)"""
-            try:
-                import ovos_workshop
-            except ImportError:
-                pass
-
-        _HACK_preload()  # workaround so resolve_resource_file doesnt take forever on 1st wakeword
 
         self._is_running = True
         self.state = ListeningState.DETECT_WAKEWORD
@@ -175,6 +166,7 @@ class DinkumVoiceLoop(VoiceLoop):
             self.listen_mode = ListeningMode.WAKEWORD
 
         LOG.info(f"Listening mode: {self.listen_mode}")
+        LOG.debug(f"STATE: {self.state}")
 
     def run(self):
         """
@@ -227,6 +219,7 @@ class DinkumVoiceLoop(VoiceLoop):
                     if self.listen_mode == ListeningMode.CONTINUOUS:
                         LOG.info(f"Continuous listening mode, updating state")
                         self.state = ListeningState.WAITING_CMD
+                        LOG.debug(f"STATE: {self.state}")
                     elif self._detect_ww(chunk):
                         LOG.info("Wakeword detected")
                     elif self._detect_hot(chunk):
@@ -255,6 +248,7 @@ class DinkumVoiceLoop(VoiceLoop):
             elif self.state == ListeningState.CONFIRMATION and \
                     self.confirmation_event.is_set():
                 self.state = ListeningState.BEFORE_COMMAND
+                LOG.debug(f"STATE: {self.state}")
 
             elif self.state == ListeningState.BEFORE_COMMAND:
                 LOG.debug("waiting for speech")
@@ -285,14 +279,16 @@ class DinkumVoiceLoop(VoiceLoop):
         else:
             self.state = ListeningState.DETECT_WAKEWORD
             self.hotwords.state = HotwordState.LISTEN
-        LOG.debug(f"state={self.state}|hotwords.state={self.hotwords.state}")
+        LOG.debug(f"STATE: {self.state}")
+        LOG.debug(f"HOTWORDS STATE: {self.hotwords.state}")
 
     def go_to_sleep(self):
         """
         Set the Listening State to "Sleeping" until woken
         """
         self.state = ListeningState.SLEEPING
-        LOG.info("sleeping")
+        LOG.info("entering SLEEP mode, STT will not be executed")
+        LOG.debug(f"STATE: {self.state}")
 
     def wakeup(self):
         """
@@ -301,6 +297,8 @@ class DinkumVoiceLoop(VoiceLoop):
         """
         self.reset_state()
         LOG.info("wakeup")
+        if self.wakeup_callback:
+            self.wakeup_callback()
 
     def start_recording(self, filename: Optional[str] = None):
         """
@@ -310,6 +308,7 @@ class DinkumVoiceLoop(VoiceLoop):
         self.recording_filename = filename or str(time.time())
         LOG.debug(f"Recording to {self.recording_filename}")
         self.state = ListeningState.RECORDING
+        LOG.debug(f"STATE: {self.state}")
 
     def stop_recording(self):
         """
@@ -337,6 +336,7 @@ class DinkumVoiceLoop(VoiceLoop):
         @param chunk: bytes of audio captured
         """
         self.hotwords.state = HotwordState.RECORDING
+        LOG.debug(f"HOTWORDS STATE: {self.hotwords.state}")
         self.hotwords.update(chunk)
         ww = self.hotwords.found()
         if ww:
@@ -368,7 +368,9 @@ class DinkumVoiceLoop(VoiceLoop):
         """
         self.hotwords.state = HotwordState.LISTEN
         if self._detect_ww(chunk):
-            self.state = ListeningState.CHECK_WAKE_UP
+            if self.state != ListeningState.CHECK_WAKE_UP:
+                LOG.debug(f"STATE: {self.state}")
+                self.state = ListeningState.CHECK_WAKE_UP
 
     def _detect_wakeup(self, chunk: bytes) -> bool:
         """
@@ -378,13 +380,22 @@ class DinkumVoiceLoop(VoiceLoop):
         @param chunk: bytes of audio captured
         @return: True if wake up word was detected
         """
-        self.hotwords.state = HotwordState.WAKEUP
+        if self.hotwords.state != HotwordState.WAKEUP:
+            self.hotwords.state = HotwordState.WAKEUP
+            LOG.debug(f"HOTWORDS STATE: {self.hotwords.state}")
+
         self.hotwords.update(chunk)
         ww = self.hotwords.found()
         if ww:
+            LOG.info("waking listener from SLEEP mode")
             # get out of sleep mode
             self.state = self.state.DETECT_WAKEWORD
             self.hotwords.state = HotwordState.LISTEN
+            LOG.debug(f"STATE: {self.state}")
+            LOG.debug(f"HOTWORDS STATE: {self.hotwords.state}")
+
+            if self.wakeup_callback:
+                self.wakeup_callback()
 
             # Callback to handle recorded hotword audio
             if self.wakeupword_audio_callback is not None:
@@ -400,7 +411,8 @@ class DinkumVoiceLoop(VoiceLoop):
             # require wake word again
             self.hotwords.state = HotwordState.LISTEN
             self.state = ListeningState.SLEEPING
-            # TODO: What does this do?
+            LOG.debug(f"STATE: {self.state}")
+            LOG.debug(f"HOTWORDS STATE: {self.hotwords.state}")
         return False
 
     def _detect_hot(self, chunk: bytes) -> bool:
@@ -411,6 +423,7 @@ class DinkumVoiceLoop(VoiceLoop):
         @return: True if a hotword was detected
         """
         self.hotwords.state = HotwordState.HOTWORD
+
         self.hotwords.update(chunk)
         ww = self.hotwords.found()
         if ww:
@@ -463,10 +476,12 @@ class DinkumVoiceLoop(VoiceLoop):
             if self.listen_mode == ListeningMode.SLEEPING:
                 # Wake word detected, begin detecting "wake up" word
                 self.state = ListeningState.CHECK_WAKE_UP
+                LOG.debug(f"STATE: {self.state}")
             else:
                 # Wake word detected, begin recording voice command
                 if not self.state == ListeningState.CONFIRMATION:
                     self.state = ListeningState.BEFORE_COMMAND
+                    LOG.debug(f"STATE: {self.state}")
                 self.reset_speech_timer()
                 self.stt_audio_bytes = bytes()
                 self.stt.stream_start()
@@ -501,6 +516,7 @@ class DinkumVoiceLoop(VoiceLoop):
                     self.state = ListeningState.IN_COMMAND
                 else:
                     self.state = ListeningState.BEFORE_COMMAND
+                LOG.debug(f"STATE: {self.state}")
         else:
             # Reset
             self.speech_seconds_left = self.speech_seconds
@@ -535,6 +551,7 @@ class DinkumVoiceLoop(VoiceLoop):
             if self.timeout_seconds_with_silence_left <= 0 or self.timeout_seconds_left <= 0:
                 # Recording has timed out
                 self.state = ListeningState.AFTER_COMMAND
+                LOG.debug(f"STATE: {self.state}")
                 break
 
             # Wait for enough speech before looking for the end of the
@@ -553,6 +570,7 @@ class DinkumVoiceLoop(VoiceLoop):
                     # end.
                     self.state = ListeningState.IN_COMMAND
                     self.silence_seconds_left = self.silence_seconds
+                    LOG.debug(f"STATE: {self.state}")
                     break
             else:
                 # Reset
@@ -580,6 +598,7 @@ class DinkumVoiceLoop(VoiceLoop):
             if self.timeout_seconds_left <= 0:
                 # Recording has timed out
                 self.state = ListeningState.AFTER_COMMAND
+                LOG.debug(f"STATE: {self.state}")
                 break
 
             # Wait for enough silence before considering the command to be
@@ -590,6 +609,7 @@ class DinkumVoiceLoop(VoiceLoop):
                 if self.silence_seconds_left <= 0:
                     # End of voice command detected
                     self.state = ListeningState.AFTER_COMMAND
+                    LOG.debug(f"STATE: {self.state}")
                     break
             else:
                 # Reset
@@ -694,6 +714,7 @@ class DinkumVoiceLoop(VoiceLoop):
             self.state = ListeningState.WAITING_CMD
         else:
             self.state = ListeningState.DETECT_WAKEWORD
+        LOG.debug(f"STATE: {self.state}")
 
         # Clear any buffered STT chunks
         self.stt_chunks.clear()
