@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.3a35](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a35) (2024-04-10)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a34...0.0.3a35)
+
+**Fixed bugs:**
+
+- Ensure `recognizer_loop:record_begin` is emitted when listening is triggered [\#105](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/105) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.0.3a34](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a34) (2024-03-28)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a33...0.0.3a34)
