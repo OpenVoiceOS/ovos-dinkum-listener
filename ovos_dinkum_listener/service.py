@@ -713,7 +713,9 @@ class OVOSDinkumVoiceService(Thread):
         if not self._validate_message_context(message) or not self.voice_loop.running:
             # ignore mycroft.mic.listen, it is targeted to an external client
             return
-
+        if self.voice_loop.wake_callback is not None:
+            # Emit `recognizer_loop:record_begin`
+            self.voice_loop.wake_callback()
         self.voice_loop.reset_speech_timer()
         self.voice_loop.stt_audio_bytes = bytes()
         self.voice_loop.stt.stream_start()
