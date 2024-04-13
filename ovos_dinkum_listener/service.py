@@ -274,7 +274,8 @@ class OVOSDinkumVoiceService(Thread):
                 wakeupword_audio_callback=self._hotword_audio,
                 stt_audio_callback=self._stt_audio,
                 recording_audio_callback=self._recording_audio,
-                wakeup_callback=self._wakeup
+                wakeup_callback=self._wakeup,
+                record_end_callback=self._record_end_signal
             )
         return loop
 
@@ -598,13 +599,13 @@ class OVOSDinkumVoiceService(Thread):
             LOG.exception("Error while saving STT audio")
         return payload
 
+    def _record_end_signal(self):
+        LOG.debug("Record end")
+        self.bus.emit(Message("recognizer_loop:record_end"))
+
     def _stt_text(self, text: str, stt_context: dict):
         if isinstance(text, list):
             text = text[0]
-
-        LOG.debug("Record end")
-        self.bus.emit(Message("recognizer_loop:record_end",
-                              context=stt_context))
 
         # Report utterance to intent service
         if text:

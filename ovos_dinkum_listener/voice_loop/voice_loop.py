@@ -95,7 +95,7 @@ class ChunkInfo:
     energy: float = 0.0
 
 
-WakeCallback = Callable[[], None]
+RecordCallback = Callable[[], None]
 TextCallback = Callable[[str, dict], None]
 AudioCallback = Callable[[bytes, dict], None]
 ChunkCallback = Callable[[ChunkInfo], None]
@@ -121,15 +121,16 @@ class DinkumVoiceLoop(VoiceLoop):
     timeout_seconds_with_silence_left: float = 0.0    
     state: ListeningState = ListeningState.DETECT_WAKEWORD
     listen_mode: ListeningMode = ListeningMode.WAKEWORD
-    wake_callback: Optional[WakeCallback] = None
+    wake_callback: Optional[RecordCallback] = None
     text_callback: Optional[TextCallback] = None
-    wakeup_callback: Optional[WakeCallback] = None
+    wakeup_callback: Optional[RecordCallback] = None
     listenword_audio_callback: Optional[AudioCallback] = None
     hotword_audio_callback: Optional[AudioCallback] = None
     stopword_audio_callback: Optional[AudioCallback] = None
     wakeupword_audio_callback: Optional[AudioCallback] = None
     stt_audio_callback: Optional[AudioCallback] = None
     recording_audio_callback: Optional[AudioCallback] = None
+    record_end_callback: Optional[RecordCallback] = None
     chunk_callback: Optional[ChunkCallback] = None
     recording_filename: str = "rec"
     is_muted: bool = False
@@ -309,6 +310,9 @@ class DinkumVoiceLoop(VoiceLoop):
         LOG.debug(f"Recording to {self.recording_filename}")
         self.state = ListeningState.RECORDING
         LOG.debug(f"STATE: {self.state}")
+        if self.wake_callback is not None:
+            # emit record_begin
+            self.wake_callback()
 
     def stop_recording(self):
         """
@@ -319,6 +323,9 @@ class DinkumVoiceLoop(VoiceLoop):
         if self.recording_audio_callback is not None:
             metadata = {"recording_name": self.recording_filename}
             self.recording_audio_callback(self.stt_audio_bytes, metadata)
+        if self.record_end_callback is not None:
+            # emit record_end
+            self.record_end_callback()
         LOG.debug("Finished recording")
         self.reset_state()
 
@@ -406,6 +413,10 @@ class DinkumVoiceLoop(VoiceLoop):
                                                self.hotwords.get_ww(ww))
 
             self.transformers.feed_hotword(chunk)
+
+            if self.record_end_callback is not None:
+                # emit record_end
+                self.record_end_callback()
             return True
         elif time.time() - self.last_ww > 10:
             # require wake word again
@@ -471,6 +482,7 @@ class DinkumVoiceLoop(VoiceLoop):
 
             # Callback to handle wake up
             if self.wake_callback is not None:
+                # emit record_begin
                 self.wake_callback()
 
             if self.listen_mode == ListeningMode.SLEEPING:
@@ -703,6 +715,10 @@ class DinkumVoiceLoop(VoiceLoop):
             self.stt_audio_callback(self.stt_audio_bytes, stt_context)
 
         self.stt_audio_bytes = bytes()
+
+        if self.record_end_callback is not None:
+            # emit record_end
+            self.record_end_callback()
 
         # Callback to handle STT text
         if self.text_callback is not None:
