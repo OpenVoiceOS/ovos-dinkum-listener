@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.3a36](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a36) (2024-04-13)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a35...0.0.3a36)
+
+**Fixed bugs:**
+
+- fix/record\_end [\#108](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/108) ([JarbasAl](https://github.com/JarbasAl))
+
+**Closed issues:**
+
+- Naptime wake up and rectangle on the UI [\#103](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/103)
+
 ## [0.0.3a35](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a35) (2024-04-10)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a34...0.0.3a35)
