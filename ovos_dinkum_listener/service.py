@@ -381,9 +381,9 @@ class OVOSDinkumVoiceService(Thread):
         self.bus.on("mycroft.audio.play_sound.response", self._handle_sound_played)
 
         # tracking volume for fake barge-in
-        self.bus.on("volume.set.percent", self._lume_change)
-        self.bus.on("mycroft.volume.increase", self._lume_change)
-        self.bus.on("mycroft.volume.decrease", self._lume_change)
+        self.bus.on("volume.set.percent", self._volume_change)
+        self.bus.on("mycroft.volume.increase", self._volume_change)
+        self.bus.on("mycroft.volume.decrease", self._volume_change)
         self._query_volume()  # sync initial volume state
 
         LOG.debug("Messagebus events registered")
