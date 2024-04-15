@@ -478,7 +478,7 @@ class OVOSDinkumVoiceService(Thread):
 
     def _handle_volume_change(self, message: Message):
         """keep track of volume changes so we restore to the correct level"""
-        if message.context.get("skill_id", "") == "dinkum-listener":
+        if not self.fake_barge_in or message.context.get("skill_id", "") == "dinkum-listener":
             # ignore our own messages
             return
         if message.msg_type == "mycroft.volume.increase":            
@@ -490,6 +490,7 @@ class OVOSDinkumVoiceService(Thread):
         else:
             vol = int(message.data["percent"] * 100)
             self._default_vol = vol
+        LOG.info(f"tracking user volume for after barge-in: {self._default_vol}")
 
     # callbacks
     def _wakeup(self):
@@ -499,9 +500,10 @@ class OVOSDinkumVoiceService(Thread):
     def _record_begin(self):
         LOG.debug("Record begin")
         if self.fake_barge_in:
+            LOG.info(f"fake barge-in lowering volume to: {self.fake_barge_in_volume}")
             self.bus.emit(
                 Message("mycroft.volume.set",
-                        {"percent": self.fake_barge_in_volume},
+                        {"percent": self.fake_barge_in_volume / 100},  # alsa plugin expects between 0-1
                         {"skill_id": "dinkum-listener"})
             )
         self.bus.emit(Message("recognizer_loop:record_begin"))
@@ -647,9 +649,10 @@ class OVOSDinkumVoiceService(Thread):
     def _record_end_signal(self):
         LOG.debug("Record end")
         if self.fake_barge_in:
+            LOG.info(f"fake barge-in restoring volume to: {self._default_vol}")
             self.bus.emit(
                 Message("mycroft.volume.set",
-                        {"percent": self._default_vol},
+                        {"percent": self._default_vol / 100},  # alsa plugin expects between 0-1
                         {"skill_id": "dinkum-listener"})
             )
         self.bus.emit(Message("recognizer_loop:record_end"))
