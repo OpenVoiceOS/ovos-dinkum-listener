@@ -381,9 +381,9 @@ class OVOSDinkumVoiceService(Thread):
         self.bus.on("mycroft.audio.play_sound.response", self._handle_sound_played)
 
         # tracking volume for fake barge-in
-        self.bus.on("volume.set.percent", self._handle_volume_change)
-        self.bus.on("mycroft.volume.increase", self._handle_volume_change)
-        self.bus.on("mycroft.volume.decrease", self._handle_volume_change)
+        self.bus.on("volume.set.percent", self._lume_change)
+        self.bus.on("mycroft.volume.increase", self._lume_change)
+        self.bus.on("mycroft.volume.decrease", self._lume_change)
         self._query_volume()  # sync initial volume state
 
         LOG.debug("Messagebus events registered")
@@ -478,15 +478,17 @@ class OVOSDinkumVoiceService(Thread):
 
     def _handle_volume_change(self, message: Message):
         """keep track of volume changes so we restore to the correct level"""
-        vol = int(message.data["percent"] * 100)
         if message.context.get("skill_id", "") == "dinkum-listener":
             # ignore our own messages
             return
-        if message.msg_type == "mycroft.volume.increase":
+        if message.msg_type == "mycroft.volume.increase":            
+            vol = int(message.data.get("percent", .1) * 100)
             self._default_vol += vol
         elif message.msg_type == "mycroft.volume.decrease":
-            self._default_vol -= vol
+            vol = int(message.data.get("percent", -.1) * 100)
+            self._default_vol -= abs(vol)
         else:
+            vol = int(message.data["percent"] * 100)
             self._default_vol = vol
 
     # callbacks
