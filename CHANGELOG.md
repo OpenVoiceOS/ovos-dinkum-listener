@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.3a37](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a37) (2024-04-15)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a36...0.0.3a37)
+
+**Implemented enhancements:**
+
+- feat/fake-barge-in [\#109](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/109) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.3a36](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a36) (2024-04-13)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a35...0.0.3a36)
