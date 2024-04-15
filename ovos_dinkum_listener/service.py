@@ -166,6 +166,7 @@ class OVOSDinkumVoiceService(Thread):
         self.status.set_alive()
         self.config = Configuration()
         self._applied_config_hash = self._config_hash()
+        self._default_vol = 70  # for barge-in
 
         self._before_start()  # connect to bus
 
@@ -379,6 +380,12 @@ class OVOSDinkumVoiceService(Thread):
 
         self.bus.on("mycroft.audio.play_sound.response", self._handle_sound_played)
 
+        # tracking volume for fake barge-in
+        self.bus.on("volume.set.percent", self._handle_volume_change)
+        self.bus.on("mycroft.volume.increase", self._handle_volume_change)
+        self.bus.on("mycroft.volume.decrease", self._handle_volume_change)
+        self._query_volume()  # sync initial volume state
+
         LOG.debug("Messagebus events registered")
 
     def _after_start(self):
@@ -452,6 +459,36 @@ class OVOSDinkumVoiceService(Thread):
             except Exception:
                 LOG.exception("Unexpected error in watchdog thread")
 
+    # Fake Barge In
+    def _query_volume(self):
+        """get the default volume"""
+        response = self.bus.wait_for_response(Message("mycroft.volume.get"))
+        if response:
+            self._default_vol = int(response.data["percent"] * 100)
+
+    @property
+    def fake_barge_in(self) -> bool:
+        """lower volume during recording"""
+        return Configuration().get("listener", {}).get("fake_barge_in", False)
+
+    @property
+    def fake_barge_in_volume(self) -> int:
+        """volume to set when recording"""
+        return Configuration().get("listener", {}).get("barge_in_volume", 30)
+
+    def _handle_volume_change(self, message: Message):
+        """keep track of volume changes so we restore to the correct level"""
+        vol = int(message.data["percent"] * 100)
+        if message.context.get("skill_id", "") == "dinkum-listener":
+            # ignore our own messages
+            return
+        if message.msg_type == "mycroft.volume.increase":
+            self._default_vol += vol
+        elif message.msg_type == "mycroft.volume.decrease":
+            self._default_vol -= vol
+        else:
+            self._default_vol = vol
+
     # callbacks
     def _wakeup(self):
         """ callback when voice loop exits SLEEP mode"""
@@ -459,6 +496,12 @@ class OVOSDinkumVoiceService(Thread):
 
     def _record_begin(self):
         LOG.debug("Record begin")
+        if self.fake_barge_in:
+            self.bus.emit(
+                Message("mycroft.volume.set",
+                        {"percent": self.fake_barge_in_volume},
+                        {"skill_id": "dinkum-listener"})
+            )
         self.bus.emit(Message("recognizer_loop:record_begin"))
 
     def _save_ww(self, audio_bytes, ww_meta, save_path=None):
@@ -601,6 +644,12 @@ class OVOSDinkumVoiceService(Thread):
 
     def _record_end_signal(self):
         LOG.debug("Record end")
+        if self.fake_barge_in:
+            self.bus.emit(
+                Message("mycroft.volume.set",
+                        {"percent": self._default_vol},
+                        {"skill_id": "dinkum-listener"})
+            )
         self.bus.emit(Message("recognizer_loop:record_end"))
 
     def _stt_text(self, text: str, stt_context: dict):
