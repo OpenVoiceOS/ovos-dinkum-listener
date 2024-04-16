@@ -503,7 +503,8 @@ class OVOSDinkumVoiceService(Thread):
             LOG.info(f"fake barge-in lowering volume to: {self.fake_barge_in_volume}")
             self.bus.emit(
                 Message("mycroft.volume.set",
-                        {"percent": self.fake_barge_in_volume / 100},  # alsa plugin expects between 0-1
+                        {"percent": self.fake_barge_in_volume / 100,   # alsa plugin expects between 0-1
+                         "play_sound": False},
                         {"skill_id": "dinkum-listener"})
             )
         self.bus.emit(Message("recognizer_loop:record_begin"))
@@ -652,7 +653,8 @@ class OVOSDinkumVoiceService(Thread):
             LOG.info(f"fake barge-in restoring volume to: {self._default_vol}")
             self.bus.emit(
                 Message("mycroft.volume.set",
-                        {"percent": self._default_vol / 100},  # alsa plugin expects between 0-1
+                        {"percent": self._default_vol / 100,   # alsa plugin expects between 0-1
+                         "play_sound": False},
                         {"skill_id": "dinkum-listener"})
             )
         self.bus.emit(Message("recognizer_loop:record_end"))
