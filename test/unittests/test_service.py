@@ -287,7 +287,14 @@ class TestDinkumVoiceService(unittest.TestCase):
         self.service.voice_loop.confirmation_event = Event()
 
         self.service._handle_listen(None)
-        self.assertEqual(self.service.voice_loop.confirmation_event.is_set(), False)
+        self.assertAlmostEqual(self.service.voice_loop.speech_seconds_left,
+                               self.service.voice_loop.speech_seconds, 1)
+        self.assertAlmostEqual(self.service.voice_loop.timeout_seconds_left,
+                               self.service.voice_loop.timeout_seconds, 1)
+        self.assertAlmostEqual(
+            self.service.voice_loop.timeout_seconds_with_silence_left,
+            self.service.voice_loop.timeout_seconds_with_silence, 1)
+        self.assertTrue(self.service.voice_loop.confirmation_event.is_set())
         self.service.voice_loop.reset_speech_timer.assert_called_once()
         self.service.voice_loop.reset_speech_timer.reset_mock()
         self.assertEqual(self.service.config["confirm_listening"], True)
