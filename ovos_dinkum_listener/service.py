@@ -321,6 +321,8 @@ class OVOSDinkumVoiceService(Thread):
             while not self._stopping:
                 if not self._reload_event.wait(30):
                     raise TimeoutError("Timed out waiting for reload")
+                # Run the voice_loop until it is stopped; if the voice service
+                # isn't stopped, re-run the voice_loop any time it stops
                 self.voice_loop.run()
         except KeyboardInterrupt:
             LOG.info("Exit via CTRL+C")
@@ -773,7 +775,6 @@ class OVOSDinkumVoiceService(Thread):
         if self.voice_loop.wake_callback is not None:
             # Emit `recognizer_loop:record_begin`
             self.voice_loop.wake_callback()
-        self.voice_loop.reset_speech_timer()
         self.voice_loop.stt_audio_bytes = bytes()
         self.voice_loop.stt.stream_start()
         if self.voice_loop.fallback_stt is not None:
@@ -796,6 +797,7 @@ class OVOSDinkumVoiceService(Thread):
                     self.voice_loop.state = ListeningState.BEFORE_COMMAND
         else:
             self.voice_loop.state = ListeningState.BEFORE_COMMAND
+        self.voice_loop.reset_speech_timer()
 
     def _handle_mic_get_status(self, message: Message):
         """Query microphone mute status."""
