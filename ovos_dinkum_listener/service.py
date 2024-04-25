@@ -14,7 +14,7 @@ import json
 import subprocess
 import time
 import wave
-from threading import Timer, Event
+
 from distutils.spawn import find_executable
 from enum import Enum
 from hashlib import md5
@@ -24,7 +24,7 @@ from threading import Thread, RLock, Event
 
 import speech_recognition as sr
 from ovos_bus_client import MessageBusClient
-from ovos_bus_client.message import Message, dig_for_message
+from ovos_bus_client.message import Message
 from ovos_bus_client.session import SessionManager
 from ovos_config import Configuration
 from ovos_config.locations import get_xdg_data_save_path
@@ -624,7 +624,9 @@ class OVOSDinkumVoiceService(Thread):
                 if not listener.get("instant_listen"):
                     self.voice_loop.state = ListeningState.CONFIRMATION
                     self.voice_loop.confirmation_event.clear()
-                    Timer(0.5, lambda: self.voice_loop.confirmation_event.set()).start()
+                    if not self.voice_loop.confirmation_event.wait(0.5):
+                        LOG.warning("Confirmation event timed out!")
+                        self.voice_loop.confirmation_event.set()
 
             if listen:
                 msg_type = "recognizer_loop:wakeword"
@@ -792,7 +794,9 @@ class OVOSDinkumVoiceService(Thread):
                 if not self.config["listener"].get("instant_listen"):
                     self.voice_loop.state = ListeningState.CONFIRMATION
                     self.voice_loop.confirmation_event.clear()
-                    Timer(0.5, lambda: self.voice_loop.confirmation_event.set()).start()
+                    if not self.voice_loop.confirmation_event.wait(0.5):
+                        LOG.warning("Confirmation event timed out!")
+                        self.voice_loop.confirmation_event.set()
                 else:
                     self.voice_loop.state = ListeningState.BEFORE_COMMAND
         else:
