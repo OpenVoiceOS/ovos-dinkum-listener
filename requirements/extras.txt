@@ -2,5 +2,5 @@ ovos-backend-client>=0.1.0
 ovos-microphone-plugin-alsa~=0.0.0
 ovos-stt-plugin-server~=0.0.3
 ovos-ww-plugin-precise-lite~=0.1
-ovos-ww-plugin-pocketsphinx~=0.1
+ovos-ww-plugin-vosk~=0.1
 ovos-vad-plugin-silero~=0.0.1
