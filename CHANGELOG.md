@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.3a39](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a39) (2024-05-30)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a38...0.0.3a39)
+
+**Merged pull requests:**
+
+- drop pocketsphinx [\#113](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/113) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.3a38](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a38) (2024-04-16)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a37...0.0.3a38)
