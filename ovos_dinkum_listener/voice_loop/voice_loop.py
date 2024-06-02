@@ -118,7 +118,9 @@ class DinkumVoiceLoop(VoiceLoop):
     speech_seconds_left: float = 0.0
     silence_seconds_left: float = 0.0
     timeout_seconds_left: float = 0.0
-    timeout_seconds_with_silence_left: float = 0.0    
+    timeout_seconds_with_silence_left: float = 0.0
+    recording_seconds_with_silence_left: float = 0.0
+    recording_mode_max_silence_seconds: float = 30.0
     state: ListeningState = ListeningState.DETECT_WAKEWORD
     listen_mode: ListeningMode = ListeningMode.WAKEWORD
     wake_callback: Optional[RecordCallback] = None
@@ -274,6 +276,7 @@ class DinkumVoiceLoop(VoiceLoop):
         Wakeword Listening -> Waiting for WW
         Hybrid Listening -> Waiting for WW
         """
+        self.recording_seconds_with_silence_left = 0
         if self.listen_mode == ListeningMode.CONTINUOUS:
             self.state = ListeningState.WAITING_CMD
             self.hotwords.state = HotwordState.HOTWORD
@@ -306,6 +309,7 @@ class DinkumVoiceLoop(VoiceLoop):
         Set the listening state to RECORDING and specify a file to record to
         @param filename: filename to record mic input to
         """
+        self.recording_seconds_with_silence_left = self.recording_mode_max_silence_seconds
         self.recording_filename = filename or str(time.time())
         LOG.debug(f"Recording to {self.recording_filename}")
         self.state = ListeningState.RECORDING
@@ -366,6 +370,16 @@ class DinkumVoiceLoop(VoiceLoop):
             self.stt_chunks.append(chunk)
 
             self.transformers.feed_speech(chunk)
+
+            if self._chunk_info.is_speech:
+                self.recording_seconds_with_silence_left = self.recording_mode_max_silence_seconds
+            # check if maximum silence has been detected
+            elif self.recording_seconds_with_silence_left <= 0:
+                LOG.info("Recording mode timed out, reached max silence time")
+                self.stop_recording()
+            else:
+                n_chunks = len(chunk) / self.mic.chunk_size
+                self.recording_seconds_with_silence_left -= n_chunks * self.mic.seconds_per_chunk
 
     def _before_wakeup(self, chunk: bytes):
         """
