@@ -693,15 +693,24 @@ class DinkumVoiceLoop(VoiceLoop):
         """
         # Command has ended, call transformers pipeline before STT
         chunk, stt_context = self.transformers.transform(chunk)
-
         if isinstance(self.stt, FakeStreamingSTT) and self.remove_silence:
             # NOTE: This is using the FS-STT buffer directly, not the S-STT queue
-            self.stt.stream.buffer.clear()
-            extracted_speech = self.vad.extract_speech(self.stt_audio_bytes)
-            # only deposit non empty audio
-            if extracted_speech:
-                LOG.debug("removed silence from utterance")
-                self.stt.stream.update(extracted_speech)
+            n_chunks = len(self.stt_audio_bytes) / self.mic.chunk_size
+            seconds = n_chunks * self.mic.seconds_per_chunk
+            if seconds > 1:
+                extracted_speech = self.vad.extract_speech(self.stt_audio_bytes)
+                n_chunks = len(extracted_speech) / self.mic.chunk_size
+                seconds = n_chunks * self.mic.seconds_per_chunk
+                if extracted_speech and seconds >= 1:
+                    self.stt.stream.buffer.clear()
+                    LOG.info("removed silence from utterance recording")
+                    # replace the stt buffer with cropped audio
+                    self.stt.stream.update(extracted_speech)
+                else:
+                    LOG.warning("trimmed audio appears to be all silence! "
+                                "skipping VAD silence removal")
+            else:
+                LOG.info("recorded audio <= 1 second, skipping silence removal")
 
         text, stt_context = self._get_tx(stt_context)
 
