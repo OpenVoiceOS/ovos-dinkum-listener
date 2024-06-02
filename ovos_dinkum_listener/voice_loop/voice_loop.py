@@ -709,8 +709,8 @@ class DinkumVoiceLoop(VoiceLoop):
                     # replace the stt buffer with cropped audio
                     self.stt.stream.update(extracted_speech)
                 else:
-                    LOG.warning(f"trimmed audio has {seconds2} seconds, too short! "
-                                "skipping VAD silence removal")
+                    LOG.warning(f"recorded {seconds} seconds of audio, trimmed audio has {seconds2} seconds, "
+                                f"too short! skipping VAD silence removal")
             else:
                 LOG.debug(f"recorded {seconds} seconds of audio, skipping silence removal")
 
