@@ -697,22 +697,21 @@ class DinkumVoiceLoop(VoiceLoop):
             # NOTE: This is using the FS-STT buffer directly, not the S-STT queue
             n_chunks = len(self.stt_audio_bytes) / self.mic.chunk_size
             seconds = n_chunks * self.mic.seconds_per_chunk
+            LOG.debug(f"recorded {seconds} seconds of audio")
             if seconds > 1:
                 extracted_speech = self.vad.extract_speech(self.stt_audio_bytes)
                 n_chunks = len(extracted_speech) / self.mic.chunk_size
                 seconds2 = n_chunks * self.mic.seconds_per_chunk
+                LOG.debug(f"removed {seconds - seconds2} seconds of silence, "
+                          f"trimmed audio has {seconds2} seconds")
                 if extracted_speech and seconds2 >= 1:
                     self.stt.stream.buffer.clear()
-                    LOG.debug(f"removed {seconds - seconds2} seconds of silence, "
-                              f"recorded {seconds} seconds of audio, "
-                              f"trimmed audio has {seconds2} seconds")
                     # replace the stt buffer with cropped audio
                     self.stt.stream.update(extracted_speech)
                 else:
-                    LOG.warning(f"recorded {seconds} seconds of audio, trimmed audio has {seconds2} seconds, "
-                                f"too short! skipping VAD silence removal")
+                    LOG.debug("trimmed audio is too short! skipping VAD silence removal")
             else:
-                LOG.debug(f"recorded {seconds} seconds of audio, skipping silence removal")
+                LOG.debug(f"skipping silence removal")
 
         text, stt_context = self._get_tx(stt_context)
 
