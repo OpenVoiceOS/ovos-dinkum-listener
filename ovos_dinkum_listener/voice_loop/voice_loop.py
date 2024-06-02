@@ -700,17 +700,19 @@ class DinkumVoiceLoop(VoiceLoop):
             if seconds > 1:
                 extracted_speech = self.vad.extract_speech(self.stt_audio_bytes)
                 n_chunks = len(extracted_speech) / self.mic.chunk_size
-                seconds = n_chunks * self.mic.seconds_per_chunk
-                if extracted_speech and seconds >= 1:
+                seconds2 = n_chunks * self.mic.seconds_per_chunk
+                if extracted_speech and seconds2 >= 1:
                     self.stt.stream.buffer.clear()
-                    LOG.info("removed silence from utterance recording")
+                    LOG.debug(f"removed {seconds - seconds2} seconds of silence, "
+                              f"recorded {seconds} seconds of audio, "
+                              f"trimmed audio has {seconds2} seconds")
                     # replace the stt buffer with cropped audio
                     self.stt.stream.update(extracted_speech)
                 else:
-                    LOG.warning("trimmed audio appears to be all silence! "
+                    LOG.warning(f"trimmed audio has {seconds2} seconds, too short! "
                                 "skipping VAD silence removal")
             else:
-                LOG.info("recorded audio <= 1 second, skipping silence removal")
+                LOG.debug(f"recorded {seconds} seconds of audio, skipping silence removal")
 
         text, stt_context = self._get_tx(stt_context)
 
