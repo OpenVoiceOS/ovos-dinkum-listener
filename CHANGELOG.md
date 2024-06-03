@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.0.3a40](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a40) (2024-06-03)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a39...0.0.3a40)
+
+**Implemented enhancements:**
+
+- TODO: recording mode timeout [\#88](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/88)
+- feat/recording\_mode\_timeout [\#115](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/115) ([JarbasAl](https://github.com/JarbasAl))
+
+**Closed issues:**
+
+- \[PYPI\] Flesh out readme and add long\_descrition [\#84](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/84)
+
+**Merged pull requests:**
+
+- Update README.md [\#117](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/117) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.3a39](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a39) (2024-05-30)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a38...0.0.3a39)
