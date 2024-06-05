@@ -1,10 +1,5 @@
 # OpenVoiceOS Dinkum Listener 
 
-Dinkum Listener made standalone, the voice loop is now a much more responsive state machine
-
-the usual configuration files are loaded, some new params are exposed under the 
-`"listener"` section but not yet documented (check the code...)
-
 Documentation can be found in [the technical manual](https://openvoiceos.github.io/ovos-technical-manual/speech_service/)
 
 ## Install
@@ -22,7 +17,7 @@ Without `extras`, wakeword and STT audio upload will be disabled unless you inst
 and possibly configure STT, WW, and VAD modules as described below.
 
 Using [ovos-vad-plugin-silero](https://github.com/OpenVoiceOS/ovos-vad-plugin-silero) 
-is strongly recommended instead of the default webrtcvad plugin
+is strongly recommended
 
 ## Configuration
 
@@ -30,6 +25,7 @@ you can set the Wakeword, VAD, STT and Microphone plugins
 
 eg, to run under MacOS you should use https://github.com/OpenVoiceOS/ovos-microphone-plugin-sounddevice
 
+non exhaustive list of config options
 ```
 {
   "stt": {
