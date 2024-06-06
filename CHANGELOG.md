@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.3a41](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a41) (2024-06-06)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a40...0.0.3a41)
+
+**Fixed bugs:**
+
+- When "remove\_slience" is set to "true" sometime STT fails with short words [\#110](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/110)
+- fix/ensure\_min\_audio\_len [\#114](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/114) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.3a40](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a40) (2024-06-03)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a39...0.0.3a40)
@@ -640,17 +649,9 @@
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a1...V0.0.2a2)
 
-**Implemented enhancements:**
-
-- feat/neon\_transformers [\#3](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/3) ([JarbasAl](https://github.com/JarbasAl))
-
 ## [V0.0.2a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a1) (2023-04-10)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.1...V0.0.2a1)
-
-**Implemented enhancements:**
-
-- feature parity with ovos-listener [\#2](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/2) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [V0.0.1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.1) (2023-04-09)
 
