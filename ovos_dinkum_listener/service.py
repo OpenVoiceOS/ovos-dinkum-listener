@@ -14,17 +14,16 @@ import json
 import subprocess
 import time
 import wave
-from threading import Timer, Event
-from distutils.spawn import find_executable
 from enum import Enum
 from hashlib import md5
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from threading import Thread, RLock, Event
+from threading import Thread, RLock, Event, Timer
 
 import speech_recognition as sr
+from distutils.spawn import find_executable
 from ovos_bus_client import MessageBusClient
-from ovos_bus_client.message import Message, dig_for_message
+from ovos_bus_client.message import Message
 from ovos_bus_client.session import SessionManager
 from ovos_config import Configuration
 from ovos_config.locations import get_xdg_data_save_path
@@ -482,7 +481,7 @@ class OVOSDinkumVoiceService(Thread):
         if not self.fake_barge_in or message.context.get("skill_id", "") == "dinkum-listener":
             # ignore our own messages
             return
-        if message.msg_type == "mycroft.volume.increase":            
+        if message.msg_type == "mycroft.volume.increase":
             vol = int(message.data.get("percent", .1) * 100)
             self._default_vol += vol
         elif message.msg_type == "mycroft.volume.decrease":
@@ -504,7 +503,7 @@ class OVOSDinkumVoiceService(Thread):
             LOG.info(f"fake barge-in lowering volume to: {self.fake_barge_in_volume}")
             self.bus.emit(
                 Message("mycroft.volume.set",
-                        {"percent": self.fake_barge_in_volume / 100,   # alsa plugin expects between 0-1
+                        {"percent": self.fake_barge_in_volume / 100,  # alsa plugin expects between 0-1
                          "play_sound": False},
                         {"skill_id": "dinkum-listener"})
             )
@@ -654,7 +653,7 @@ class OVOSDinkumVoiceService(Thread):
             LOG.info(f"fake barge-in restoring volume to: {self._default_vol}")
             self.bus.emit(
                 Message("mycroft.volume.set",
-                        {"percent": self._default_vol / 100,   # alsa plugin expects between 0-1
+                        {"percent": self._default_vol / 100,  # alsa plugin expects between 0-1
                          "play_sound": False},
                         {"skill_id": "dinkum-listener"})
             )
