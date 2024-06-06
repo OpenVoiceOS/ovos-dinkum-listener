@@ -697,6 +697,29 @@ class DinkumVoiceLoop(VoiceLoop):
         stt_context["transcription"] = text
         return text, stt_context
 
+    def _vad_remove_silence(self):
+        """removes silence from the STT buffer using the VAD plugin
+        trimmed audio will never be < 1 second
+        """
+        # NOTE: This is using the FS-STT buffer directly, not the S-STT queue
+        n_chunks = len(self.stt_audio_bytes) / self.mic.chunk_size
+        seconds = n_chunks * self.mic.seconds_per_chunk
+        LOG.debug(f"recorded {seconds} seconds of audio")
+        if seconds > 1:
+            extracted_speech = self.vad.extract_speech(self.stt_audio_bytes)
+            n_chunks = len(extracted_speech) / self.mic.chunk_size
+            seconds2 = n_chunks * self.mic.seconds_per_chunk
+            LOG.debug(f"removed {seconds - seconds2} seconds of silence, "
+                      f"trimmed audio has {seconds2} seconds")
+            if extracted_speech and seconds2 >= 1:
+                self.stt.stream.buffer.clear()
+                # replace the stt buffer with cropped audio
+                self.stt.stream.update(extracted_speech)
+            else:
+                LOG.debug("trimmed audio is too short! skipping VAD silence removal")
+        else:
+            LOG.debug(f"skipping silence removal")
+
     def _after_cmd(self, chunk: bytes):
         """
         Handle audio chunk after VAD has determined a command is ended.
@@ -707,15 +730,8 @@ class DinkumVoiceLoop(VoiceLoop):
         """
         # Command has ended, call transformers pipeline before STT
         chunk, stt_context = self.transformers.transform(chunk)
-
         if isinstance(self.stt, FakeStreamingSTT) and self.remove_silence:
-            # NOTE: This is using the FS-STT buffer directly, not the S-STT queue
-            self.stt.stream.buffer.clear()
-            extracted_speech = self.vad.extract_speech(self.stt_audio_bytes)
-            # only deposit non empty audio
-            if extracted_speech:
-                LOG.debug("removed silence from utterance")
-                self.stt.stream.update(extracted_speech)
+            self._vad_remove_silence()
 
         text, stt_context = self._get_tx(stt_context)
 
