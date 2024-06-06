@@ -200,6 +200,8 @@ class DinkumVoiceLoop(VoiceLoop):
         while self._is_running:
             # If no audio is provided, raise an exception and stop the loop
             chunk = self.mic.read_chunk()
+            if not self._is_running:  # handle shutdown in middle of read_chunk
+                break
             assert chunk is not None, "No audio from microphone"
 
             if self.is_muted:
