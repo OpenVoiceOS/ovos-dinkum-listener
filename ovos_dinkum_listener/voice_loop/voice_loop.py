@@ -709,6 +709,9 @@ class DinkumVoiceLoop(VoiceLoop):
         LOG.debug(f"recorded {seconds} seconds of audio")
         if seconds > 1:
             extracted_speech = self.vad.extract_speech(self.stt_audio_bytes)
+            if extracted_speech is None:
+                LOG.debug("audio appears to be full silence! skipping VAD silence removal")
+                return
             n_chunks = len(extracted_speech) / self.mic.chunk_size
             seconds2 = n_chunks * self.mic.seconds_per_chunk
             LOG.debug(f"removed {seconds - seconds2} seconds of silence, "
