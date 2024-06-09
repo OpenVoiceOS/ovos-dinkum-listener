@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.3a43](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a43) (2024-06-09)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a42...0.0.3a43)
+
+**Fixed bugs:**
+
+- HiveMind Voice Satellite failed to launch \(object of type 'NoneType' has no len\(\)\) [\#121](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/121)
+- fix/vad\_full\_silence [\#122](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/122) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.3a42](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a42) (2024-06-06)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a41...0.0.3a42)
@@ -636,14 +645,6 @@
 **Fixed bugs:**
 
 - fix/dataclass py 3.11 [\#7](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/7) ([JarbasAl](https://github.com/JarbasAl))
-
-**Closed issues:**
-
-- ValueError: mutable default \<class 'collections.deque'\> for field hotword\_chunks is not allowed: use default\_factory [\#6](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/6)
-
-**Merged pull requests:**
-
-- Fix workflows [\#5](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/5) ([emphasize](https://github.com/emphasize))
 
 ## [V0.0.2a3](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a3) (2023-04-20)
 
