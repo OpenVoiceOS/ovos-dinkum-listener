@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.3a44](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a44) (2024-06-11)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a43...0.0.3a44)
+
+**Fixed bugs:**
+
+- \[BUG\] cpu usage keeps increasing until crash [\#98](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/98)
+- require latest OPM [\#123](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/123) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.3a43](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a43) (2024-06-09)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a42...0.0.3a43)
@@ -634,17 +643,9 @@
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a4...V0.0.2a5)
 
-**Fixed bugs:**
-
-- fix/save\_stt [\#8](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/8) ([JarbasAl](https://github.com/JarbasAl))
-
 ## [V0.0.2a4](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a4) (2023-04-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a3...V0.0.2a4)
-
-**Fixed bugs:**
-
-- fix/dataclass py 3.11 [\#7](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/7) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [V0.0.2a3](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a3) (2023-04-20)
 
