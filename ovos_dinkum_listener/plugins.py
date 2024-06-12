@@ -60,8 +60,6 @@ class FakeStreamingSTT(StreamingSTT):
                    lang: Optional[str] = None) -> List[Tuple[str, float]]:
         """transcribe audio data to a list of
         possible transcriptions and respective confidences"""
-        if audio is None and not self.stream.buffer:
-            return []
         # plugins expect AudioData objects
         audiod = AudioData(audio or self.stream.buffer.read(),
                            sample_rate=self.stream.sample_rate,
