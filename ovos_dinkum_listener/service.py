@@ -20,6 +20,7 @@ from os.path import dirname
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from threading import Thread, RLock, Event
+from typing import List, Tuple
 
 import speech_recognition as sr
 from distutils.spawn import find_executable
@@ -659,15 +660,14 @@ class OVOSDinkumVoiceService(Thread):
             )
         self.bus.emit(Message("recognizer_loop:record_end"))
 
-    def _stt_text(self, text: str, stt_context: dict):
-        if isinstance(text, list):
-            text = text[0]
-
+    def _stt_text(self, transcripts: List[Tuple[str, float]],
+                  stt_context: dict):
         # Report utterance to intent service
-        if text:
+        if transcripts:
+            utts = [u[0] for u in transcripts]  # filter confidence
             lang = stt_context.get("lang") or Configuration().get("lang", "en-us")
-            LOG.debug(f"STT: {text}")
-            payload = {"utterances": [text],
+            LOG.debug(f"STT: {utts}")
+            payload = {"utterances": utts,
                        "lang": lang}
             self.bus.emit(Message("recognizer_loop:utterance", payload, stt_context))
         elif self.voice_loop.listen_mode == ListeningMode.CONTINUOUS:
@@ -893,12 +893,13 @@ class OVOSDinkumVoiceService(Thread):
 
         audio = bytes2audiodata(wav_data)
 
-        utterance = self.voice_loop.stt.engine.execute(audio, lang)
+        utterances = self.voice_loop.stt.transcribe(audio, lang)
 
-        if utterance:
+        if utterances:
             self.bus.emit(message.forward(
                 "recognizer_loop:utterance",
-                {"utterances": [utterance], "lang": lang}))
+                {"utterances": [u[0] for u in utterances],
+                 "lang": lang}))
         else:
             self.bus.emit(message.forward(
                 "recognizer_loop:speech.recognition.unknown"))
