@@ -117,6 +117,7 @@ class DinkumVoiceLoop(VoiceLoop):
     hotword_chunks: Deque = field(default_factory=deque)
     stt_chunks: Deque = field(default_factory=deque)
     stt_audio_bytes: bytes = bytes()
+    min_stt_confidence: float = 0.6
     last_ww: float = -1.0
     speech_seconds_left: float = 0.0
     silence_seconds_left: float = 0.0
@@ -719,8 +720,12 @@ class DinkumVoiceLoop(VoiceLoop):
             except:
                 LOG.exception("Fallback STT failed")
 
-        stt_context["transcriptions"] = utts
-        return utts, stt_context
+        filtered = [u for u in utts if u[1] >= self.min_stt_confidence]
+        if filtered != utts:
+            LOG.info(f"Ignoring low confidence STT transcriptions: {[u for u in utts if u not in filtered]}")
+
+        stt_context["transcriptions"] = filtered
+        return filtered, stt_context
 
     def _vad_remove_silence(self):
         """removes silence from the STT buffer using the VAD plugin

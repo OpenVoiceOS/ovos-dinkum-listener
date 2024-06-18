@@ -894,11 +894,14 @@ class OVOSDinkumVoiceService(Thread):
         audio = bytes2audiodata(wav_data)
 
         utterances = self.voice_loop.stt.transcribe(audio, lang)
+        filtered = [u for u in utterances if u[1] >= self.voice_loop.min_stt_confidence]
+        if filtered != utterances:
+            LOG.info(f"Ignoring low confidence STT transcriptions: {[u for u in utterances if u not in filtered]}")
 
-        if utterances:
+        if filtered:
             self.bus.emit(message.forward(
                 "recognizer_loop:utterance",
-                {"utterances": [u[0] for u in utterances],
+                {"utterances": [u[0] for u in filtered],
                  "lang": lang}))
         else:
             self.bus.emit(message.forward(
