@@ -284,7 +284,8 @@ class OVOSDinkumVoiceService(Thread):
                 stt_audio_callback=self._stt_audio,
                 recording_audio_callback=self._recording_audio,
                 wakeup_callback=self._wakeup,
-                record_end_callback=self._record_end_signal
+                record_end_callback=self._record_end_signal,
+                min_stt_confidence=listener_config.get("min_stt_confidence", 0.6)
             )
         return loop
 
