@@ -707,14 +707,17 @@ class DinkumVoiceLoop(VoiceLoop):
 
         # get text and trigger callback
         try:
-            utts = self.stt.transcribe() or ""
+            utts = self.stt.transcribe() or []
         except:
             LOG.exception("STT failed")
             utts = []
 
         if not utts and self.fallback_stt is not None:
             LOG.info("Attempting fallback STT plugin")
-            utts = self.fallback_stt.transcribe() or ""
+            try:
+                utts = self.fallback_stt.transcribe() or []
+            except:
+                LOG.exception("Fallback STT failed")
 
         stt_context["transcriptions"] = utts
         return utts, stt_context
