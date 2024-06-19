@@ -39,7 +39,7 @@ from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessSt
 from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt
 from ovos_dinkum_listener.transformers import AudioTransformersService
 from ovos_dinkum_listener.voice_loop import DinkumVoiceLoop, ListeningMode, ListeningState
-from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer
+from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer, get_sound_duration
 
 try:
     from ovos_backend_client.api import DatasetApi
@@ -780,7 +780,10 @@ class OVOSDinkumVoiceService(Thread):
                 message = message or Message("", context=context)  # might be None
                 self.bus.emit(message.forward("mycroft.audio.play_sound", {"uri": sound}))
                 self.voice_loop.state = ListeningState.CONFIRMATION
-                self.voice_loop.confirmation_seconds_left = self.voice_loop.confirmation_seconds
+                try:
+                    self.voice_loop.confirmation_seconds_left = get_sound_duration(sound)
+                except:
+                    self.voice_loop.confirmation_seconds_left = self.voice_loop.confirmation_seconds
         else:
             self.voice_loop.state = ListeningState.BEFORE_COMMAND
 
