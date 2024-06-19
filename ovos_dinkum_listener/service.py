@@ -866,6 +866,9 @@ class OVOSDinkumVoiceService(Thread):
 
     def _handle_sound_played(self, message: Message):
         """Handle response message from audio service."""
+        if not self._validate_message_context(message) or not self.voice_loop.running:
+            # ignore this sound, it is targeted to an external client
+            return
         if self.voice_loop.state == ListeningState.CONFIRMATION:
             self.voice_loop.state = ListeningState.BEFORE_COMMAND
 
