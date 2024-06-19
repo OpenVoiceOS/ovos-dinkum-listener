@@ -378,8 +378,6 @@ class OVOSDinkumVoiceService(Thread):
         self.bus.on("opm.ww.query", self._handle_opm_ww_query)
         self.bus.on("opm.vad.query", self._handle_opm_vad_query)
 
-        self.bus.on("mycroft.audio.play_sound.response", self._handle_sound_played)
-
         # tracking volume for fake barge-in
         self.bus.on("volume.set.percent", self._handle_volume_change)
         self.bus.on("mycroft.volume.increase", self._handle_volume_change)
@@ -619,10 +617,6 @@ class OVOSDinkumVoiceService(Thread):
                 self.bus.emit(Message("mycroft.audio.play_sound",
                                       {"uri": sound, "force_unmute": True},
                                       context))
-                if not listener.get("instant_listen"):
-                    self.voice_loop.state = ListeningState.CONFIRMATION
-                    self.voice_loop.confirmation_event.clear()
-                    Timer(0.5, lambda: self.voice_loop.confirmation_event.set()).start()
 
             if listen:
                 msg_type = "recognizer_loop:wakeword"
@@ -788,12 +782,7 @@ class OVOSDinkumVoiceService(Thread):
                            }
                 message = message or Message("", context=context)  # might be None
                 self.bus.emit(message.forward("mycroft.audio.play_sound", {"uri": sound}))
-                if not self.config["listener"].get("instant_listen"):
-                    self.voice_loop.state = ListeningState.CONFIRMATION
-                    self.voice_loop.confirmation_event.clear()
-                    Timer(0.5, lambda: self.voice_loop.confirmation_event.set()).start()
-                else:
-                    self.voice_loop.state = ListeningState.BEFORE_COMMAND
+                self.voice_loop.state = ListeningState.BEFORE_COMMAND
         else:
             self.voice_loop.state = ListeningState.BEFORE_COMMAND
 
@@ -876,11 +865,6 @@ class OVOSDinkumVoiceService(Thread):
         """Wake up the voice loop."""
         LOG.debug("SLEEP - wake up triggered from bus event")
         self.voice_loop.wakeup()
-
-    def _handle_sound_played(self, message: Message):
-        """Handle response message from audio service."""
-        if self.voice_loop.state == ListeningState.CONFIRMATION:
-            self.voice_loop.confirmation_event.set()
 
     def _handle_b64_audio(self, message: Message):
         """ transcribe base64 encoded audio """

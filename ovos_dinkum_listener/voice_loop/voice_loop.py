@@ -39,8 +39,6 @@ class ListeningState(str, Enum):
     SLEEPING = "sleeping"
     CHECK_WAKE_UP = "wake_up"
 
-    CONFIRMATION = "confirmation"
-
     BEFORE_COMMAND = "before_cmd"
     IN_COMMAND = "in_cmd"
     AFTER_COMMAND = "after_cmd"
@@ -248,13 +246,6 @@ class DinkumVoiceLoop(VoiceLoop):
                 self._before_wakeup(chunk)
             elif self.state == ListeningState.CHECK_WAKE_UP:
                 self._detect_wakeup(chunk)
-            
-            # set either by timeout (0.5) or by ovos-audio response
-            elif self.state == ListeningState.CONFIRMATION and \
-                    self.confirmation_event.is_set():
-                self.state = ListeningState.BEFORE_COMMAND
-                LOG.debug(f"STATE: {self.state}")
-
             elif self.state == ListeningState.BEFORE_COMMAND:
                 LOG.debug("waiting for speech")
                 self._before_cmd(chunk)
@@ -507,9 +498,8 @@ class DinkumVoiceLoop(VoiceLoop):
                 LOG.debug(f"STATE: {self.state}")
             else:
                 # Wake word detected, begin recording voice command
-                if not self.state == ListeningState.CONFIRMATION:
-                    self.state = ListeningState.BEFORE_COMMAND
-                    LOG.debug(f"STATE: {self.state}")
+                self.state = ListeningState.BEFORE_COMMAND
+                LOG.debug(f"STATE: {self.state}")
                 self.reset_speech_timer()
                 self.stt_audio_bytes = bytes()
                 self.stt.stream_start()
