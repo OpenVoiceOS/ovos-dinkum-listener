@@ -36,7 +36,6 @@ from ovos_plugin_manager.vad import get_vad_configs
 from ovos_plugin_manager.wakewords import get_ww_lang_configs, get_ww_supported_langs, get_ww_module_configs
 from ovos_utils.log import LOG, log_deprecation
 from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessState
-from ovos_utils.sound import get_sound_duration
 
 from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt
 from ovos_dinkum_listener.transformers import AudioTransformersService
@@ -47,6 +46,13 @@ try:
 except ImportError:
     LOG.info("`ovos-backend-client` is not installed. Upload is disabled")
     DatasetApi = None
+
+try:
+    from ovos_utils.sound import get_sound_duration
+except ImportError:
+
+    def get_sound_duration(*args, **kwargs):
+        raise ImportError("please install ovos-utils>=0.1.0a25")
 
 # Seconds between systemd watchdog updates
 WATCHDOG_DELAY = 0.5
