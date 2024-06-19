@@ -566,8 +566,10 @@ class DinkumVoiceLoop(VoiceLoop):
     def _confirmation_sound(self, chunk: bytes):
         self._chunk_info.is_listen_sound = True
         if self.instant_listen:
+            LOG.debug("instant_listen is on")
             self.confirmation_seconds_left = 0
             self.state = ListeningState.BEFORE_COMMAND
+            LOG.debug(f"STATE: {self.state}")
             self._before_cmd(chunk)
             return
 
@@ -577,6 +579,7 @@ class DinkumVoiceLoop(VoiceLoop):
         self.confirmation_seconds_left -= self.mic.seconds_per_chunk
         if self.confirmation_seconds_left <= 0:
             self.state = ListeningState.BEFORE_COMMAND
+            LOG.debug(f"STATE: {self.state}")
 
     def _before_cmd(self, chunk: bytes):
         """
