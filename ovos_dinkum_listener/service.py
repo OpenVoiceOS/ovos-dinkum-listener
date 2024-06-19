@@ -613,9 +613,11 @@ class OVOSDinkumVoiceService(Thread):
 
             if sound:
                 LOG.debug(f"Handling listen sound: {sound}")
+                audio_context = dict(context)
+                audio_context["destination"] = ["audio"]
                 self.bus.emit(Message("mycroft.audio.play_sound",
                                       {"uri": sound, "force_unmute": True},
-                                      context))
+                                      audio_context))
             if listen:
                 msg_type = "recognizer_loop:wakeword"
                 payload["utterance"] = \
@@ -774,11 +776,6 @@ class OVOSDinkumVoiceService(Thread):
         if self.config.get('confirm_listening'):
             sound = self.config.get('sounds', {}).get('start_listening')
             if sound:
-                context = {'client_name': 'ovos_dinkum_listener',
-                           'source': 'listener',
-                           'destination': ["audio"]  # default native-source
-                           }
-                message = message or Message("", context=context)  # might be None
                 self.bus.emit(message.forward("mycroft.audio.play_sound", {"uri": sound}))
                 self.voice_loop.state = ListeningState.CONFIRMATION
                 try:
