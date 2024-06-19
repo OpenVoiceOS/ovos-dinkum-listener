@@ -506,7 +506,6 @@ class DinkumVoiceLoop(VoiceLoop):
             if self.listen_mode == ListeningMode.SLEEPING:
                 # Wake word detected, begin detecting "wake up" word
                 self.state = ListeningState.CHECK_WAKE_UP
-                LOG.debug(f"STATE: {self.state}")
             else:
                 if ww_data.get("sound"):
                     self.state = ListeningState.CONFIRMATION
@@ -522,6 +521,7 @@ class DinkumVoiceLoop(VoiceLoop):
                 if self.fallback_stt is not None:
                     self.fallback_stt.stream_start()
 
+            LOG.debug(f"STATE: {self.state}")
             self.last_ww = time.time()
             self.transformers.feed_hotword(chunk)
             return True
