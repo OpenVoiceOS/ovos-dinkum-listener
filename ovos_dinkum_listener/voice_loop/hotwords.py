@@ -1,15 +1,13 @@
-import subprocess
-import wave
 from enum import Enum
-from os.path import dirname, isfile
+from os.path import dirname
 from threading import Event
 from typing import Optional
 
-from distutils.spawn import find_executable
 from ovos_config import Configuration
 from ovos_plugin_manager.wakewords import OVOSWakeWordFactory, HotWordEngine
 from ovos_utils.fakebus import FakeBus
 from ovos_utils.log import LOG
+from ovos_utils.sound import get_sound_duration
 
 
 class HotWordException(RuntimeWarning):
@@ -180,7 +178,12 @@ class HotwordContainer:
                                            "stopword": stopword}
                     if sound:
                         try:
-                            self._plugins[word]["sound_duration"] = get_sound_duration(sound)
+                            if sound.startswith("snd/"):
+                                dur = get_sound_duration(sound,
+                                                         base_dir=f"{dirname(dirname(__file__))}/res")
+                            else:
+                                dur = get_sound_duration(sound)
+                            self._plugins[word]["sound_duration"] = dur
                         except:
                             pass
 
@@ -342,35 +345,3 @@ class HotwordContainer:
                 LOG.error(e)
         for ww in self.ww_names:
             self._plugins.pop(ww)
-
-
-def get_sound_duration(path: str) -> float:
-    if path.startswith("snd/"):
-        resolved_path = f"{dirname(dirname(__file__))}/res/{path}"
-        if isfile(resolved_path):
-            path = resolved_path
-
-    if not isfile(path):
-        raise FileNotFoundError(f"could not resolve sound file: {path}")
-
-    if path.endswith(".wav"):
-        with wave.open(path, 'r') as f:
-            frames = f.getnframes()
-            rate = f.getframerate()
-        return frames / float(rate)
-    media_info = find_executable("mediainfo")
-    if media_info:
-        args = (media_info, path)
-        popen = subprocess.Popen(args, stdout=subprocess.PIPE)
-        popen.wait()
-        output = popen.stdout.read().decode("utf-8").split("Duration")[1].split("\n")[0]
-        output = "".join([c for c in output if c.isdigit()])
-        return int(output) / 1000
-    ffprobe = find_executable("ffprobe")
-    if ffprobe:
-        args = (ffprobe, "-show_entries", "format=duration", "-i", path)
-        popen = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        popen.wait()
-        output = popen.stdout.read().decode("utf-8")
-        return float(output.split("duration=")[-1].split("\n")[0])
-    raise RuntimeError("Failed to determine sound length, please install mediainfo or ffprobe")

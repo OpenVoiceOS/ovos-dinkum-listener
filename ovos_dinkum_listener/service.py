@@ -16,6 +16,7 @@ import time
 import wave
 from enum import Enum
 from hashlib import md5
+from os.path import dirname
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from threading import Thread, RLock, Event
@@ -35,11 +36,11 @@ from ovos_plugin_manager.vad import get_vad_configs
 from ovos_plugin_manager.wakewords import get_ww_lang_configs, get_ww_supported_langs, get_ww_module_configs
 from ovos_utils.log import LOG, log_deprecation
 from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessState
+from ovos_utils.sound import get_sound_duration
 
 from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt
 from ovos_dinkum_listener.transformers import AudioTransformersService
 from ovos_dinkum_listener.voice_loop import DinkumVoiceLoop, ListeningMode, ListeningState
-from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer, get_sound_duration
 
 try:
     from ovos_backend_client.api import DatasetApi
@@ -781,7 +782,11 @@ class OVOSDinkumVoiceService(Thread):
                 self.bus.emit(message.forward("mycroft.audio.play_sound", {"uri": sound}))
                 self.voice_loop.state = ListeningState.CONFIRMATION
                 try:
-                    self.voice_loop.confirmation_seconds_left = get_sound_duration(sound)
+                    if sound.startswith("snd/"):
+                        dur = get_sound_duration(sound, base_dir=f"{dirname(__file__)}/res")
+                    else:
+                        dur = get_sound_duration(sound)
+                    self.voice_loop.confirmation_seconds_left = dur
                 except:
                     self.voice_loop.confirmation_seconds_left = self.voice_loop.confirmation_seconds
         else:
