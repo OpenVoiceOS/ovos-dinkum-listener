@@ -39,6 +39,8 @@ class ListeningState(str, Enum):
     SLEEPING = "sleeping"
     CHECK_WAKE_UP = "wake_up"
 
+    CONFIRMATION = "confirmation"
+
     BEFORE_COMMAND = "before_cmd"
     IN_COMMAND = "in_cmd"
     AFTER_COMMAND = "after_cmd"
@@ -90,6 +92,7 @@ class VoiceLoop:
 @dataclass
 class ChunkInfo:
     is_speech: bool = False
+    is_listen_sound: bool = False
     energy: float = 0.0
 
 
@@ -104,10 +107,12 @@ class DinkumVoiceLoop(VoiceLoop):
     speech_seconds: float = 0.3
     silence_seconds: float = 0.7
     timeout_seconds: float = 10.0
-    timeout_seconds_with_silence: float = 5.0    
+    timeout_seconds_with_silence: float = 5.0
+    confirmation_seconds: float = 0.5  # TODO - can we determine dynamically based on sound file ?
     num_stt_rewind_chunks: int = 2
     num_hotword_keep_chunks: int = 15
     remove_silence: bool = False
+    instant_listen: bool = False
     skip_next_wake: bool = False
     hotword_chunks: Deque = field(default_factory=deque)
     stt_chunks: Deque = field(default_factory=deque)
@@ -115,6 +120,7 @@ class DinkumVoiceLoop(VoiceLoop):
     last_ww: float = -1.0
     speech_seconds_left: float = 0.0
     silence_seconds_left: float = 0.0
+    confirmation_seconds_left: float = 0.0
     timeout_seconds_left: float = 0.0
     timeout_seconds_with_silence_left: float = 0.0
     recording_seconds_with_silence_left: float = 0.0
@@ -179,7 +185,6 @@ class DinkumVoiceLoop(VoiceLoop):
         self.timeout_seconds_left = self.timeout_seconds
         self.timeout_seconds_with_silence_left = self.timeout_seconds_with_silence        
         self.state = ListeningState.DETECT_WAKEWORD
-        self.confirmation_event = Event()
 
         # Keep hotword/STT audio so they can (optionally) be saved to disk
         self.hotword_chunks = deque(maxlen=self.num_hotword_keep_chunks)
@@ -246,6 +251,11 @@ class DinkumVoiceLoop(VoiceLoop):
                 self._before_wakeup(chunk)
             elif self.state == ListeningState.CHECK_WAKE_UP:
                 self._detect_wakeup(chunk)
+
+            elif self.state == ListeningState.CONFIRMATION:
+                LOG.debug("playing listen sound")
+                self._confirmation_sound(chunk)
+
             elif self.state == ListeningState.BEFORE_COMMAND:
                 LOG.debug("waiting for speech")
                 self._before_cmd(chunk)
@@ -476,14 +486,15 @@ class DinkumVoiceLoop(VoiceLoop):
         ww = self.hotwords.found()
         if ww:
             LOG.debug(f"Wake word detected={ww}")
+            ww_data = self.hotwords.get_ww(ww)
+
             # Callback to handle recorded hotword audio
             if self.listenword_audio_callback is not None:
                 hotword_audio_bytes = bytes()
                 while self.hotword_chunks:
                     hotword_audio_bytes += self.hotword_chunks.popleft()
 
-                self.listenword_audio_callback(hotword_audio_bytes,
-                                               self.hotwords.get_ww(ww))
+                self.listenword_audio_callback(hotword_audio_bytes, ww_data)
 
             self.hotword_chunks.clear()
 
@@ -497,9 +508,12 @@ class DinkumVoiceLoop(VoiceLoop):
                 self.state = ListeningState.CHECK_WAKE_UP
                 LOG.debug(f"STATE: {self.state}")
             else:
+                if ww_data.get("sound"):
+                    self.state = ListeningState.CONFIRMATION
+                    self.confirmation_seconds_left = self.confirmation_seconds
+                else:
+                    self.state = ListeningState.BEFORE_COMMAND
                 # Wake word detected, begin recording voice command
-                self.state = ListeningState.BEFORE_COMMAND
-                LOG.debug(f"STATE: {self.state}")
                 self.reset_speech_timer()
                 self.stt_audio_bytes = bytes()
                 self.stt.stream_start()
@@ -546,6 +560,21 @@ class DinkumVoiceLoop(VoiceLoop):
             if self.listen_mode == ListeningMode.CONTINUOUS:
                 self.stt_audio_bytes += chunk
                 self.stt_chunks.append(chunk)
+
+    def _confirmation_sound(self, chunk: bytes):
+        self._chunk_info.is_listen_sound = True
+        if self.instant_listen:
+            self.confirmation_seconds_left = 0
+            self.state = ListeningState.BEFORE_COMMAND
+            self._before_cmd(chunk)
+            return
+
+        # skip STT buffer if instant_listen is NOT set
+        # Recording voice command, but user has not spoken yet
+        self.transformers.feed_audio(chunk)
+        self.confirmation_seconds_left -= self.mic.seconds_per_chunk
+        if self.confirmation_seconds_left <= 0:
+            self.state = ListeningState.BEFORE_COMMAND
 
     def _before_cmd(self, chunk: bytes):
         """

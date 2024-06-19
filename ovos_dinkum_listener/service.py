@@ -18,7 +18,7 @@ from enum import Enum
 from hashlib import md5
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from threading import Thread, RLock, Event, Timer
+from threading import Thread, RLock, Event
 
 import speech_recognition as sr
 from distutils.spawn import find_executable
@@ -254,7 +254,7 @@ class OVOSDinkumVoiceService(Thread):
                 fallback_stt=self.fallback_stt,
                 vad=self.vad,
                 transformers=self.transformers,
-                #
+                instant_listen=listener_config.get("instant_listen"),
                 speech_seconds=listener_config.get("speech_begin", 0.3),
                 silence_seconds=listener_config.get("silence_end", 0.7),
                 timeout_seconds=listener_config.get("recording_timeout", 10),
@@ -377,6 +377,8 @@ class OVOSDinkumVoiceService(Thread):
         self.bus.on("opm.stt.query", self._handle_opm_stt_query)
         self.bus.on("opm.ww.query", self._handle_opm_ww_query)
         self.bus.on("opm.vad.query", self._handle_opm_vad_query)
+
+        self.bus.on("mycroft.audio.play_sound.response", self._handle_sound_played)
 
         # tracking volume for fake barge-in
         self.bus.on("volume.set.percent", self._handle_volume_change)
@@ -609,15 +611,10 @@ class OVOSDinkumVoiceService(Thread):
             event = ww_context.get("event")
 
             if sound:
-                context = {'client_name': 'ovos_dinkum_listener',
-                           'source': 'listener',
-                           'destination': ["audio"]  # default native-source
-                           }
                 LOG.debug(f"Handling listen sound: {sound}")
                 self.bus.emit(Message("mycroft.audio.play_sound",
                                       {"uri": sound, "force_unmute": True},
                                       context))
-
             if listen:
                 msg_type = "recognizer_loop:wakeword"
                 payload["utterance"] = \
@@ -782,7 +779,8 @@ class OVOSDinkumVoiceService(Thread):
                            }
                 message = message or Message("", context=context)  # might be None
                 self.bus.emit(message.forward("mycroft.audio.play_sound", {"uri": sound}))
-                self.voice_loop.state = ListeningState.BEFORE_COMMAND
+                self.voice_loop.state = ListeningState.CONFIRMATION
+                self.voice_loop.confirmation_seconds_left = self.voice_loop.confirmation_seconds
         else:
             self.voice_loop.state = ListeningState.BEFORE_COMMAND
 
@@ -865,6 +863,11 @@ class OVOSDinkumVoiceService(Thread):
         """Wake up the voice loop."""
         LOG.debug("SLEEP - wake up triggered from bus event")
         self.voice_loop.wakeup()
+
+    def _handle_sound_played(self, message: Message):
+        """Handle response message from audio service."""
+        if self.voice_loop.state == ListeningState.CONFIRMATION:
+            self.voice_loop.state = ListeningState.BEFORE_COMMAND
 
     def _handle_b64_audio(self, message: Message):
         """ transcribe base64 encoded audio """
