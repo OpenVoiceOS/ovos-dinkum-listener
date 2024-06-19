@@ -295,6 +295,7 @@ class TestDinkumVoiceService(unittest.TestCase):
         self.assertEqual(self.service.voice_loop.stt_audio_bytes, bytes())
         self.service.voice_loop.stt.stream_start.assert_called_once()
         self.service.voice_loop.stt.stream_start.reset_mock()
+        self.assertEqual(self.service.voice_loop.state, ListeningState.CONFIRMATION)
 
         self.service.voice_loop.state = ListeningState.DETECT_WAKEWORD
         self.service.config["confirm_listening"] = False
