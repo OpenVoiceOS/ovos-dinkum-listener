@@ -1,6 +1,7 @@
 import subprocess
 import wave
 from enum import Enum
+from os.path import dirname, isfile
 from threading import Event
 from typing import Optional
 
@@ -343,7 +344,15 @@ class HotwordContainer:
             self._plugins.pop(ww)
 
 
-def get_sound_duration(path) -> float:
+def get_sound_duration(path: str) -> float:
+    if path.startswith("snd/"):
+        resolved_path = f"{dirname(dirname(__file__))}/res/{path}"
+        if isfile(resolved_path):
+            path = resolved_path
+
+    if not isfile(path):
+        raise FileNotFoundError(f"could not resolve sound file: {path}")
+
     if path.endswith(".wav"):
         with wave.open(path, 'r') as f:
             frames = f.getnframes()
