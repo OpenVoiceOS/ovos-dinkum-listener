@@ -108,7 +108,7 @@ class DinkumVoiceLoop(VoiceLoop):
     silence_seconds: float = 0.7
     timeout_seconds: float = 10.0
     timeout_seconds_with_silence: float = 5.0
-    confirmation_seconds: float = 0.5  # TODO - can we determine dynamically based on sound file ?
+    confirmation_seconds: float = 0.5
     num_stt_rewind_chunks: int = 2
     num_hotword_keep_chunks: int = 15
     remove_silence: bool = False
@@ -510,7 +510,9 @@ class DinkumVoiceLoop(VoiceLoop):
             else:
                 if ww_data.get("sound"):
                     self.state = ListeningState.CONFIRMATION
-                    self.confirmation_seconds_left = self.confirmation_seconds
+                    # derive timeout from sound file length if possible
+                    dur = ww_data.get("sound_duration", self.confirmation_seconds)
+                    self.confirmation_seconds_left = dur
                 else:
                     self.state = ListeningState.BEFORE_COMMAND
                 # Wake word detected, begin recording voice command
