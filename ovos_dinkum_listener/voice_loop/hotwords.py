@@ -183,6 +183,7 @@ class HotwordContainer:
                                                          base_dir=f"{dirname(dirname(__file__))}/res")
                             else:
                                 dur = get_sound_duration(sound)
+                            LOG.debug(f"{sound} duration: {dur} seconds")
                             self._plugins[word]["sound_duration"] = dur
                         except:
                             pass

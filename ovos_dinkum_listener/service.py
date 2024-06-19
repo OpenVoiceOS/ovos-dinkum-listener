@@ -41,7 +41,7 @@ from ovos_utils.sound import get_sound_duration
 from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt
 from ovos_dinkum_listener.transformers import AudioTransformersService
 from ovos_dinkum_listener.voice_loop import DinkumVoiceLoop, ListeningMode, ListeningState
-
+from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer
 try:
     from ovos_backend_client.api import DatasetApi
 except ImportError:
@@ -786,6 +786,7 @@ class OVOSDinkumVoiceService(Thread):
                         dur = get_sound_duration(sound, base_dir=f"{dirname(__file__)}/res")
                     else:
                         dur = get_sound_duration(sound)
+                    LOG.debug(f"{sound} duration: {dur} seconds")
                     self.voice_loop.confirmation_seconds_left = dur
                 except:
                     self.voice_loop.confirmation_seconds_left = self.voice_loop.confirmation_seconds
