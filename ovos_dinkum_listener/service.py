@@ -16,9 +16,10 @@ import time
 import wave
 from enum import Enum
 from hashlib import md5
+from os.path import dirname
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from threading import Thread, RLock, Event, Timer
+from threading import Thread, RLock, Event
 
 import speech_recognition as sr
 from distutils.spawn import find_executable
@@ -40,12 +41,18 @@ from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt
 from ovos_dinkum_listener.transformers import AudioTransformersService
 from ovos_dinkum_listener.voice_loop import DinkumVoiceLoop, ListeningMode, ListeningState
 from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer
-
 try:
     from ovos_backend_client.api import DatasetApi
 except ImportError:
     LOG.info("`ovos-backend-client` is not installed. Upload is disabled")
     DatasetApi = None
+
+try:
+    from ovos_utils.sound import get_sound_duration
+except ImportError:
+
+    def get_sound_duration(*args, **kwargs):
+        raise ImportError("please install ovos-utils>=0.1.0a25")
 
 # Seconds between systemd watchdog updates
 WATCHDOG_DELAY = 0.5
@@ -254,7 +261,7 @@ class OVOSDinkumVoiceService(Thread):
                 fallback_stt=self.fallback_stt,
                 vad=self.vad,
                 transformers=self.transformers,
-                #
+                instant_listen=listener_config.get("instant_listen"),
                 speech_seconds=listener_config.get("speech_begin", 0.3),
                 silence_seconds=listener_config.get("silence_end", 0.7),
                 timeout_seconds=listener_config.get("recording_timeout", 10),
@@ -611,19 +618,12 @@ class OVOSDinkumVoiceService(Thread):
             event = ww_context.get("event")
 
             if sound:
-                context = {'client_name': 'ovos_dinkum_listener',
-                           'source': 'listener',
-                           'destination': ["audio"]  # default native-source
-                           }
                 LOG.debug(f"Handling listen sound: {sound}")
+                audio_context = dict(context)
+                audio_context["destination"] = ["audio"]
                 self.bus.emit(Message("mycroft.audio.play_sound",
                                       {"uri": sound, "force_unmute": True},
-                                      context))
-                if not listener.get("instant_listen"):
-                    self.voice_loop.state = ListeningState.CONFIRMATION
-                    self.voice_loop.confirmation_event.clear()
-                    Timer(0.5, lambda: self.voice_loop.confirmation_event.set()).start()
-
+                                      audio_context))
             if listen:
                 msg_type = "recognizer_loop:wakeword"
                 payload["utterance"] = \
@@ -782,18 +782,17 @@ class OVOSDinkumVoiceService(Thread):
         if self.config.get('confirm_listening'):
             sound = self.config.get('sounds', {}).get('start_listening')
             if sound:
-                context = {'client_name': 'ovos_dinkum_listener',
-                           'source': 'listener',
-                           'destination': ["audio"]  # default native-source
-                           }
-                message = message or Message("", context=context)  # might be None
                 self.bus.emit(message.forward("mycroft.audio.play_sound", {"uri": sound}))
-                if not self.config["listener"].get("instant_listen"):
-                    self.voice_loop.state = ListeningState.CONFIRMATION
-                    self.voice_loop.confirmation_event.clear()
-                    Timer(0.5, lambda: self.voice_loop.confirmation_event.set()).start()
-                else:
-                    self.voice_loop.state = ListeningState.BEFORE_COMMAND
+                self.voice_loop.state = ListeningState.CONFIRMATION
+                try:
+                    if sound.startswith("snd/"):
+                        dur = get_sound_duration(sound, base_dir=f"{dirname(__file__)}/res")
+                    else:
+                        dur = get_sound_duration(sound)
+                    LOG.debug(f"{sound} duration: {dur} seconds")
+                    self.voice_loop.confirmation_seconds_left = dur
+                except:
+                    self.voice_loop.confirmation_seconds_left = self.voice_loop.confirmation_seconds
         else:
             self.voice_loop.state = ListeningState.BEFORE_COMMAND
 
@@ -879,8 +878,11 @@ class OVOSDinkumVoiceService(Thread):
 
     def _handle_sound_played(self, message: Message):
         """Handle response message from audio service."""
+        if not self._validate_message_context(message) or not self.voice_loop.running:
+            # ignore this sound, it is targeted to an external client
+            return
         if self.voice_loop.state == ListeningState.CONFIRMATION:
-            self.voice_loop.confirmation_event.set()
+            self.voice_loop.state = ListeningState.BEFORE_COMMAND
 
     def _handle_b64_audio(self, message: Message):
         """ transcribe base64 encoded audio """

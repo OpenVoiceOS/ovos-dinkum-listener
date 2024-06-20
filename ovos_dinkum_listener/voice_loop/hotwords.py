@@ -1,11 +1,18 @@
 from enum import Enum
+from os.path import dirname
 from threading import Event
 from typing import Optional
 
 from ovos_config import Configuration
 from ovos_plugin_manager.wakewords import OVOSWakeWordFactory, HotWordEngine
-from ovos_utils.log import LOG
 from ovos_utils.fakebus import FakeBus
+from ovos_utils.log import LOG
+try:
+    from ovos_utils.sound import get_sound_duration
+except ImportError:
+
+    def get_sound_duration(*args, **kwargs):
+        raise ImportError("please install ovos-utils>=0.1.0a25")
 
 
 class HotWordException(RuntimeWarning):
@@ -174,6 +181,18 @@ class HotwordContainer:
                                            "listen": listen,
                                            "wakeup": wakeup,
                                            "stopword": stopword}
+                    if sound:
+                        try:
+                            if sound.startswith("snd/"):
+                                dur = get_sound_duration(sound,
+                                                         base_dir=f"{dirname(dirname(__file__))}/res")
+                            else:
+                                dur = get_sound_duration(sound)
+                            LOG.debug(f"{sound} duration: {dur} seconds")
+                            self._plugins[word]["sound_duration"] = dur
+                        except:
+                            pass
+
             except Exception as e:
                 LOG.error("Failed to load hotword: " + word)
 

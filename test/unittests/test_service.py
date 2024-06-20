@@ -8,6 +8,7 @@ from time import sleep
 from unittest.mock import Mock, patch
 
 from ovos_utils.messagebus import FakeBus
+from ovos_bus_client.message import Message
 from ovos_utils.process_utils import ProcessState
 
 
@@ -286,7 +287,7 @@ class TestDinkumVoiceService(unittest.TestCase):
         self.service.voice_loop.reset_speech_timer = Mock()
         self.service.voice_loop.confirmation_event = Event()
 
-        self.service._handle_listen(None)
+        self.service._handle_listen(Message(""))
         self.assertEqual(self.service.voice_loop.confirmation_event.is_set(), False)
         self.service.voice_loop.reset_speech_timer.assert_called_once()
         self.service.voice_loop.reset_speech_timer.reset_mock()
@@ -295,13 +296,11 @@ class TestDinkumVoiceService(unittest.TestCase):
         self.service.voice_loop.stt.stream_start.assert_called_once()
         self.service.voice_loop.stt.stream_start.reset_mock()
         self.assertEqual(self.service.voice_loop.state, ListeningState.CONFIRMATION)
-        sleep(1)
-        self.assertEqual(self.service.voice_loop.confirmation_event.is_set(), True)
 
         self.service.voice_loop.state = ListeningState.DETECT_WAKEWORD
         self.service.config["confirm_listening"] = False
         
-        self.service._handle_listen(None)
+        self.service._handle_listen(Message(""))
         self.assertEqual(self.service.config["confirm_listening"], False)
         self.service.voice_loop.reset_speech_timer.assert_called_once()
         self.service.voice_loop.reset_speech_timer.reset_mock()
