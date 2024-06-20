@@ -117,6 +117,8 @@ class DinkumVoiceLoop(VoiceLoop):
     hotword_chunks: Deque = field(default_factory=deque)
     stt_chunks: Deque = field(default_factory=deque)
     stt_audio_bytes: bytes = bytes()
+    min_stt_confidence: float = 0.6
+    max_transcripts: int = 1
     last_ww: float = -1.0
     speech_seconds_left: float = 0.0
     silence_seconds_left: float = 0.0
@@ -707,21 +709,28 @@ class DinkumVoiceLoop(VoiceLoop):
 
         # get text and trigger callback
         try:
-            text = self.stt.stream_stop() or ""
+            utts = self.stt.transcribe() or []
         except:
             LOG.exception("STT failed")
-            text = ""
+            utts = []
 
-        if not text and self.fallback_stt is not None:
+        if not utts and self.fallback_stt is not None:
             LOG.info("Attempting fallback STT plugin")
-            text = self.fallback_stt.stream_stop() or ""
+            try:
+                utts = self.fallback_stt.transcribe() or []
+            except:
+                LOG.exception("Fallback STT failed")
 
-        # TODO - some plugins return list of transcripts some just text
-        # standardize support for this
-        if isinstance(text, list):
-            text = text[0]
-        stt_context["transcription"] = text
-        return text, stt_context
+        filtered = [u for u in utts if u[1] >= self.min_stt_confidence]
+        if filtered != utts:
+            LOG.info(f"Ignoring low confidence STT transcriptions: {[u for u in utts if u not in filtered]}")
+
+        if len(filtered) > self.max_transcripts:
+            LOG.debug(f"selecting top {self.max_transcripts} transcriptions")
+            filtered = filtered[:self.max_transcripts]
+
+        stt_context["transcriptions"] = filtered
+        return filtered, stt_context
 
     def _vad_remove_silence(self):
         """removes silence from the STT buffer using the VAD plugin
@@ -762,11 +771,11 @@ class DinkumVoiceLoop(VoiceLoop):
         if isinstance(self.stt, FakeStreamingSTT) and self.remove_silence:
             self._vad_remove_silence()
 
-        text, stt_context = self._get_tx(stt_context)
+        utts, stt_context = self._get_tx(stt_context)
 
-        if text:
+        if utts:
             LOG.debug(f"transformers metadata: {stt_context}")
-            LOG.info(f"transcribed: {text}")
+            LOG.info(f"transcribed: {utts}")
         else:
             LOG.info("nothing transcribed")
         # Voice command has finished recording
@@ -781,7 +790,7 @@ class DinkumVoiceLoop(VoiceLoop):
 
         # Callback to handle STT text
         if self.text_callback is not None:
-            self.text_callback(text, stt_context)
+            self.text_callback(utts, stt_context)
 
         # Back to detecting wake word
         if self.listen_mode == ListeningMode.CONTINUOUS or \

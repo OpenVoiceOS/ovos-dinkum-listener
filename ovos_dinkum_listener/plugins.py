@@ -1,8 +1,9 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List, Tuple
+
+from ovos_config.config import Configuration
 from ovos_plugin_manager.stt import OVOSSTTFactory
 from ovos_plugin_manager.templates.stt import StreamingSTT, StreamThread
 from ovos_plugin_manager.utils import ReadWriteStream
-from ovos_config.config import Configuration
 from ovos_utils.log import LOG
 from speech_recognition import AudioData
 
@@ -18,11 +19,11 @@ class FakeStreamThread(StreamThread):
 
     def finalize(self):
         """ return final transcription """
-        
-        if not self.buffer: 
+
+        if not self.buffer:
             return ""
 
-        try:            
+        try:
             # plugins expect AudioData objects
             audio = AudioData(self.buffer.read(),
                               sample_rate=self.sample_rate,
@@ -54,6 +55,19 @@ class FakeStreamingSTT(StreamingSTT):
         sample_width = listener.get("sample_width", 2)
         return FakeStreamThread(self.queue, self.lang, self.engine, sample_rate,
                                 sample_width)
+
+    def transcribe(self, audio: Optional = None,
+                   lang: Optional[str] = None) -> List[Tuple[str, float]]:
+        """transcribe audio data to a list of
+        possible transcriptions and respective confidences"""
+        # plugins expect AudioData objects
+        audiod = AudioData(audio or self.stream.buffer.read(),
+                           sample_rate=self.stream.sample_rate,
+                           sample_width=self.stream.sample_width)
+        transcripts = self.engine.transcribe(audiod, lang)
+        if audio is None:
+            self.stream.buffer.clear()
+        return transcripts
 
 
 def load_stt_module(config: Dict[str, Any] = None) -> StreamingSTT:
