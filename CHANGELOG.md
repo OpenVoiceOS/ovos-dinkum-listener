@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.3a46](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a46) (2024-06-20)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a45...0.0.3a46)
+
+**Implemented enhancements:**
+
+- feat/alternative\_transcripts [\#124](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/124) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.3a45](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a45) (2024-06-20)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a44...0.0.3a45)
@@ -290,10 +298,6 @@
 **Fixed bugs:**
 
 - ovos-microphone-plugin-alsa requirement fails on Mac OS [\#52](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/52)
-
-**Closed issues:**
-
-- Missing requirements [\#13](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/13)
 
 **Merged pull requests:**
 
