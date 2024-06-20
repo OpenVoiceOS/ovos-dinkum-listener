@@ -262,19 +262,15 @@ class OVOSDinkumVoiceService(Thread):
                 fallback_stt=self.fallback_stt,
                 vad=self.vad,
                 transformers=self.transformers,
-                instant_listen=listener_config.get("instant_listen"),
+                instant_listen=listener_config.get("instant_listen", True),
                 speech_seconds=listener_config.get("speech_begin", 0.3),
                 silence_seconds=listener_config.get("silence_end", 0.7),
                 timeout_seconds=listener_config.get("recording_timeout", 10),
                 timeout_seconds_with_silence=listener_config.get("recording_timeout_with_silence", 5),
                 recording_mode_max_silence_seconds=listener_config.get("recording_mode_max_silence_seconds", 30),
-                num_stt_rewind_chunks=listener_config.get(
-                    "utterance_chunks_to_rewind", 2),
-                num_hotword_keep_chunks=listener_config.get(
-                    "wakeword_chunks_to_save", 15),
-                remove_silence=listener_config.get(
-                    "remove_silence", False),
-                #
+                num_stt_rewind_chunks=listener_config.get("utterance_chunks_to_rewind", 2),
+                num_hotword_keep_chunks=listener_config.get("wakeword_chunks_to_save", 15),
+                remove_silence=listener_config.get("remove_silence", False),
                 wake_callback=self._record_begin,
                 text_callback=self._stt_text,
                 listenword_audio_callback=self._hotword_audio,
@@ -285,7 +281,8 @@ class OVOSDinkumVoiceService(Thread):
                 recording_audio_callback=self._recording_audio,
                 wakeup_callback=self._wakeup,
                 record_end_callback=self._record_end_signal,
-                min_stt_confidence=listener_config.get("min_stt_confidence", 0.6)
+                min_stt_confidence=listener_config.get("min_stt_confidence", 0.6),
+                max_transcripts=listener_config.get("max_transcripts", 1)
             )
         return loop
 

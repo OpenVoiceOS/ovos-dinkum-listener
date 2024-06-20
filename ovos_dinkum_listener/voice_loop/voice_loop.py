@@ -118,6 +118,7 @@ class DinkumVoiceLoop(VoiceLoop):
     stt_chunks: Deque = field(default_factory=deque)
     stt_audio_bytes: bytes = bytes()
     min_stt_confidence: float = 0.6
+    max_transcripts: int = 1
     last_ww: float = -1.0
     speech_seconds_left: float = 0.0
     silence_seconds_left: float = 0.0
@@ -723,6 +724,10 @@ class DinkumVoiceLoop(VoiceLoop):
         filtered = [u for u in utts if u[1] >= self.min_stt_confidence]
         if filtered != utts:
             LOG.info(f"Ignoring low confidence STT transcriptions: {[u for u in utts if u not in filtered]}")
+
+        if len(filtered) > self.max_transcripts:
+            LOG.debug(f"selecting top {self.max_transcripts} transcriptions")
+            filtered = filtered[:self.max_transcripts]
 
         stt_context["transcriptions"] = filtered
         return filtered, stt_context
