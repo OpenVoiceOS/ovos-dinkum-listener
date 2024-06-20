@@ -1,12 +1,25 @@
 # Changelog
 
+## [0.0.3a45](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a45) (2024-06-20)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a44...0.0.3a45)
+
+**Implemented enhancements:**
+
+- feat/drop\_ww\_sounds\_from\_STT\_audio [\#126](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/126)
+
+**Fixed bugs:**
+
+- Delay between ww recognition and acknowledgement sound [\#107](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/107)
+- \[BUG\] cpu usage keeps increasing until crash [\#98](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/98)
+- fix/confirmation\_state [\#125](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/125) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.3a44](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a44) (2024-06-11)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.0.3a43...0.0.3a44)
 
 **Fixed bugs:**
 
-- \[BUG\] cpu usage keeps increasing until crash [\#98](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/98)
 - require latest OPM [\#123](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/123) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.0.3a43](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.0.3a43) (2024-06-09)
@@ -591,10 +604,6 @@
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a11...V0.0.2a12)
 
-**Closed issues:**
-
-- No start\_listening listening sound [\#12](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/12)
-
 ## [V0.0.2a11](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a11) (2023-05-04)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a10...V0.0.2a11)
@@ -619,25 +628,13 @@
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a7...V0.0.2a8)
 
-**Merged pull requests:**
-
-- Fix missing ovos-backend-client library [\#11](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/11) ([goldyfruit](https://github.com/goldyfruit))
-
 ## [V0.0.2a7](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a7) (2023-04-23)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a6...V0.0.2a7)
 
-**Implemented enhancements:**
-
-- feat/fallback\_stt [\#10](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/10) ([JarbasAl](https://github.com/JarbasAl))
-
 ## [V0.0.2a6](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a6) (2023-04-23)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/V0.0.2a5...V0.0.2a6)
-
-**Merged pull requests:**
-
-- feat/stt\_compat\_no\_more\_flac [\#9](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/9) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [V0.0.2a5](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/V0.0.2a5) (2023-04-22)
 
