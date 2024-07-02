@@ -721,7 +721,16 @@ class DinkumVoiceLoop(VoiceLoop):
             except:
                 LOG.exception("Fallback STT failed")
 
+        if not utts:
+            LOG.warning("STT transcription failed!")
+            return [], stt_context
+
         filtered = [u for u in utts if u[1] >= self.min_stt_confidence]
+        if not filtered:
+            # ensure min 1 transcript
+            filtered = [max(utts, key=lambda k: k[1])]
+            LOG.warning("STT transcription below minimum confidence level!!!")
+
         if filtered != utts:
             LOG.info(f"Ignoring low confidence STT transcriptions: {[u for u in utts if u not in filtered]}")
 
