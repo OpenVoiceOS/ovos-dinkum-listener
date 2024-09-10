@@ -9,17 +9,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
+import base64
 import json
+import subprocess
 import time
 import wave
 from enum import Enum
 from hashlib import md5
+from os.path import dirname
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from threading import Thread, RLock, Event
+from typing import List, Tuple
 
-from ovos_backend_client.api import DatasetApi
-from ovos_bus_client import Message, MessageBusClient
+import speech_recognition as sr
+from distutils.spawn import find_executable
+from ovos_bus_client import MessageBusClient
+from ovos_bus_client.message import Message
 from ovos_bus_client.session import SessionManager
 from ovos_config import Configuration
 from ovos_config.locations import get_xdg_data_save_path
@@ -29,18 +35,48 @@ from ovos_plugin_manager.utils.tts_cache import hash_sentence
 from ovos_plugin_manager.vad import OVOSVADFactory
 from ovos_plugin_manager.vad import get_vad_configs
 from ovos_plugin_manager.wakewords import get_ww_lang_configs, get_ww_supported_langs, get_ww_module_configs
-from ovos_utils.file_utils import resolve_resource_file
-from ovos_utils.log import LOG
-from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap
-from ovos_utils.sound import play_audio
+from ovos_utils.log import LOG, log_deprecation
+from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessState
 
 from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt
 from ovos_dinkum_listener.transformers import AudioTransformersService
 from ovos_dinkum_listener.voice_loop import DinkumVoiceLoop, ListeningMode, ListeningState
 from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer
+try:
+    from ovos_backend_client.api import DatasetApi
+except ImportError:
+    LOG.info("`ovos-backend-client` is not installed. Upload is disabled")
+    DatasetApi = None
+
+try:
+    from ovos_utils.sound import get_sound_duration
+except ImportError:
+
+    def get_sound_duration(*args, **kwargs):
+        raise ImportError("please install ovos-utils>=0.1.0a25")
 
 # Seconds between systemd watchdog updates
 WATCHDOG_DELAY = 0.5
+
+
+def bytes2audiodata(data):
+    recognizer = sr.Recognizer()
+    with NamedTemporaryFile() as fp:
+        fp.write(data)
+
+        if find_executable("ffmpeg"):
+            p = fp.name + "converted.wav"
+            # ensure file format
+            cmd = ["ffmpeg", "-i", fp.name, "-acodec", "pcm_s16le", "-ar",
+                   "16000", "-ac", "1", "-f", "wav", p, "-y"]
+            subprocess.call(cmd)
+        else:
+            LOG.warning("ffmpeg not found, please ensure audio is in a valid format")
+            p = fp.name
+
+        with sr.AudioFile(p) as source:
+            audio = recognizer.record(source)
+    return audio
 
 
 class ServiceState(str, Enum):
@@ -113,12 +149,12 @@ class OVOSDinkumVoiceService(Thread):
     def __init__(self, on_ready=on_ready, on_error=on_error,
                  on_stopping=on_stopping, on_alive=on_alive,
                  on_started=on_started, watchdog=lambda: None, mic=None,
-                 bus=None):
+                 bus=None, validate_source=True, *args, **kwargs):
         """
         watchdog: (callable) function to call periodically indicating
           operational status.
         """
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
         LOG.info("Starting Voice Service")
         callbacks = StatusCallbackMap(on_ready=on_ready,
@@ -128,14 +164,16 @@ class OVOSDinkumVoiceService(Thread):
                                       on_started=on_started)
         self.bus = bus
         self.service_id = "voice"
+        self.validate_source = validate_source
         self.status = ProcessStatus(self.service_id, self.bus,
                                     callback_map=callbacks)
         self._watchdog = watchdog
         self._shutdown_event = Event()
         self._stopping = False
         self.status.set_alive()
-        self._state: ServiceState = ServiceState.NOT_STARTED
         self.config = Configuration()
+        self._applied_config_hash = self._config_hash()
+        self._default_vol = 70  # for barge-in
 
         self._before_start()  # connect to bus
 
@@ -155,9 +193,27 @@ class OVOSDinkumVoiceService(Thread):
         self._load_lock = RLock()
         self._reload_event = Event()
         self._reload_event.set()
-        self._applied_config_hash = None
         listener = self.config["listener"]
         self.voice_loop = self._init_voice_loop(listener)
+
+    def _validate_message_context(self, message, native_sources=None):
+        """ used to determine if a message should be processed or ignored
+        only native sources should trigger on mycroft.mic.listen
+        """
+        if not message or not self.validate_source:
+            return True
+        destination = message.context.get("destination")
+        if destination:
+            native_sources = native_sources or \
+                             Configuration()["Audio"].get("native_sources",
+                                                          ["debug_cli", "audio"]) or []
+            if any(s in destination for s in native_sources):
+                # request from device
+                return True
+            # external request, do not handle
+            return False
+        # broadcast for everyone
+        return True
 
     def _config_hash(self):
         lang = self.config.get("lang")
@@ -199,7 +255,6 @@ class OVOSDinkumVoiceService(Thread):
         @return: Initialized VoiceLoop object
         """
         with self._load_lock:
-            self._applied_config_hash = self._config_hash()
             loop = DinkumVoiceLoop(
                 mic=self.mic,
                 hotwords=self.hotwords,
@@ -207,15 +262,15 @@ class OVOSDinkumVoiceService(Thread):
                 fallback_stt=self.fallback_stt,
                 vad=self.vad,
                 transformers=self.transformers,
-                #
+                instant_listen=listener_config.get("instant_listen", True),
                 speech_seconds=listener_config.get("speech_begin", 0.3),
                 silence_seconds=listener_config.get("silence_end", 0.7),
                 timeout_seconds=listener_config.get("recording_timeout", 10),
-                num_stt_rewind_chunks=listener_config.get(
-                    "utterance_chunks_to_rewind", 2),
-                num_hotword_keep_chunks=listener_config.get(
-                    "wakeword_chunks_to_save", 15),
-                #
+                timeout_seconds_with_silence=listener_config.get("recording_timeout_with_silence", 5),
+                recording_mode_max_silence_seconds=listener_config.get("recording_mode_max_silence_seconds", 30),
+                num_stt_rewind_chunks=listener_config.get("utterance_chunks_to_rewind", 2),
+                num_hotword_keep_chunks=listener_config.get("wakeword_chunks_to_save", 15),
+                remove_silence=listener_config.get("remove_silence", False),
                 wake_callback=self._record_begin,
                 text_callback=self._stt_text,
                 listenword_audio_callback=self._hotword_audio,
@@ -224,6 +279,10 @@ class OVOSDinkumVoiceService(Thread):
                 wakeupword_audio_callback=self._hotword_audio,
                 stt_audio_callback=self._stt_audio,
                 recording_audio_callback=self._recording_audio,
+                wakeup_callback=self._wakeup,
+                record_end_callback=self._record_end_signal,
+                min_stt_confidence=listener_config.get("min_stt_confidence", 0.6),
+                max_transcripts=listener_config.get("max_transcripts", 1)
             )
         return loop
 
@@ -235,42 +294,52 @@ class OVOSDinkumVoiceService(Thread):
 
     @property
     def state(self):
-        return self._state
+        log_deprecation("This property is deprecated, reference `status.state`",
+                        "0.1.0")
+        if self.status.state in (ProcessState.NOT_STARTED, ProcessState.ALIVE):
+            return ServiceState.NOT_STARTED
+        if self.status.state == ProcessState.STARTED:
+            return ServiceState.STARTED
+        if self.status.state == ProcessState.READY:
+            return ServiceState.RUNNING
+        if self.status.state in (ProcessState.ERROR, ProcessState.STOPPING):
+            return ServiceState.STOPPING
+        return self.status.state
 
     def run(self):
         """
         Service entry point
         """
         try:
-            self._state = ServiceState.NOT_STARTED
-            self._before_start()  # Ensure configuration and bus are initialized
+            self.status.set_alive()
             self._start()
-            self._state = ServiceState.STARTED
+            self.status.set_started()
             self._after_start()
             LOG.debug("Service started")
-
-            try:
-                self.status.set_ready()
-                LOG.info("Service ready")
-                while not self._stopping:
-                    if not self._reload_event.wait(30):
-                        raise TimeoutError("Timed out waiting for reload")
-                    self._state = ServiceState.RUNNING
-                    self.voice_loop.run()
-            except KeyboardInterrupt:
-                pass
-            except Exception as e:
-                LOG.exception("voice_loop failed")
-                self.status.set_error(str(e))
-            finally:
-                LOG.info("Service stopping")
-                self._state = ServiceState.STOPPING
-                self._shutdown()
-                self._after_stop()
-                self._state = ServiceState.NOT_STARTED
         except Exception as e:
             LOG.exception("Service failed to start")
             self.status.set_error(str(e))
+            return
+
+        try:
+            self.status.set_ready()
+            LOG.info("Service ready")
+            while not self._stopping:
+                if not self._reload_event.wait(30):
+                    raise TimeoutError("Timed out waiting for reload")
+                self.voice_loop.run()
+        except KeyboardInterrupt:
+            LOG.info("Exit via CTRL+C")
+        except Exception as e:
+            LOG.exception("voice_loop failed")
+            self.status.set_error(str(e))
+        finally:
+            LOG.info("Service stopping")
+            self.stop()
+            LOG.debug("shutdown done")
+            LOG.debug("stopped")
+            if self.status.state != ProcessState.ERROR:
+                self.status.state = ProcessState.NOT_STARTED
 
     def _before_start(self):
         """
@@ -294,6 +363,8 @@ class OVOSDinkumVoiceService(Thread):
         # Register events
         self.bus.on("mycroft.mic.mute", self._handle_mute)
         self.bus.on("mycroft.mic.unmute", self._handle_unmute)
+        self.bus.on("mycroft.mic.mute.toggle", self._handle_mute_toggle)
+
         self.bus.on("mycroft.mic.listen", self._handle_listen)
         self.bus.on('mycroft.mic.get_status', self._handle_mic_get_status)
         self.bus.on('recognizer_loop:audio_output_start', self._handle_audio_start)
@@ -302,6 +373,7 @@ class OVOSDinkumVoiceService(Thread):
 
         self.bus.on('recognizer_loop:sleep', self._handle_sleep)
         self.bus.on('recognizer_loop:wake_up', self._handle_wake_up)
+        self.bus.on('recognizer_loop:b64_audio', self._handle_b64_audio)
         self.bus.on('recognizer_loop:record_stop', self._handle_stop_recording)
         self.bus.on('recognizer_loop:state.set', self._handle_change_state)
         self.bus.on('recognizer_loop:state.get', self._handle_get_state)
@@ -311,6 +383,14 @@ class OVOSDinkumVoiceService(Thread):
         self.bus.on("opm.stt.query", self._handle_opm_stt_query)
         self.bus.on("opm.ww.query", self._handle_opm_ww_query)
         self.bus.on("opm.vad.query", self._handle_opm_vad_query)
+
+        self.bus.on("mycroft.audio.play_sound.response", self._handle_sound_played)
+
+        # tracking volume for fake barge-in
+        self.bus.on("volume.set.percent", self._handle_volume_change)
+        self.bus.on("mycroft.volume.increase", self._handle_volume_change)
+        self.bus.on("mycroft.volume.decrease", self._handle_volume_change)
+        self._query_volume()  # sync initial volume state
 
         LOG.debug("Messagebus events registered")
 
@@ -323,16 +403,11 @@ class OVOSDinkumVoiceService(Thread):
         """
         Stop the voice_loop and trigger service shutdown
         """
+        self.status.set_stopping()
         self._stopping = True
-        if not self.voice_loop.running:
-            LOG.debug("voice_loop not running, just shutdown the service")
-            self._shutdown()
-            return
-        self._shutdown_event.clear()
-        self.voice_loop.stop()
-        if not self._shutdown_event.wait(30):
-            LOG.error(f"voice_loop didn't call _shutdown")
-            self._shutdown()
+        if self.voice_loop.running:
+            self.voice_loop.stop()
+        self._shutdown()
 
     def _shutdown(self):
         """
@@ -355,15 +430,12 @@ class OVOSDinkumVoiceService(Thread):
                 self.vad.stop()
 
             self.mic.stop()
+
+            self.bus.close()
         except Exception as e:
             LOG.exception(f"Shutdown failed with: {e}")
         self._shutdown_event.set()
         self._load_lock.release()
-
-    def _after_stop(self):
-        """Shut down code called after stop()"""
-        self.status.set_stopping()
-        self.bus.close()
 
     def _connect_to_bus(self):
         """Connects to the websocket message bus"""
@@ -393,9 +465,54 @@ class OVOSDinkumVoiceService(Thread):
             except Exception:
                 LOG.exception("Unexpected error in watchdog thread")
 
+    # Fake Barge In
+    def _query_volume(self):
+        """get the default volume"""
+        response = self.bus.wait_for_response(Message("mycroft.volume.get"))
+        if response:
+            self._default_vol = int(response.data["percent"] * 100)
+
+    @property
+    def fake_barge_in(self) -> bool:
+        """lower volume during recording"""
+        return Configuration().get("listener", {}).get("fake_barge_in", False)
+
+    @property
+    def fake_barge_in_volume(self) -> int:
+        """volume to set when recording"""
+        return Configuration().get("listener", {}).get("barge_in_volume", 30)
+
+    def _handle_volume_change(self, message: Message):
+        """keep track of volume changes so we restore to the correct level"""
+        if not self.fake_barge_in or message.context.get("skill_id", "") == "dinkum-listener":
+            # ignore our own messages
+            return
+        if message.msg_type == "mycroft.volume.increase":
+            vol = int(message.data.get("percent", .1) * 100)
+            self._default_vol += vol
+        elif message.msg_type == "mycroft.volume.decrease":
+            vol = int(message.data.get("percent", -.1) * 100)
+            self._default_vol -= abs(vol)
+        else:
+            vol = int(message.data["percent"] * 100)
+            self._default_vol = vol
+        LOG.info(f"tracking user volume for after barge-in: {self._default_vol}")
+
     # callbacks
+    def _wakeup(self):
+        """ callback when voice loop exits SLEEP mode"""
+        self.bus.emit(Message("mycroft.awoken"))
+
     def _record_begin(self):
         LOG.debug("Record begin")
+        if self.fake_barge_in:
+            LOG.info(f"fake barge-in lowering volume to: {self.fake_barge_in_volume}")
+            self.bus.emit(
+                Message("mycroft.volume.set",
+                        {"percent": self.fake_barge_in_volume / 100,  # alsa plugin expects between 0-1
+                         "play_sound": False},
+                        {"skill_id": "dinkum-listener"})
+            )
         self.bus.emit(Message("recognizer_loop:record_begin"))
 
     def _save_ww(self, audio_bytes, ww_meta, save_path=None):
@@ -435,7 +552,11 @@ class OVOSDinkumVoiceService(Thread):
                                           metadata,
                                           upload_url=upload_url)
 
-        Thread(target=upload, daemon=True, args=(wav_data, metadata)).start()
+        if DatasetApi is not None:
+            Thread(target=upload, daemon=True,
+                   args=(wav_data, metadata)).start()
+        else:
+            LOG.debug("`pip install ovos-backend-client` to enable upload")
 
     @staticmethod
     def _compile_ww_context(key_phrase, ww_module):
@@ -462,7 +583,7 @@ class OVOSDinkumVoiceService(Thread):
         context = {'client_name': 'ovos_dinkum_listener',
                    'source': 'audio',  # default native audio source
                    'destination': ["skills"]}
-        stt_lang = ww_context.get("lang")
+        stt_lang = ww_context.get("stt_lang")  # per wake word lang override in mycroft.conf
         if stt_lang:
             context["lang"] = stt_lang
 
@@ -484,7 +605,8 @@ class OVOSDinkumVoiceService(Thread):
                     'utterances': [utterance],
                     "lang": stt_lang or Configuration().get("lang", "en-us")
                 }
-                self.bus.emit(Message("recognizer_loop:utterance", payload,
+                self.bus.emit(Message("recognizer_loop:utterance",
+                                      payload,
                                       context))
                 return payload
 
@@ -496,13 +618,11 @@ class OVOSDinkumVoiceService(Thread):
 
             if sound:
                 LOG.debug(f"Handling listen sound: {sound}")
-                try:
-                    sound = resolve_resource_file(sound)
-                    if sound:
-                        play_audio(sound)
-                except Exception as e:
-                    LOG.warning(e)
-
+                audio_context = dict(context)
+                audio_context["destination"] = ["audio"]
+                self.bus.emit(Message("mycroft.audio.play_sound",
+                                      {"uri": sound, "force_unmute": True},
+                                      audio_context))
             if listen:
                 msg_type = "recognizer_loop:wakeword"
                 payload["utterance"] = \
@@ -526,19 +646,27 @@ class OVOSDinkumVoiceService(Thread):
             LOG.exception("Error while saving STT audio")
         return payload
 
-    def _stt_text(self, text: str, stt_context: dict):
-        if isinstance(text, list):
-            text = text[0]
-
+    def _record_end_signal(self):
         LOG.debug("Record end")
-        self.bus.emit(Message("recognizer_loop:record_end",
-                              context=stt_context))
+        if self.fake_barge_in:
+            LOG.info(f"fake barge-in restoring volume to: {self._default_vol}")
+            self.bus.emit(
+                Message("mycroft.volume.set",
+                        {"percent": self._default_vol / 100,  # alsa plugin expects between 0-1
+                         "play_sound": False},
+                        {"skill_id": "dinkum-listener"})
+            )
+        self.bus.emit(Message("recognizer_loop:record_end"))
 
+    def _stt_text(self, transcripts: List[Tuple[str, float]],
+                  stt_context: dict):
         # Report utterance to intent service
-        if text:
-            LOG.debug(f"STT: {text}")
-            payload = stt_context
-            payload["utterances"] = [text]
+        if transcripts:
+            utts = [u[0] for u in transcripts]  # filter confidence
+            lang = stt_context.get("lang") or Configuration().get("lang", "en-us")
+            LOG.debug(f"STT: {utts}")
+            payload = {"utterances": utts,
+                       "lang": lang}
             self.bus.emit(Message("recognizer_loop:utterance", payload, stt_context))
         elif self.voice_loop.listen_mode == ListeningMode.CONTINUOUS:
             LOG.debug("ignoring transcription failure")
@@ -575,13 +703,13 @@ class OVOSDinkumVoiceService(Thread):
         upload_url = Configuration().get("listener", {}).get('stt_upload', {}).get('url')
 
         def upload(wav_data, metadata):
-            # TODO - not yet merged in backend-client
-            try:
-                DatasetApi().upload_stt(wav_data, metadata, upload_url=upload_url)
-            except:
-                pass
+            DatasetApi().upload_stt(wav_data, metadata, upload_url=upload_url)
 
-        Thread(target=upload, daemon=True, args=(wav_data, metadata)).start()
+        if DatasetApi:
+            Thread(target=upload, daemon=True,
+                   args=(wav_data, metadata)).start()
+        else:
+            LOG.debug("`pip install ovos-backend-client` to enable upload")
 
     def _stt_audio(self, audio_bytes: bytes, stt_context: dict):
         try:
@@ -627,52 +755,70 @@ class OVOSDinkumVoiceService(Thread):
         return stt_context
 
     # mic bus api
-    def _handle_mute(self, _message: Message):
+    def _handle_mute(self, message: Message):
         self.voice_loop.is_muted = True
 
-    def _handle_unmute(self, _message: Message):
+    def _handle_unmute(self, message: Message):
         self.voice_loop.is_muted = False
 
+    def _handle_mute_toggle(self, message: Message):
+        self.voice_loop.is_muted = not self.voice_loop.is_muted
+
     def _handle_listen(self, message: Message):
-        instant_listen = self.config.get('listener', {}).get('instant_listen')
+        if not self._validate_message_context(message) or not self.voice_loop.running:
+            # ignore mycroft.mic.listen, it is targeted to an external client
+            return
+        if self.voice_loop.wake_callback is not None:
+            # Emit `recognizer_loop:record_begin`
+            self.voice_loop.wake_callback()
+        self.voice_loop.reset_speech_timer()
+        self.voice_loop.stt_audio_bytes = bytes()
+        self.voice_loop.stt.stream_start()
+        if self.voice_loop.fallback_stt is not None:
+            self.voice_loop.fallback_stt.stream_start()
+
         if self.config.get('confirm_listening'):
             sound = self.config.get('sounds', {}).get('start_listening')
-            sound = resolve_resource_file(sound)
             if sound:
-                play = play_audio(sound)
-                if not instant_listen:
-                    play.wait(10)
-            else:
-                LOG.error(f"Requested sound not available: {sound}")
-        self.voice_loop.skip_next_wake = True
+                self.bus.emit(message.forward("mycroft.audio.play_sound", {"uri": sound}))
+                self.voice_loop.state = ListeningState.CONFIRMATION
+                try:
+                    if sound.startswith("snd/"):
+                        dur = get_sound_duration(sound, base_dir=f"{dirname(__file__)}/res")
+                    else:
+                        dur = get_sound_duration(sound)
+                    LOG.debug(f"{sound} duration: {dur} seconds")
+                    self.voice_loop.confirmation_seconds_left = dur
+                except:
+                    self.voice_loop.confirmation_seconds_left = self.voice_loop.confirmation_seconds
+        else:
+            self.voice_loop.state = ListeningState.BEFORE_COMMAND
 
-    def _handle_mic_get_status(self, event):
+    def _handle_mic_get_status(self, message: Message):
         """Query microphone mute status."""
         data = {'muted': self.voice_loop.is_muted}
-        self.bus.emit(event.response(data))
+        self.bus.emit(message.response(data))
 
-    def _handle_audio_start(self, event):
-        """Mute voice loop."""
+    def _handle_audio_start(self, message: Message):
+        """audio output started"""
         if self.config.get("listener").get("mute_during_output"):
             self.voice_loop.is_muted = True
 
-    def _handle_audio_end(self, event):
-        """Request unmute, if more sources have requested the mic to be muted
-        it will remain muted.
-        """
+    def _handle_audio_end(self, message: Message):
+        """audio output ended"""
         if self.config.get("listener").get("mute_during_output"):
             self.voice_loop.is_muted = False  # restore
 
-    def _handle_stop(self, event):
+    def _handle_stop(self, message: Message):
         """Handler for mycroft.stop, i.e. button press."""
         self.voice_loop.is_muted = False  # restore
 
     # state events
-    def _handle_change_state(self, event):
+    def _handle_change_state(self, message: Message):
         """Set listening state."""
         # TODO - unify this api, should match ovos-listener exactly
-        state = event.data.get("state")
-        mode = event.data.get("mode")
+        state = message.data.get("state")
+        mode = message.data.get("mode")
 
         # NOTE: the enums are also strings and will match
         if state:
@@ -681,7 +827,7 @@ class OVOSDinkumVoiceService(Thread):
             elif state == ListeningState.DETECT_WAKEWORD or state == ListeningState.WAITING_CMD:  # "continuous"
                 self.voice_loop.reset_state()
             elif state == ListeningState.RECORDING:  # "recording"
-                self.voice_loop.start_recording(event.data.get("recording_name"))
+                self.voice_loop.start_recording(message.data.get("recording_name"))
             else:
                 LOG.error(f"Invalid listening state: {state}")
 
@@ -697,33 +843,67 @@ class OVOSDinkumVoiceService(Thread):
             else:
                 LOG.error(f"Invalid listen mode: {mode}")
 
-        self._handle_get_state(event)
+        self._handle_get_state(message)
 
-    def _handle_get_state(self, event):
+    def _handle_get_state(self, message: Message):
         """Query listening state"""
         # TODO - unify this api, should match ovos-listener exactly
         data = {'mode': self.voice_loop.listen_mode,
                 "state": self.voice_loop.state}
-        self.bus.emit(event.reply("recognizer_loop:state", data))
+        self.bus.emit(message.reply("recognizer_loop:state", data))
 
-    def _handle_stop_recording(self, event):
+    def _handle_stop_recording(self, message: Message):
         """Stop current recording session """
         self.voice_loop.stop_recording()
+        sound = self.config.get('sounds', {}).get('end_listening')
+        if sound:
+            self.bus.emit(message.forward("mycroft.audio.play_sound", {"uri": sound}))
 
-    def _handle_extend_listening(self, event):
+    def _handle_extend_listening(self, message: Message):
         """ when a skill is activated (converse) reset the timeout until wakeword is needed again
         only used when in hybrid listening mode """
         if self.voice_loop.listen_mode == ListeningMode.HYBRID:
             self.voice_loop.last_ww = time.time()
 
-    def _handle_sleep(self, event):
+    def _handle_sleep(self, message: Message):
         """Put the voice loop to sleep."""
         self.voice_loop.go_to_sleep()
 
-    def _handle_wake_up(self, event):
+    def _handle_wake_up(self, message: Message):
         """Wake up the voice loop."""
+        LOG.debug("SLEEP - wake up triggered from bus event")
         self.voice_loop.wakeup()
-        self.bus.emit(Message("mycroft.awoken"))
+
+    def _handle_sound_played(self, message: Message):
+        """Handle response message from audio service."""
+        if not self._validate_message_context(message) or not self.voice_loop.running:
+            # ignore this sound, it is targeted to an external client
+            return
+        if self.voice_loop.state == ListeningState.CONFIRMATION:
+            self.voice_loop.state = ListeningState.BEFORE_COMMAND
+
+    def _handle_b64_audio(self, message: Message):
+        """ transcribe base64 encoded audio """
+        b64audio = message.data["audio"]
+        lang = message.data.get("lang", self.voice_loop.stt.lang)
+
+        wav_data = base64.b64decode(b64audio)
+
+        audio = bytes2audiodata(wav_data)
+
+        utterances = self.voice_loop.stt.transcribe(audio, lang)
+        filtered = [u for u in utterances if u[1] >= self.voice_loop.min_stt_confidence]
+        if filtered != utterances:
+            LOG.info(f"Ignoring low confidence STT transcriptions: {[u for u in utterances if u not in filtered]}")
+
+        if filtered:
+            self.bus.emit(message.forward(
+                "recognizer_loop:utterance",
+                {"utterances": [u[0] for u in filtered],
+                 "lang": lang}))
+        else:
+            self.bus.emit(message.forward(
+                "recognizer_loop:speech.recognition.unknown"))
 
     # OPM bus api
     def _handle_get_languages_stt(self, message):
@@ -922,7 +1102,7 @@ class OVOSDinkumVoiceService(Thread):
                 self.voice_loop.start()
                 self._reload_event.set()
 
-            self._applied_config_hash = self._config_hash()
+            self._applied_config_hash = new_hash
             self.status.set_ready()
             LOG.info("Reload Completed")
         except Exception as e:

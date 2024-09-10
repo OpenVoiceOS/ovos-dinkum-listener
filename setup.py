@@ -64,16 +64,27 @@ def get_version():
     return version
 
 
+def get_description():
+    with open(os.path.join(BASEDIR, "README.md"), "r") as f:
+        long_description = f.read()
+    return long_description
+
+
 setup(
     name='ovos-dinkum-listener',
     version=get_version(),
     license='Apache-2.0',
     url='https://github.com/OpenVoiceOS/ovos-dinkum-listener',
     description='ovos-core listener daemon client',
+    long_description=get_description(),
+    long_description_content_type="text/markdown",
     packages=['ovos_dinkum_listener'],
     package_data={'': package_files('ovos_dinkum_listener')},
     include_package_data=True,
     install_requires=required('requirements/requirements.txt'),
+    extras_require={
+        "extras": required("requirements/extras.txt")
+    },
     classifiers=[
         "Development Status :: 4 - Beta",
         "Programming Language :: Python :: 3",

@@ -1,14 +1,23 @@
 # OpenVoiceOS Dinkum Listener 
 
-Dinkum Listener made standalone, the voice loop is now a much more responsive state machine
-
-the usual configuration files are loaded, some new params are exposed under the 
-`"listener"` section but not yet documented (check the code...)
+Documentation can be found in [the technical manual](https://openvoiceos.github.io/ovos-technical-manual/speech_service/)
 
 ## Install
 
-using [ovos-vad-plugin-silero](https://github.com/OpenVoiceOS/ovos-vad-plugin-silero) 
-is strongly recommended instead of the default webrtcvad plugin
+`pip install ovos-dinkum-listener[extras]` to install this package and the default
+plugins. Note that by default, either `tensorflow` or `tflite_runtime` will need
+to be installed separately for wakeword detection.
+
+> If unable to install tflite_runtime in your platform, you can find wheels
+> here https://whl.smartgic.io/. eg, for pyhon 3.11 in x86
+> `pip install https://whl.smartgic.io/tflite_runtime-2.13.0-cp311-cp311-linux_x86_64.whl`
+
+Without `extras`, wakeword and STT audio upload will be disabled unless you install 
+[`ovos-backend-client`](https://github.com/OpenVoiceOS/ovos-backend-client) separately. You will also need to manually install,
+and possibly configure STT, WW, and VAD modules as described below.
+
+Using [ovos-vad-plugin-silero](https://github.com/OpenVoiceOS/ovos-vad-plugin-silero) 
+is strongly recommended
 
 ## Configuration
 
@@ -16,6 +25,7 @@ you can set the Wakeword, VAD, STT and Microphone plugins
 
 eg, to run under MacOS you should use https://github.com/OpenVoiceOS/ovos-microphone-plugin-sounddevice
 
+non exhaustive list of config options
 ```
 {
   "stt": {
@@ -33,24 +43,23 @@ eg, to run under MacOS you should use https://github.com/OpenVoiceOS/ovos-microp
       "module": "ovos-microphone-plugin-alsa"
     },
     VAD": {
-     // Seconds of speech before voice command has begun
-     "speech_seconds": 0.1,
-     // Seconds of silence before a voice command has finished
-     "silence_seconds": 0.5,
-     // Seconds of audio to keep before voice command has begun
-     "before_seconds": 0.5,
-     // Minimum length of voice command (seconds)
-     // NOTE: max_seconds uses recording_timeout listener setting
-     "min_seconds": 1,
      // recommended plugin: "ovos-vad-plugin-silero"
-     "module": "ovos-vad-plugin-webrtcvad",
+     "module": "ovos-vad-plugin-silero",
      "ovos-vad-plugin-silero": {"threshold": 0.2},
      "ovos-vad-plugin-webrtcvad": {"vad_mode": 3}
     },
-    // Settings used by microphone to set recording timeout
+    // Seconds of speech before voice command has begun
+    "speech_begin": 0.1,
+    // Seconds of silence before a voice command has finished
+    "silence_end": 0.5,
+    // Settings used by microphone to set recording timeout with and without speech detected
     "recording_timeout": 10.0,
+    // Settings used by microphone to set recording timeout without speech detected.
     "recording_timeout_with_silence": 3.0,
-
+    // max time allowed without user speaking before exiting RECORDING mode
+    "recording_mode_max_silence_seconds": 30.0,
+    // Setting to remove all silence/noise from start and end of recorded speech (only non-streaming)
+    "remove_silence": true,
     // continuous listen is an experimental setting, it removes the need for
     // wake words and uses VAD only, a streaming STT is strongly recommended
     // NOTE: depending on hardware this may cause mycroft to hear its own TTS responses as questions
@@ -66,90 +75,47 @@ eg, to run under MacOS you should use https://github.com/OpenVoiceOS/ovos-microp
 }
 ```
 
+## Tips and tricks
 
-## mycroft-dinkum vs ovos-dinkum-listener
+### Saving Transcriptions
 
-- release 0.0.0 is the extracted dinkum listener, plugins are hardcoded options
-- release 0.0.1 adds OPM support
-- release 0.1.0 adds full feature parity with ovos-listener and has very little dinkum left
+You can enable saving of recordings to file, this should be your first step to diagnose problems, is the audio inteligible? is it being cropped? too noisy? low volume?
 
-ovos exclusive features:
+> set `"save_utterances": true` in your [listener config](https://github.com/OpenVoiceOS/ovos-config/blob/V0.0.13a19/ovos_config/mycroft.conf#L436), recordings will be saved to `~/.local/share/mycroft/listener/utterances`
 
-- fallback STT
-- non-streaming STT support
-- compatible with all existing wake-word/STT plugins
-- continuous listening  (no wakeword, VAD only)
-- hybrid listening  (no wakeword for follow up commands)
-- multiple wakewords
-   - assign a STT lang per wakeword (multilingual support)
-- hotword types (perform actions other than listen)
-- sleep mode (no stt -> no accidental activations)
-- recording mode (save speech to file instead of STT)
-- OPM bus api (query available plugins)
-- sample upload (DatasetApi ovos-backend-client)
-- XDG path standards for recorded audio data
-- [neon-transformers](https://github.com/NeonGeckoCom/neon-transformers) support
+If the recorded audio looks good to you, maybe you need to use a different STT plugin, maybe the one you are using does not like your microphone, or just isn't very good for your language
 
-## How does it work
+### Wrong Transcriptions
 
-There are 3 modes to run dinkum, wakeword, hybrid, of continuous (VAD only)
+If you consistently get specific words or utterances transcribed wrong, you can remedy around this to some extent by using the [ovos-utterance-corrections-plugin](https://github.com/OpenVoiceOS/ovos-utterance-corrections-plugin)
 
-Additionally here are 2 temporary modes that can be triggered via bus events / companion skills
+> You can define replacements at word level `~/.local/share/mycroft/word_corrections.json`
 
-### Wake Word mode
-![imagem](https://github.com/OpenVoiceOS/ovos-dinkum-listener/assets/33701864/c55388dc-a7fb-4857-9c35-f4a4223c4145)
-
-### Continuous mode
-![imagem](https://github.com/OpenVoiceOS/ovos-dinkum-listener/assets/33701864/c8820161-9cb8-433f-9380-6d07965c7fa5)
-
-### Hybrid mode
-![imagem](https://github.com/OpenVoiceOS/ovos-dinkum-listener/assets/33701864/b9012663-4f00-47a9-bac4-8b08392da12c)
-
-### Sleep mode
-Can be used via [Naptime skill](https://github.com/OpenVoiceOS/skill-ovos-naptime)
-![imagem](https://github.com/OpenVoiceOS/ovos-dinkum-listener/assets/33701864/24835210-2116-4080-8c2b-fc18eecd923a)
-
-### Recording mode
-Can be used via [Recording skill](https://github.com/NeonGeckoCom/skill-audio-recording)
-![imagem](https://github.com/OpenVoiceOS/ovos-dinkum-listener/assets/33701864/0337b499-3175-4031-a83f-eda352d2197f)
-
-## Usage
-
+for example whisper STT often gets artist names wrong, this allows you to correct them
+```json
+{
+    "Jimmy Hendricks": "Jimi Hendrix",
+    "Eric Klapptern": "Eric Clapton",
+    "Eric Klappton": "Eric Clapton"
+}
 ```
-/home/miro/.venvs/ovos-core/bin/python /home/miro/PycharmProjects/mycroft-dinkum-listener/ovos_dinkum_listener/__main__.py 
-2023-04-23 00:57:58.713 - OVOS - ovos_config.models:load_local:105 - DEBUG - Configuration /home/miro/PycharmProjects/ovos-core/mycroft/configuration/mycroft.conf loaded
-2023-04-23 00:57:58.753 - OVOS - ovos_config.models:load_local:111 - DEBUG - Configuration '/etc/mycroft/mycroft.conf' not defined, skipping
-2023-04-23 00:57:58.793 - OVOS - ovos_config.models:load_local:111 - DEBUG - Configuration '/home/miro/.config/mycroft/web_cache.json' not defined, skipping
-2023-04-23 00:57:58.834 - OVOS - ovos_config.models:load_local:111 - DEBUG - Configuration '/home/miro/.config/mycroft/mycroft.conf' not defined, skipping
-2023-04-23 00:57:58.872 - OVOS - ovos_config.models:load_local:111 - DEBUG - Configuration '/etc/xdg/mycroft/mycroft.conf' not defined, skipping
-2023-04-23 00:57:58.919 - OVOS - ovos_config.models:load_local:111 - DEBUG - Configuration '/home/miro/.config/kdedefaults/mycroft/mycroft.conf' not defined, skipping
-2023-04-23 00:57:58.968 - OVOS - ovos_config.models:load_local:111 - DEBUG - Configuration '/home/miro/.mycroft/mycroft.conf' not defined, skipping
-2023-04-23 00:57:59.023 - OVOS - ovos_utils.configuration:get_xdg_config_save_path:141 - WARNING - configuration moved to the `ovos_config` package. This submodule will be removed in ovos_utils 0.1.0
-2023-04-23 00:57:59.042 - OVOS - ovos_utils.configuration:get_xdg_base:76 - WARNING - configuration moved to the `ovos_config` package. This submodule will be removed in ovos_utils 0.1.0
-2023-04-23 00:57:59.062 - OVOS - __main__:before_start:141 - INFO - Starting service...
-2023-04-23 00:57:59.062 - OVOS - ovos_bus_client.conf:load_message_bus_config:19 - INFO - Loading message bus configs
-2023-04-23 00:57:59.065 - OVOS - ovos_bus_client.client.client:on_open:85 - INFO - Connected
-2023-04-23 00:57:59.066 - OVOS - ovos_bus_client.session:reset_default_session:171 - INFO - New Default Session Start: f1ec40cd-a5b5-40aa-ab6c-2a9d90a77d88
-2023-04-23 00:57:59.066 - OVOS - __main__:_connect_to_bus:261 - INFO - Connected to Mycroft Core message bus
-2023-04-23 00:57:59.070 - OVOS - ovos_dinkum_listener.voice_loop.microphone:_run:91 - DEBUG - Opening microphone (device=default, rate=16000, width=2, channels=1)
-2023-04-23 00:57:59.159 - OVOS - ovos_dinkum_listener.voice_loop.hotwords:load_hotword_engines:64 - INFO - creating hotword engines
-2023-04-23 00:57:59.160 - OVOS - ovos_plugin_manager.wakewords:load_module:110 - INFO - Loading "hey_mycroft" wake word via ovos-ww-plugin-precise-lite
-2023-04-23 00:57:59.388057: I tensorflow/core/util/port.cc:110] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
-2023-04-23 00:57:59.410033: I tensorflow/tsl/cuda/cudart_stub.cc:28] Could not find cuda drivers on your machine, GPU will not be used.
-2023-04-23 00:57:59.516648: I tensorflow/tsl/cuda/cudart_stub.cc:28] Could not find cuda drivers on your machine, GPU will not be used.
-2023-04-23 00:57:59.517355: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
-To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2023-04-23 00:58:00.110092: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
-2023-04-23 00:58:00.855 - OVOS - ovos_plugin_manager.wakewords:load_module:117 - INFO - Loaded the Wake Word plugin ovos-ww-plugin-precise-lite
-2023-04-23 00:58:00.862 - OVOS - ovos_plugin_manager.wakewords:load_module:110 - INFO - Loading "wake_up" wake word via ovos-ww-plugin-pocketsphinx
-2023-04-23 00:58:00.870 - OVOS - ovos_plugin_manager.wakewords:load_module:117 - INFO - Loaded the Wake Word plugin ovos-ww-plugin-pocketsphinx
-INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
-2023-04-23 00:58:00.934 - OVOS - ovos_dinkum_listener.plugins:load_stt_module:61 - DEBUG - Using FakeStreamingSTT wrapper
-2023-04-23 00:58:27.211 - OVOS - __main__:_record_begin:283 - DEBUG - Record begin
-2023-04-23 00:58:29.892 - OVOS - ovos_dinkum_listener.voice_loop.voice_loop:_after_cmd:431 - DEBUG - transformers metadata: {'client_name': 'ovos_dinkum_listener', 'source': 'audio', 'destination': ['skills']}
-2023-04-23 00:58:30.089 - OVOS - __main__:_stt_text:408 - DEBUG - Record end
-2023-04-23 00:58:30.091 - OVOS - __main__:_stt_text:420 - DEBUG - STT: thank you
-```
+
+### Silence Removal
+
+By default OVOS applies VAD (Voice Activity Detection) to crop silence from the audio sent to STT, this helps in performance and in accuracy (reduces hallucinations in plugins like FasterWhisper)
+
+Depending on your microphone/VAD plugin, this might be removing too much audio
+
+> set `"remove_silence": false` in your [listener config](https://github.com/OpenVoiceOS/ovos-config/blob/V0.0.13a19/ovos_config/mycroft.conf#L452), this will send the full audio recording to STT
+
+### Listen Sound
+
+does your listen sound contain speech? some users replace the "ding" sound with words such as "yes?"
+
+In this case the listen sound will be sent to STT and might negatively affect the transcription
+
+> set `"instant_listen": false` in your [listener config](https://github.com/OpenVoiceOS/ovos-config/blob/V0.0.13a19/ovos_config/mycroft.conf#L519), this will drop the listen sound audio from the STT audio buffer. You will need to wait for the listen sound to finish before speaking your command in this case
+
 
 ## Credits
 

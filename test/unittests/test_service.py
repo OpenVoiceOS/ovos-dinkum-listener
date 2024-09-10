@@ -8,6 +8,7 @@ from time import sleep
 from unittest.mock import Mock, patch
 
 from ovos_utils.messagebus import FakeBus
+from ovos_bus_client.message import Message
 from ovos_utils.process_utils import ProcessState
 
 
@@ -132,13 +133,11 @@ class TestDinkumVoiceService(unittest.TestCase):
     def test_service_run(self):
         self.assertIsNotNone(self.service)
         real_shutdown = self.service._shutdown
-        real_after_stop = self.service._after_stop
 
         def _shutdown():
             self.service._shutdown_event.set()
 
         self.service._shutdown = Mock(side_effect=_shutdown)
-        self.service._after_stop = Mock()
         self.service.voice_loop._is_running = True
 
         def _run_loop():
@@ -182,12 +181,9 @@ class TestDinkumVoiceService(unittest.TestCase):
         # Stop loop
         self.service.stop()
         self.service.voice_loop.stop.assert_called_once()
-        self.assertEqual(self.service.state, ServiceState.NOT_STARTED)
+        self.assertEqual(self.service.state, ServiceState.STOPPING)
         self.service._shutdown.assert_called_once()
-        self.service._after_stop.assert_called_once()
-
         self.service._shutdown = real_shutdown
-        self.service._after_stop = real_after_stop
 
     def test_service_stop(self):
         self.assertIsNotNone(self.service)
@@ -197,7 +193,7 @@ class TestDinkumVoiceService(unittest.TestCase):
         self.service.fallback_stt.shutdown = Mock()
         self.service.hotwords.shutdown = Mock()
         self.service.vad.stop = Mock()
-        self.service.voice_loop.stop = Mock(side_effect=self.service._shutdown)
+        self.service.voice_loop.stop = Mock()
 
         self.service.stop()
         self.service.voice_loop.stop.assert_called_once()
@@ -285,9 +281,35 @@ class TestDinkumVoiceService(unittest.TestCase):
         self.assertFalse(self.service.voice_loop.is_muted)
 
     def test_handle_listen(self):
-        self.service.voice_loop.skip_next_wake = False
-        self.service._handle_listen(None)
-        self.assertTrue(self.service.voice_loop.skip_next_wake)
+        from ovos_dinkum_listener.voice_loop import ListeningState
+        orig_reset = self.service.voice_loop.reset_speech_timer
+        self.service.voice_loop.stt.stream_start = Mock()
+        self.service.voice_loop.reset_speech_timer = Mock()
+        self.service.voice_loop.confirmation_event = Event()
+
+        self.service._handle_listen(Message(""))
+        self.assertEqual(self.service.voice_loop.confirmation_event.is_set(), False)
+        self.service.voice_loop.reset_speech_timer.assert_called_once()
+        self.service.voice_loop.reset_speech_timer.reset_mock()
+        self.assertEqual(self.service.config["confirm_listening"], True)
+        self.assertEqual(self.service.voice_loop.stt_audio_bytes, bytes())
+        self.service.voice_loop.stt.stream_start.assert_called_once()
+        self.service.voice_loop.stt.stream_start.reset_mock()
+        self.assertEqual(self.service.voice_loop.state, ListeningState.CONFIRMATION)
+
+        self.service.voice_loop.state = ListeningState.DETECT_WAKEWORD
+        self.service.config["confirm_listening"] = False
+        
+        self.service._handle_listen(Message(""))
+        self.assertEqual(self.service.config["confirm_listening"], False)
+        self.service.voice_loop.reset_speech_timer.assert_called_once()
+        self.service.voice_loop.reset_speech_timer.reset_mock()
+        self.assertEqual(self.service.voice_loop.stt_audio_bytes, bytes())
+        self.service.voice_loop.stt.stream_start.assert_called_once()
+        self.service.voice_loop.stt.stream_start.reset_mock()
+        self.assertEqual(self.service.voice_loop.state, ListeningState.BEFORE_COMMAND)    
+
+        self.service.voice_loop.reset_speech_timer = orig_reset
 
     def test_handle_mic_get_status(self):
         # TODO

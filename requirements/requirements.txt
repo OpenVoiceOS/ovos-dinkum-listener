@@ -1,7 +1,5 @@
-ovos-backend-client~=0.0.6
-ovos-plugin-manager~=0.0.23
-ovos-microphone-plugin-alsa~=0.0.0
-ovos-utils~=0.0.33
-ovos-config~=0.0.10
-ovos-bus-client~=0.0.3
+ovos-plugin-manager<0.1.0, >=0.0.26a28
+ovos-utils>=0.0.38
+ovos-config<0.1.0, >=0.0.12
+ovos-bus-client<0.1.0, >=0.0.7
 SpeechRecognition~=3.9
