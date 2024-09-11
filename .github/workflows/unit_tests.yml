@@ -44,7 +44,7 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt install python3-dev swig libssl-dev libpulse-dev libfann-dev portaudio19-dev python3-pyaudio
+          sudo apt install python3-dev swig libssl-dev libpulse-dev portaudio19-dev
           python -m pip install build wheel
       - name: Install core repo
         run: |
