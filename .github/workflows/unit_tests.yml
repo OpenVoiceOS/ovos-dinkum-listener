@@ -48,7 +48,7 @@ jobs:
           python -m pip install build wheel
       - name: Install core repo
         run: |
-          pip install .[extras]
+          pip install .[extras,linux,onnx]
       - name: Install test dependencies
         run: |
           pip install -r requirements/tests.txt
