@@ -1,0 +1,7 @@
+onnxruntime
+
+# VAD plugins
+ovos-vad-plugin-silero>=0.0.1,<1.0.0
+
+# Wake Word plugins
+ovos-ww-plugin-openwakeword>=0.0.1,<1.0.0

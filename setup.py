@@ -83,7 +83,9 @@ setup(
     include_package_data=True,
     install_requires=required('requirements/requirements.txt'),
     extras_require={
-        "extras": required("requirements/extras.txt")
+        "extras": required("requirements/extras.txt"),
+        "linux": required("requirements/linux.txt"),
+        "onnx": required("requirements/onnx.txt")
     },
     classifiers=[
         "Development Status :: 4 - Beta",
