@@ -35,4 +35,4 @@ jobs:
           python setup.py bdist_wheel
       - name: Install package
         run: |
-          pip install .
+          pip install .[extras,linux,onnx]
