@@ -29,7 +29,7 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt install python3-dev swig libssl-dev libasound2-dev
+          sudo apt install python3-dev swig libssl-dev libasound2-dev libpulse-dev portaudio19-dev
       - name: Build Distribution Packages
         run: |
           python setup.py bdist_wheel
