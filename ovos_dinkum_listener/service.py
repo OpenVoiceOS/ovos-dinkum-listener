@@ -1192,7 +1192,7 @@ class _TemplateFilenameFormatter:
             return func
         return _decor
 
-    def _build_fmtkw(self, **kwargs):
+    def _build_fmtkw(self, template, **kwargs):
         """
         Builds the dictionary that can be passed to :func:`str.format`.
         """
@@ -1201,7 +1201,7 @@ class _TemplateFilenameFormatter:
 
         # Build the information requested for the file string.
         formatter = string.Formatter()
-        fmtiter = formatter.parse(self.filename_template)
+        fmtiter = formatter.parse(template)
         fmtkw = {}
         missing = []
         for fmttup in fmtiter:
@@ -1227,4 +1227,5 @@ class _TemplateFilenameFormatter:
         Substitutes known keys with dynamically constructed values
         """
         fmtkw = self._build_fmtkw(**kwargs)
-        return template.format(**fmtkw)
+        text = template.format(**fmtkw)
+        return text
