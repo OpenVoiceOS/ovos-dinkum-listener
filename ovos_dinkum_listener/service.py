@@ -683,10 +683,11 @@ class OVOSDinkumVoiceService(Thread):
 
         listener = self.config.get("listener")
         # filename_template = listener.get("filename_template", "{date}-{uuid}")
-        filename_template = listener.get("filename_template", "{hash}")
-        builder = _TemplateFilenameBuilder(filename_template)
+        filename_template = listener.get("filename_template", "utterance_{date}_{uuid}")
 
-        @builder.register('hash')
+        formatter = _TemplateFilenameFormatter()
+
+        @formatter.register('hash')
         def transcription_hash():
             # Build a hash of the transcription
             try:
@@ -697,7 +698,9 @@ class OVOSDinkumVoiceService(Thread):
                 concat_text = '_'.join([t[0] for t in stt_meta.get('transcriptions')])
                 return hash_sentence(concat_text)
 
-        filename = builder.build()
+        filename = formatter.format(filename_template)
+        LOG.info(f"Build filename={filename}")
+        LOG.info(f"Build filename_template={filename_template}")
 
         mic = self.voice_loop.mic
         wav_path = stt_audio_dir / f"{filename}.wav"
@@ -1129,50 +1132,49 @@ class OVOSDinkumVoiceService(Thread):
             self._load_lock.release()
 
 
-class _TemplateFilenameBuilder:
+class _TemplateFilenameFormatter:
     """
-    Helper to build filenames based on a customizable user template.
+    Helper to dynamically filename parts based on a user-specified template.
 
-    Each instance of this builder can be customized to support different
-    keys, but some common ones are builtin like "uuid", "date", and "utcdate"
+    Each instance of this builder can be customized to support different keys,
+    but some common ones are builtin like "uuid", "date", and "utcdate"
 
     Example:
         >>> # Simple date and uuid keys are available by default.
-        >>> filename_template = 'my_filename_{date:%Y-%M-%D}_{uuid}'
-        >>> self = _TemplateFilenameBuilder(filename_template)
-        >>> name = self.build()
+        >>> template = 'my_filename_{date:%Y-%M-%D}_{uuid}'
+        >>> self = _TemplateFilenameFormatter()
+        >>> name = self.format(template)
         >>> # xdoctest: +IGNORE_WANT
         >>> print(f'name={name}')
         name=my_filename_2024-11-09/14/24_1b39fdb7-7a82-4e04-a689-258bf0a9cd7a
 
     Example:
         >>> # You can define how to handle custom keys
-        >>> filename_template = '{mykey}.bar.{date:%Y-%z}-{uuid}'
-        >>> self = _TemplateFilenameBuilder(filename_template)
+        >>> template = '{mykey}.bar.{date:%Y-%z}-{uuid}'
+        >>> self = _TemplateFilenameFormatter()
         >>> @self.register('mykey')
         >>> def custom_func():
         ...     return 'myval'
-        >>> name = self.build()
+        >>> name = self.format(template)
         >>> # xdoctest: +IGNORE_WANT
         >>> print(f'name={name}')
         name=myval.bar.2024--765176fa-7c80-431c-b43d-2ad14a58a249
 
     Example:
         >>> # should raise an error if template contains an unknown field
-        >>> filename_template = '{doesnotexist}.bar.{date:%Y-%z}-{uuid}'
-        >>> self = _TemplateFilenameBuilder(filename_template)
+        >>> template = '{doesnotexist}.bar.{date:%Y-%z}-{uuid}'
+        >>> self = _TemplateFilenameFormatter()
         >>> import pytest
         >>> with pytest.raises(KeyError) as ex:
-        ...     name = self.build()
+        ...     name = self.format(template)
         >>> # xdoctest: +IGNORE_WANT
         >>> print(str(ex.value))
         "Template string contained unsupported keys ['doesnotexist']. Supported keys are: ['uuid', 'date', 'utcdate']"
 
     """
-    def __init__(self, filename_template):
+    def __init__(self):
         import uuid
         import datetime as datetime_mod
-        self.filename_template = filename_template
         # mapping of key to functions that build content for those keys
         self.builders = {
             'uuid': uuid.uuid4,
@@ -1181,20 +1183,21 @@ class _TemplateFilenameBuilder:
         }
 
     def register(self, key):
+        """
+        Decorator which will register a function called when the template
+        string contains ``key``.
+        """
         def _decor(func):
             self.builders[key] = func
             return func
         return _decor
 
-    def _build_fmtkw(self, extra_builders=None):
+    def _build_fmtkw(self, **kwargs):
         """
         Builds the dictionary that can be passed to :func:`str.format`.
         """
         import string
-        if extra_builders is None:
-            extra_builders = {}
-
-        builders = self.builders | extra_builders
+        builders = self.builders | kwargs
 
         # Build the information requested for the file string.
         formatter = string.Formatter()
@@ -1219,6 +1222,9 @@ class _TemplateFilenameBuilder:
             )
         return fmtkw
 
-    def build(self, extra_builders=None):
-        fmtkw = self._build_fmtkw(extra_builders)
-        return self.filename_template.format(**fmtkw)
+    def format(self, template, **kwargs):
+        """
+        Substitutes known keys with dynamically constructed values
+        """
+        fmtkw = self._build_fmtkw(**kwargs)
+        return template.format(**fmtkw)
