@@ -1226,6 +1226,6 @@ class _TemplateFilenameFormatter:
         """
         Substitutes known keys with dynamically constructed values
         """
-        fmtkw = self._build_fmtkw(**kwargs)
+        fmtkw = self._build_fmtkw(template, **kwargs)
         text = template.format(**fmtkw)
         return text
