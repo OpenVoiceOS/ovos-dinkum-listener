@@ -682,9 +682,15 @@ class OVOSDinkumVoiceService(Thread):
         stt_audio_dir.mkdir(parents=True, exist_ok=True)
 
         listener = self.config.get("listener")
-        # filename_template = listener.get("filename_template", "{date}-{uuid}")
-        filename_template = listener.get("filename_template", "utterance_{date}_{uuid}")
 
+        # What is a good default?
+        # Where does the documentation for this feature go?
+        default_template = "utterance_{date}_{uuid}"
+        default_template = "{hash}-{uuid}"
+        default_template = "{date:%Y-%m-%dT%H%M%S%z}-{uuid}"
+        default_template = "{hash}-{date:%Y-%m-%dT%H%M%S%z}-{uuid}"
+
+        filename_template = listener.get("filename_template", default_template)
         formatter = _TemplateFilenameFormatter()
 
         @formatter.register('hash')
@@ -695,12 +701,11 @@ class OVOSDinkumVoiceService(Thread):
                 return hash_sentence(stt_meta.get('transcription'))
             except KeyError:
                 # handles new API
-                concat_text = '_'.join([t[0] for t in stt_meta.get('transcriptions')])
+                tests = [t[0] for t in stt_meta.get('transcriptions')]
+                concat_text = '_'.join(tests)
                 return hash_sentence(concat_text)
 
         filename = formatter.format(filename_template)
-        LOG.info(f"Build filename={filename}")
-        LOG.info(f"Build filename_template={filename_template}")
 
         mic = self.voice_loop.mic
         wav_path = stt_audio_dir / f"{filename}.wav"
@@ -1141,12 +1146,21 @@ class _TemplateFilenameFormatter:
 
     Example:
         >>> # Simple date and uuid keys are available by default.
-        >>> template = 'my_filename_{date:%Y-%M-%D}_{uuid}'
+        >>> template = 'my_filename_{date}_{uuid}'
         >>> self = _TemplateFilenameFormatter()
         >>> name = self.format(template)
         >>> # xdoctest: +IGNORE_WANT
         >>> print(f'name={name}')
-        name=my_filename_2024-11-09/14/24_1b39fdb7-7a82-4e04-a689-258bf0a9cd7a
+        name=my_filename_2024-09-14 18:53:22.619838-05:00_7fe91270-3266-42c1-89d9-0809b9facb9e
+
+    Example:
+        >>> # The date can use standard python format-string semantics
+        >>> template = 'my_filename_{date:%Y-%m-%dT%H%M%S%z}_{uuid}'
+        >>> self = _TemplateFilenameFormatter()
+        >>> name = self.format(template)
+        >>> # xdoctest: +IGNORE_WANT
+        >>> print(f'name={name}')
+        name=my_filename_2024-09-14T185354-0500_6f0f6daf-cd81-4c5b-bf38-76a4466161c6
 
     Example:
         >>> # You can define how to handle custom keys
@@ -1174,12 +1188,14 @@ class _TemplateFilenameFormatter:
     """
     def __init__(self):
         import uuid
-        import datetime as datetime_mod
+        # import datetime as datetime_mod
         # mapping of key to functions that build content for those keys
         self.builders = {
             'uuid': uuid.uuid4,
-            'date': datetime_mod.datetime.now,
-            'utcdate': datetime_mod.datetime.utcnow,
+            # 'date': datetime_mod.datetime.now,
+            # 'utcdate': datetime_mod.datetime.utcnow,
+            'date': self._now_tz,
+            'utcdate': self._utcnow_tz,
         }
 
     def register(self, key):
@@ -1191,6 +1207,22 @@ class _TemplateFilenameFormatter:
             self.builders[key] = func
             return func
         return _decor
+
+    def _now_tz(self):
+        # Helper to provide a timzone aware datetime.now variant.
+        # (note: the timezone is not always right, e.g. EDT-vs-EST)
+        import datetime as datetime_mod
+        _delta = datetime_mod.timedelta(seconds=-time.timezone)
+        tzinfo = datetime_mod.timezone(_delta)
+        datetime_obj = datetime_mod.datetime.now(tzinfo)
+        return datetime_obj
+
+    def _utcnow_tz(self):
+        # Helper to provide a timzone aware datetime.now variant.
+        import datetime as datetime_mod
+        tzinfo = datetime_mod.timezone.utc
+        datetime_obj = datetime_mod.datetime.now(tzinfo)
+        return datetime_obj
 
     def _build_fmtkw(self, template, **kwargs):
         """
