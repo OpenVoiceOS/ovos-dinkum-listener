@@ -13,7 +13,6 @@ import base64
 import json
 import subprocess
 import time
-import uuid
 import wave
 from enum import Enum
 from hashlib import md5
@@ -32,6 +31,7 @@ from ovos_config import Configuration
 from ovos_config.locations import get_xdg_data_save_path
 from ovos_plugin_manager.microphone import OVOSMicrophoneFactory
 from ovos_plugin_manager.stt import get_stt_lang_configs, get_stt_supported_langs, get_stt_module_configs
+from ovos_plugin_manager.utils.tts_cache import hash_sentence
 from ovos_plugin_manager.vad import OVOSVADFactory
 from ovos_plugin_manager.vad import get_vad_configs
 from ovos_plugin_manager.wakewords import get_ww_lang_configs, get_ww_supported_langs, get_ww_module_configs
@@ -681,7 +681,23 @@ class OVOSDinkumVoiceService(Thread):
             stt_audio_dir = Path(f"{self.default_save_path}/utterances")
         stt_audio_dir.mkdir(parents=True, exist_ok=True)
 
-        filename = str(uuid.uuid4())
+        listener = self.config.get("listener")
+        # filename_template = listener.get("filename_template", "{date}-{uuid}")
+        filename_template = listener.get("filename_template", "{hash}")
+        builder = _TemplateFilenameBuilder(filename_template)
+
+        @builder.register('hash')
+        def transcription_hash():
+            # Build a hash of the transcription
+            try:
+                # handles legacy API
+                return hash_sentence(stt_meta.get('transcription'))
+            except KeyError:
+                # handles new API
+                concat_text = '_'.join([t[0] for t in stt_meta.get('transcriptions')])
+                return hash_sentence(concat_text)
+
+        filename = builder.build()
 
         mic = self.voice_loop.mic
         wav_path = stt_audio_dir / f"{filename}.wav"
@@ -1111,3 +1127,98 @@ class OVOSDinkumVoiceService(Thread):
             self.status.set_error(e)
         finally:
             self._load_lock.release()
+
+
+class _TemplateFilenameBuilder:
+    """
+    Helper to build filenames based on a customizable user template.
+
+    Each instance of this builder can be customized to support different
+    keys, but some common ones are builtin like "uuid", "date", and "utcdate"
+
+    Example:
+        >>> # Simple date and uuid keys are available by default.
+        >>> filename_template = 'my_filename_{date:%Y-%M-%D}_{uuid}'
+        >>> self = _TemplateFilenameBuilder(filename_template)
+        >>> name = self.build()
+        >>> # xdoctest: +IGNORE_WANT
+        >>> print(f'name={name}')
+        name=my_filename_2024-11-09/14/24_1b39fdb7-7a82-4e04-a689-258bf0a9cd7a
+
+    Example:
+        >>> # You can define how to handle custom keys
+        >>> filename_template = '{mykey}.bar.{date:%Y-%z}-{uuid}'
+        >>> self = _TemplateFilenameBuilder(filename_template)
+        >>> @self.register('mykey')
+        >>> def custom_func():
+        ...     return 'myval'
+        >>> name = self.build()
+        >>> # xdoctest: +IGNORE_WANT
+        >>> print(f'name={name}')
+        name=myval.bar.2024--765176fa-7c80-431c-b43d-2ad14a58a249
+
+    Example:
+        >>> # should raise an error if template contains an unknown field
+        >>> filename_template = '{doesnotexist}.bar.{date:%Y-%z}-{uuid}'
+        >>> self = _TemplateFilenameBuilder(filename_template)
+        >>> import pytest
+        >>> with pytest.raises(KeyError) as ex:
+        ...     name = self.build()
+        >>> # xdoctest: +IGNORE_WANT
+        >>> print(str(ex.value))
+        "Template string contained unsupported keys ['doesnotexist']. Supported keys are: ['uuid', 'date', 'utcdate']"
+
+    """
+    def __init__(self, filename_template):
+        import uuid
+        import datetime as datetime_mod
+        self.filename_template = filename_template
+        # mapping of key to functions that build content for those keys
+        self.builders = {
+            'uuid': uuid.uuid4,
+            'date': datetime_mod.datetime.now,
+            'utcdate': datetime_mod.datetime.utcnow,
+        }
+
+    def register(self, key):
+        def _decor(func):
+            self.builders[key] = func
+            return func
+        return _decor
+
+    def _build_fmtkw(self, extra_builders=None):
+        """
+        Builds the dictionary that can be passed to :func:`str.format`.
+        """
+        import string
+        if extra_builders is None:
+            extra_builders = {}
+
+        builders = self.builders | extra_builders
+
+        # Build the information requested for the file string.
+        formatter = string.Formatter()
+        fmtiter = formatter.parse(self.filename_template)
+        fmtkw = {}
+        missing = []
+        for fmttup in fmtiter:
+            key = fmttup[1]
+
+            if key in builders:
+                builder = builders[key]
+                if callable(builder):
+                    fmtkw[key] = builder()
+                else:
+                    fmtkw[key] = builder
+            else:
+                missing.append(key)
+        if missing:
+            raise KeyError(
+                f'Template string contained unsupported keys {missing}. '
+                f'Supported keys are: {list(builders.keys())}'
+            )
+        return fmtkw
+
+    def build(self, extra_builders=None):
+        fmtkw = self._build_fmtkw(extra_builders)
+        return self.filename_template.format(**fmtkw)
