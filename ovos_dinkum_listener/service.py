@@ -13,6 +13,7 @@ import base64
 import json
 import subprocess
 import time
+import uuid
 import wave
 from enum import Enum
 from hashlib import md5
@@ -31,7 +32,6 @@ from ovos_config import Configuration
 from ovos_config.locations import get_xdg_data_save_path
 from ovos_plugin_manager.microphone import OVOSMicrophoneFactory
 from ovos_plugin_manager.stt import get_stt_lang_configs, get_stt_supported_langs, get_stt_module_configs
-from ovos_plugin_manager.utils.tts_cache import hash_sentence
 from ovos_plugin_manager.vad import OVOSVADFactory
 from ovos_plugin_manager.vad import get_vad_configs
 from ovos_plugin_manager.wakewords import get_ww_lang_configs, get_ww_supported_langs, get_ww_module_configs
@@ -681,7 +681,8 @@ class OVOSDinkumVoiceService(Thread):
             stt_audio_dir = Path(f"{self.default_save_path}/utterances")
         stt_audio_dir.mkdir(parents=True, exist_ok=True)
 
-        filename = hash_sentence(stt_meta["transcription"])
+        filename = str(uuid.uuid4())
+
         mic = self.voice_loop.mic
         wav_path = stt_audio_dir / f"{filename}.wav"
         meta_path = stt_audio_dir / f"{filename}.json"
