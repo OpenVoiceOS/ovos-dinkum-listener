@@ -698,7 +698,7 @@ class OVOSDinkumVoiceService(Thread):
             # Build a hash of the transcription
             try:
                 # handles legacy API
-                text = stt_meta.get('transcription', [])
+                text = stt_meta.get('transcription')
             except KeyError:
                 # handles new API
                 # transcriptions should be : List[Tuple[str, int]]
