@@ -42,6 +42,7 @@ from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt
 from ovos_dinkum_listener.transformers import AudioTransformersService
 from ovos_dinkum_listener.voice_loop import DinkumVoiceLoop, ListeningMode, ListeningState
 from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer
+from ovos_dinkum_listener._util import _TemplateFilenameFormatter
 try:
     from ovos_backend_client.api import DatasetApi
 except ImportError:
@@ -685,10 +686,11 @@ class OVOSDinkumVoiceService(Thread):
 
         # What is a good default?
         # Where does the documentation for this feature go?
-        default_template = "utterance_{date}_{uuid}"
-        default_template = "{hash}-{uuid}"
-        default_template = "{date:%Y-%m-%dT%H%M%S%z}-{uuid}"
-        default_template = "{hash}-{date:%Y-%m-%dT%H%M%S%z}-{uuid}"
+        # TODO: document the listener.filename_template option
+        # default_template = "utterance_{now}_{uuid4}"
+        # default_template = "{now:%Y-%m-%dT%H%M%S%z}-{uuid4}"
+        # default_template = "{hash}-{now:%Y-%m-%dT%H%M%S%z}-{uuid4}"
+        default_template = "{hash}-{uuid4}"
 
         filename_template = listener.get("filename_template", default_template)
         formatter = _TemplateFilenameFormatter()
@@ -1138,129 +1140,3 @@ class OVOSDinkumVoiceService(Thread):
             self.status.set_error(e)
         finally:
             self._load_lock.release()
-
-
-class _TemplateFilenameFormatter:
-    """
-    Helper to dynamically filename parts based on a user-specified template.
-
-    Each instance of this builder can be customized to support different keys,
-    but some common ones are builtin like "uuid", "date", and "utcdate"
-
-    Example:
-        >>> # Simple date and uuid keys are available by default.
-        >>> template = 'my_filename_{date}_{uuid}'
-        >>> self = _TemplateFilenameFormatter()
-        >>> name = self.format(template)
-        >>> # xdoctest: +IGNORE_WANT
-        >>> print(f'name={name}')
-        name=my_filename_2024-09-14 18:53:22.619838-05:00_7fe91270-3266-42c1-89d9-0809b9facb9e
-
-    Example:
-        >>> # The date can use standard python format-string semantics
-        >>> template = 'my_filename_{date:%Y-%m-%dT%H%M%S%z}_{uuid}'
-        >>> self = _TemplateFilenameFormatter()
-        >>> name = self.format(template)
-        >>> # xdoctest: +IGNORE_WANT
-        >>> print(f'name={name}')
-        name=my_filename_2024-09-14T185354-0500_6f0f6daf-cd81-4c5b-bf38-76a4466161c6
-
-    Example:
-        >>> # You can define how to handle custom keys
-        >>> template = '{mykey}.bar.{date:%Y-%z}-{uuid}'
-        >>> self = _TemplateFilenameFormatter()
-        >>> @self.register('mykey')
-        >>> def custom_func():
-        ...     return 'myval'
-        >>> name = self.format(template)
-        >>> # xdoctest: +IGNORE_WANT
-        >>> print(f'name={name}')
-        name=myval.bar.2024--765176fa-7c80-431c-b43d-2ad14a58a249
-
-    Example:
-        >>> # should raise an error if template contains an unknown field
-        >>> template = '{doesnotexist}.bar.{date:%Y-%z}-{uuid}'
-        >>> self = _TemplateFilenameFormatter()
-        >>> import pytest
-        >>> with pytest.raises(KeyError) as ex:
-        ...     name = self.format(template)
-        >>> # xdoctest: +IGNORE_WANT
-        >>> print(str(ex.value))
-        "Template string contained unsupported keys ['doesnotexist']. Supported keys are: ['uuid', 'date', 'utcdate']"
-
-    """
-    def __init__(self):
-        import uuid
-        # import datetime as datetime_mod
-        # mapping of key to functions that build content for those keys
-        self.builders = {
-            'uuid': uuid.uuid4,
-            # 'date': datetime_mod.datetime.now,
-            # 'utcdate': datetime_mod.datetime.utcnow,
-            'date': self._now_tz,
-            'utcdate': self._utcnow_tz,
-        }
-
-    def register(self, key):
-        """
-        Decorator which will register a function called when the template
-        string contains ``key``.
-        """
-        def _decor(func):
-            self.builders[key] = func
-            return func
-        return _decor
-
-    def _now_tz(self):
-        # Helper to provide a timzone aware datetime.now variant.
-        # (note: the timezone is not always right, e.g. EDT-vs-EST)
-        import datetime as datetime_mod
-        _delta = datetime_mod.timedelta(seconds=-time.timezone)
-        tzinfo = datetime_mod.timezone(_delta)
-        datetime_obj = datetime_mod.datetime.now(tzinfo)
-        return datetime_obj
-
-    def _utcnow_tz(self):
-        # Helper to provide a timzone aware datetime.now variant.
-        import datetime as datetime_mod
-        tzinfo = datetime_mod.timezone.utc
-        datetime_obj = datetime_mod.datetime.now(tzinfo)
-        return datetime_obj
-
-    def _build_fmtkw(self, template, **kwargs):
-        """
-        Builds the dictionary that can be passed to :func:`str.format`.
-        """
-        import string
-        builders = self.builders | kwargs
-
-        # Build the information requested for the file string.
-        formatter = string.Formatter()
-        fmtiter = formatter.parse(template)
-        fmtkw = {}
-        missing = []
-        for fmttup in fmtiter:
-            key = fmttup[1]
-
-            if key in builders:
-                builder = builders[key]
-                if callable(builder):
-                    fmtkw[key] = builder()
-                else:
-                    fmtkw[key] = builder
-            else:
-                missing.append(key)
-        if missing:
-            raise KeyError(
-                f'Template string contained unsupported keys {missing}. '
-                f'Supported keys are: {list(builders.keys())}'
-            )
-        return fmtkw
-
-    def format(self, template, **kwargs):
-        """
-        Substitutes known keys with dynamically constructed values
-        """
-        fmtkw = self._build_fmtkw(template, **kwargs)
-        text = template.format(**fmtkw)
-        return text
