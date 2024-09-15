@@ -54,4 +54,4 @@ jobs:
           pip install -r requirements/tests.txt
       - name: Run unittests
         run: |
-          pytest test/unittests
+          pytest --cov-config pyproject.toml --cov-report html --cov-report term --durations 5 --cov=ovos_dinkum_listener

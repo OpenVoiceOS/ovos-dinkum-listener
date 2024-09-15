@@ -1,2 +1,3 @@
 pytest~=7.1
 ovos-vad-plugin-webrtcvad
+xdoctest~=1.1.5
