@@ -53,7 +53,7 @@ class AudioTransformersService:
                     self.loaded_plugins[plug_name] = plug()
                     self.loaded_plugins[plug_name].bind(self.bus)
                     LOG.info(f"loaded audio transformer plugin: {plug_name}")
-                except Exception as e:
+                except Exception:
                     LOG.exception(f"Failed to load audio transformer plugin: "
                                   f"{plug_name}")
         self.has_loaded = True
