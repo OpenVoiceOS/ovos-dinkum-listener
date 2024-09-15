@@ -698,12 +698,15 @@ class OVOSDinkumVoiceService(Thread):
             # Build a hash of the transcription
             try:
                 # handles legacy API
-                return hash_sentence(stt_meta.get('transcription'))
+                text = stt_meta.get('transcription', [])
             except KeyError:
                 # handles new API
-                tests = [t[0] for t in stt_meta.get('transcriptions')]
-                concat_text = '_'.join(tests)
-                return hash_sentence(concat_text)
+                # transcriptions should be : List[Tuple[str, int]]
+                try:
+                    text = stt_meta.get('transcriptions')[0][0]
+                except IndexError:
+                    return 'null'
+            return hash_sentence(text)
 
         filename = formatter.format(filename_template)
 
