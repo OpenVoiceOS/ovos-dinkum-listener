@@ -42,6 +42,7 @@ from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt
 from ovos_dinkum_listener.transformers import AudioTransformersService
 from ovos_dinkum_listener.voice_loop import DinkumVoiceLoop, ListeningMode, ListeningState
 from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer
+from ovos_dinkum_listener._util import _TemplateFilenameFormatter
 try:
     from ovos_backend_client.api import DatasetApi
 except ImportError:
@@ -681,7 +682,30 @@ class OVOSDinkumVoiceService(Thread):
             stt_audio_dir = Path(f"{self.default_save_path}/utterances")
         stt_audio_dir.mkdir(parents=True, exist_ok=True)
 
-        filename = hash_sentence(stt_meta["transcription"])
+        listener = self.config.get("listener", {})
+
+        # Documented in ovos_config/mycroft.conf
+        default_template = "{md5}-{uuid4}"
+        utterance_filename = listener.get("utterance_filename", default_template)
+        formatter = _TemplateFilenameFormatter()
+
+        @formatter.register('md5')
+        def transcription_md5():
+            # Build a hash of the transcription
+            try:
+                # handles legacy API
+                text = stt_meta.get('transcription')
+            except KeyError:
+                # handles new API
+                # transcriptions should be : List[Tuple[str, int]]
+                try:
+                    text = stt_meta.get('transcriptions')[0][0]
+                except IndexError:
+                    return 'null'
+            return hash_sentence(text)
+
+        filename = formatter.format(utterance_filename)
+
         mic = self.voice_loop.mic
         wav_path = stt_audio_dir / f"{filename}.wav"
         meta_path = stt_audio_dir / f"{filename}.json"
