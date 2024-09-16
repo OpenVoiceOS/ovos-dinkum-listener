@@ -1,3 +1,8 @@
+import uuid
+import string
+from ovos_utils.time import now_local, now_utc
+
+
 class _TemplateFilenameFormatter:
     """
     Helper to dynamically filename parts based on a user-specified template.
@@ -48,13 +53,12 @@ class _TemplateFilenameFormatter:
 
     """
     def __init__(self):
-        import uuid
         # import datetime as datetime_mod
         # mapping of key to functions that build content for those keys
         self.builders = {
             'uuid4': uuid.uuid4,
-            'now': self._now_tz,
-            'utcnow': self._utcnow_tz,
+            'now': now_local,
+            'utcnow': now_utc,
         }
 
     def register(self, key):
@@ -67,28 +71,10 @@ class _TemplateFilenameFormatter:
             return func
         return _decor
 
-    def _now_tz(self):
-        # Helper to provide a timzone aware datetime.now variant.
-        # (note: the timezone is not always right, e.g. EDT-vs-EST)
-        import datetime as datetime_mod
-        import time
-        _delta = datetime_mod.timedelta(seconds=-time.timezone)
-        tzinfo = datetime_mod.timezone(_delta)
-        datetime_obj = datetime_mod.datetime.now(tzinfo)
-        return datetime_obj
-
-    def _utcnow_tz(self):
-        # Helper to provide a timzone aware datetime.now variant.
-        import datetime as datetime_mod
-        tzinfo = datetime_mod.timezone.utc
-        datetime_obj = datetime_mod.datetime.now(tzinfo)
-        return datetime_obj
-
     def _build_fmtkw(self, template, **kwargs):
         """
         Builds the dictionary that can be passed to :func:`str.format`.
         """
-        import string
         builders = self.builders | kwargs
 
         # Build the information requested for the file string.

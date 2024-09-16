@@ -682,21 +682,15 @@ class OVOSDinkumVoiceService(Thread):
             stt_audio_dir = Path(f"{self.default_save_path}/utterances")
         stt_audio_dir.mkdir(parents=True, exist_ok=True)
 
-        listener = self.config.get("listener")
+        listener = self.config.get("listener", {})
 
-        # What is a good default?
-        # Where does the documentation for this feature go?
-        # TODO: document the listener.filename_template option
-        # default_template = "utterance_{now}_{uuid4}"
-        # default_template = "{now:%Y-%m-%dT%H%M%S%z}-{uuid4}"
-        # default_template = "{hash}-{now:%Y-%m-%dT%H%M%S%z}-{uuid4}"
-        default_template = "{hash}-{uuid4}"
-
-        filename_template = listener.get("filename_template", default_template)
+        # Documented in ovos_config/mycroft.conf
+        default_template = "{md5}-{uuid4}"
+        utterance_filename = listener.get("utterance_filename", default_template)
         formatter = _TemplateFilenameFormatter()
 
-        @formatter.register('hash')
-        def transcription_hash():
+        @formatter.register('md5')
+        def transcription_md5():
             # Build a hash of the transcription
             try:
                 # handles legacy API
@@ -710,7 +704,7 @@ class OVOSDinkumVoiceService(Thread):
                     return 'null'
             return hash_sentence(text)
 
-        filename = formatter.format(filename_template)
+        filename = formatter.format(utterance_filename)
 
         mic = self.voice_loop.mic
         wav_path = stt_audio_dir / f"{filename}.wav"
