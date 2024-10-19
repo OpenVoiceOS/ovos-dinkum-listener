@@ -692,16 +692,14 @@ class OVOSDinkumVoiceService(Thread):
         @formatter.register('md5')
         def transcription_md5():
             # Build a hash of the transcription
+            
             try:
-                # handles legacy API
-                text = stt_meta.get('transcription')
-            except KeyError:
-                # handles new API
                 # transcriptions should be : List[Tuple[str, int]]
-                try:
-                    text = stt_meta.get('transcriptions')[0][0]
-                except IndexError:
-                    return 'null'
+                text = stt_meta.get('transcriptions')[0][0]
+            except IndexError:
+                # handles legacy API
+                return stt_meta.get('transcription') or 'null'
+                    
             return hash_sentence(text)
 
         filename = formatter.format(utterance_filename)
