@@ -12,7 +12,6 @@
 #
 import os
 import os.path
-from pathlib import Path
 
 from setuptools import setup
 
