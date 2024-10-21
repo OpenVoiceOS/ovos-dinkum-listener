@@ -1,12 +1,16 @@
 # Changelog
 
-## [0.2.3a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.2.3a1) (2024-10-19)
+## [0.2.4a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.2.4a1) (2024-10-21)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.2.2...0.2.3a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.2.3...0.2.4a1)
+
+**Closed issues:**
+
+- Empty utterance error [\#147](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/147)
 
 **Merged pull requests:**
 
-- fix:save utterances [\#148](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/148) ([JarbasAl](https://github.com/JarbasAl))
+- fix:handle empty string transcriptions [\#150](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/150) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
