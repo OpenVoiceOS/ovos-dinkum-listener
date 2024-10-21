@@ -659,20 +659,38 @@ class OVOSDinkumVoiceService(Thread):
             )
         self.bus.emit(Message("recognizer_loop:record_end"))
 
-    def _stt_text(self, transcripts: List[Tuple[str, float]],
-                  stt_context: dict):
-        # Report utterance to intent service
-        if transcripts:
-            utts = [u[0] for u in transcripts]  # filter confidence
+    def __normtranscripts(self, transcripts: List[Tuple[str, float]]) -> List[str]:
+        # unfortunately common enough when using whisper to deserve a setting
+        # mainly happens on silent audio, not as a mistranscription
+        default_hallucinations = [
+            "thanks for watching!",
+            'thank you for watching!',
+            "so",
+            "beep!"
+            # "Thank you"  # this one can also be valid!!
+        ]
+        hallucinations = self.config.get("hallucination_list", default_hallucinations) \
+            if self.config.get("filter_hallucinations", True) else []
+        utts = [u[0].lstrip(" \"'").strip(" \"'") for u in transcripts]
+        filtered_hutts = [u for u in utts if u and u.lower() not in hallucinations]
+        hutts = [u for u in utts if u and u not in filtered_hutts]
+        if hutts:
+            LOG.debug(f"Filtered hallucinations: {hutts}")
+        return filtered_hutts
+
+    def _stt_text(self, transcripts: List[Tuple[str, float]], stt_context: dict):
+        utts = self.__normtranscripts(transcripts)
+        LOG.debug(f"STT: {utts}")
+        if utts:
             lang = stt_context.get("lang") or Configuration().get("lang", "en-us")
-            LOG.debug(f"STT: {utts}")
-            payload = {"utterances": utts,
-                       "lang": lang}
+            payload = {"utterances": utts, "lang": lang}
             self.bus.emit(Message("recognizer_loop:utterance", payload, stt_context))
-        elif self.voice_loop.listen_mode == ListeningMode.CONTINUOUS:
-            LOG.debug("ignoring transcription failure")
         else:
-            self.bus.emit(Message("recognizer_loop:speech.recognition.unknown", context=stt_context))
+            if self.voice_loop.listen_mode != ListeningMode.CONTINUOUS:
+                LOG.error("Empty transcription, either recorded silence or STT failed!")
+                self.bus.emit(Message("recognizer_loop:speech.recognition.unknown", context=stt_context))
+            else:
+                LOG.debug("Ignoring empty transcription in continuous listening mode")
 
     def _save_stt(self, audio_bytes, stt_meta, save_path=None):
         LOG.info("Saving Utterance Recording")
