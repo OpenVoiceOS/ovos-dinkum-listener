@@ -659,17 +659,17 @@ class OVOSDinkumVoiceService(Thread):
             )
         self.bus.emit(Message("recognizer_loop:record_end"))
 
-    def _stt_text(self, transcripts: List[Tuple[str, float]],
-                  stt_context: dict):
+    def _stt_text(self, transcripts: List[Tuple[str, float]], stt_context: dict):
         # Report utterance to intent service
-        if transcripts:
-            utts = [u[0] for u in transcripts]  # filter confidence
+        utts = [u[0] for u in transcripts if u[0].strip()]  # filter confidence and empty strings
+        if utts:
             lang = stt_context.get("lang") or Configuration().get("lang", "en-us")
             LOG.debug(f"STT: {utts}")
-            payload = {"utterances": utts,
-                       "lang": lang}
+            payload = {"utterances": utts,  "lang": lang}
             self.bus.emit(Message("recognizer_loop:utterance", payload, stt_context))
-        elif self.voice_loop.listen_mode == ListeningMode.CONTINUOUS:
+            return
+
+        if self.voice_loop.listen_mode == ListeningMode.CONTINUOUS:
             LOG.debug("ignoring transcription failure")
         else:
             self.bus.emit(Message("recognizer_loop:speech.recognition.unknown", context=stt_context))
