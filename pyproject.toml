@@ -1,0 +1,38 @@
+[build-system]
+requires = [ "setuptools>=41.0.1",]
+build-backend = "setuptools.build_meta"
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = "--xdoctest --ignore-glob=setup.py"
+norecursedirs = ".git build __pycache__ docs"
+filterwarnings = [ "default", ]
+
+[tool.coverage.run]
+branch = true
+source = ["ovos_dinkum_listener"]
+
+[tool.coverage.report]
+exclude_lines = [ 
+    "pragma: no cover",
+     ".*  # pragma: no cover",
+     ".*  # nocover",
+     "def __repr__",
+     "raise AssertionError",
+     "raise NotImplementedError",
+     "if 0:",
+     "if trace is not None",
+     "verbose = .*",
+     "^ *raise",
+     "^ *pass *$",
+     "if _debug:",
+     "if __name__ == .__main__.:",
+]
+omit = [
+    "*/setup.py",
+]
+
+[tool.xdoctest]
+options = ''
