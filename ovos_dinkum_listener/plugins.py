@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, List, Tuple
+from typing import Any, Dict, Optional, List, Tuple, Union
 
 from ovos_config.config import Configuration
 from ovos_plugin_manager.stt import OVOSSTTFactory
@@ -56,18 +56,25 @@ class FakeStreamingSTT(StreamingSTT):
         return FakeStreamThread(self.queue, self.lang, self.engine, sample_rate,
                                 sample_width)
 
-    def transcribe(self, audio: Optional = None,
+    def transcribe(self, audio: Optional[Union[bytes, AudioData]] = None,
                    lang: Optional[str] = None) -> List[Tuple[str, float]]:
         """transcribe audio data to a list of
         possible transcriptions and respective confidences"""
         # plugins expect AudioData objects
-        audiod = AudioData(audio or self.stream.buffer.read(),
-                           sample_rate=self.stream.sample_rate,
-                           sample_width=self.stream.sample_width)
-        transcripts = self.engine.transcribe(audiod, lang)
         if audio is None:
+            audiod = AudioData(self.stream.buffer.read(),
+                               sample_rate=self.stream.sample_rate,
+                               sample_width=self.stream.sample_width)
             self.stream.buffer.clear()
-        return transcripts
+        elif isinstance(audio, bytes):
+            audiod = AudioData(audio,
+                               sample_rate=self.stream.sample_rate,
+                               sample_width=self.stream.sample_width)
+        elif isinstance(audio, AudioData):
+            audiod = audio
+        else:
+            raise ValueError(f"'audio' must be 'bytes' or 'AudioData', got '{type(audio)}'")
+        return self.engine.transcribe(audiod, lang)
 
 
 def load_stt_module(config: Dict[str, Any] = None) -> StreamingSTT:
