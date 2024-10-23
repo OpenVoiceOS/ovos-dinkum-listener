@@ -13,7 +13,7 @@ import base64
 import json
 import subprocess
 import wave
-from distutils.spawn import find_executable
+from shutil import which
 from enum import Enum
 from hashlib import md5
 from os.path import dirname
@@ -67,11 +67,11 @@ def bytes2audiodata(data):
     recognizer = sr.Recognizer()
     with NamedTemporaryFile() as fp:
         fp.write(data)
-
-        if find_executable("ffmpeg"):
+        ffmpeg = which("ffmpeg")
+        if ffmpeg:
             p = fp.name + "converted.wav"
             # ensure file format
-            cmd = ["ffmpeg", "-i", fp.name, "-acodec", "pcm_s16le", "-ar",
+            cmd = [ffmpeg, "-i", fp.name, "-acodec", "pcm_s16le", "-ar",
                    "16000", "-ac", "1", "-f", "wav", p, "-y"]
             subprocess.call(cmd)
         else:
