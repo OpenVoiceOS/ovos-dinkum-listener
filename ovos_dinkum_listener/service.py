@@ -197,7 +197,7 @@ class OVOSDinkumVoiceService(Thread):
         self.vad = vad or OVOSVADFactory.create()
         self.stt = stt or load_stt_module()
         self.disable_fallback = disable_fallback
-        self.disable_reload = stt is None
+        self.disable_reload = stt is not None
         if disable_fallback:
             self.fallback_stt = None
         else:
@@ -1086,7 +1086,7 @@ class OVOSDinkumVoiceService(Thread):
         Configuration object reports a change
         """
         if self._config_hash() == self._applied_config_hash:
-            LOG.debug(f"No relevant configuration changed")
+            LOG.debug("No relevant configuration changed")
             return
         LOG.info("Reloading changed configuration")
         if not self._load_lock.acquire(timeout=30):
