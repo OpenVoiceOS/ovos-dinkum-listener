@@ -13,14 +13,14 @@ import base64
 import json
 import subprocess
 import wave
-from shutil import which
 from enum import Enum
 from hashlib import md5
 from os.path import dirname
 from pathlib import Path
+from shutil import which
 from tempfile import NamedTemporaryFile
 from threading import Thread, RLock, Event
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Union
 
 import speech_recognition as sr
 import time
@@ -31,17 +31,18 @@ from ovos_config import Configuration
 from ovos_config.locations import get_xdg_data_save_path
 from ovos_plugin_manager.microphone import OVOSMicrophoneFactory
 from ovos_plugin_manager.stt import get_stt_lang_configs, get_stt_supported_langs, get_stt_module_configs
-from ovos_plugin_manager.templates.stt import STT
+from ovos_plugin_manager.templates.microphone import Microphone
+from ovos_plugin_manager.templates.stt import STT, StreamingSTT
 from ovos_plugin_manager.templates.vad import VADEngine
 from ovos_plugin_manager.utils.tts_cache import hash_sentence
-from ovos_plugin_manager.vad import OVOSVADFactory
-from ovos_plugin_manager.vad import get_vad_configs
+from ovos_plugin_manager.vad import OVOSVADFactory, get_vad_configs
 from ovos_plugin_manager.wakewords import get_ww_lang_configs, get_ww_supported_langs, get_ww_module_configs
+from ovos_utils.fakebus import FakeBus
 from ovos_utils.log import LOG, log_deprecation
 from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessState
 
 from ovos_dinkum_listener._util import _TemplateFilenameFormatter
-from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt
+from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt, FakeStreamingSTT
 from ovos_dinkum_listener.transformers import AudioTransformersService
 from ovos_dinkum_listener.voice_loop import DinkumVoiceLoop, ListeningMode, ListeningState
 from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer
@@ -152,11 +153,14 @@ class OVOSDinkumVoiceService(Thread):
 
     def __init__(self, on_ready=on_ready, on_error=on_error,
                  on_stopping=on_stopping, on_alive=on_alive,
-                 on_started=on_started, watchdog=lambda: None, mic=None,
-                 bus=None, validate_source=True,
+                 on_started=on_started, watchdog=lambda: None,
+                 mic: Optional[Microphone] = None,
+                 bus: Optional[Union[MessageBusClient, FakeBus]] = None,
+                 validate_source: bool = True,
                  stt: Optional[STT] = None,
                  fallback_stt: Optional[STT] = None,
                  vad: Optional[VADEngine] = None,
+                 hotwords: Optional[HotwordContainer] = None,
                  disable_fallback: bool = False,
                  *args, **kwargs):
         """
@@ -193,11 +197,14 @@ class OVOSDinkumVoiceService(Thread):
 
         self.mic = mic or OVOSMicrophoneFactory.create(microphone_config)
 
-        self.hotwords = HotwordContainer(self.bus)
+        self.hotwords = hotwords or HotwordContainer(self.bus)
         self.vad = vad or OVOSVADFactory.create()
+        if stt and not isinstance(stt, StreamingSTT):
+            stt = FakeStreamingSTT(stt)
         self.stt = stt or load_stt_module()
         self.disable_fallback = disable_fallback
         self.disable_reload = stt is not None
+        self.disable_hotword_reload = hotwords is not None
         if disable_fallback:
             self.fallback_stt = None
         else:
@@ -439,7 +446,8 @@ class OVOSDinkumVoiceService(Thread):
             if hasattr(self.fallback_stt, "shutdown"):
                 self.fallback_stt.shutdown()
 
-            self.hotwords.shutdown()
+            if not self.disable_hotword_reload:
+                self.hotwords.shutdown()
 
             if hasattr(self.vad, "stop"):
                 self.vad.stop()
@@ -724,14 +732,14 @@ class OVOSDinkumVoiceService(Thread):
         @formatter.register('md5')
         def transcription_md5():
             # Build a hash of the transcription
-            
+
             try:
                 # transcriptions should be : List[Tuple[str, int]]
                 text = stt_meta.get('transcriptions')[0][0]
             except IndexError:
                 # handles legacy API
                 return stt_meta.get('transcription') or 'null'
-                    
+
             return hash_sentence(text)
 
         filename = formatter.format(utterance_filename)
@@ -1129,7 +1137,7 @@ class OVOSDinkumVoiceService(Thread):
                     LOG.debug(f"new={self.fallback_stt.__class__}: "
                               f"{self.fallback_stt.config}")
 
-            if new_hash['hotwords'] != self._applied_config_hash['hotwords']:
+            if not self.disable_hotword_reload and new_hash['hotwords'] != self._applied_config_hash['hotwords']:
                 LOG.info(f"Reloading Hotwords")
                 LOG.debug(f"old={self.hotwords.applied_hotwords_config}")
                 self._reload_event.clear()
