@@ -207,7 +207,9 @@ class DinkumVoiceLoop(VoiceLoop):
             chunk = self.mic.read_chunk()
             if not self._is_running:  # handle shutdown in middle of read_chunk
                 break
-            assert chunk is not None, "No audio from microphone"
+            if chunk is None:
+                #LOG.warning("No audio from microphone")
+                continue
 
             if self.is_muted:
                 # Soft mute

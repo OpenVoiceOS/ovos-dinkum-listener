@@ -1,12 +1,12 @@
 # Changelog
 
-## [0.3.0a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.0a1) (2024-10-23)
+## [0.3.1a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.1a1) (2024-10-24)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.2.4...0.3.0a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.0...0.3.1a1)
 
 **Merged pull requests:**
 
-- feat:b64 [\#152](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/152) ([JarbasAl](https://github.com/JarbasAl))
+- fix:add hotwords kwarg [\#154](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/154) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
