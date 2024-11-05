@@ -1,12 +1,12 @@
 # Changelog
 
-## [0.3.1a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.1a1) (2024-10-24)
+## [0.3.2a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.2a1) (2024-11-05)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.0...0.3.1a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.1...0.3.2a1)
 
 **Merged pull requests:**
 
-- fix:add hotwords kwarg [\#154](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/154) ([JarbasAl](https://github.com/JarbasAl))
+- fix: allow latest bus client version [\#157](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/157) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
