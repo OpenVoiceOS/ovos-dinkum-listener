@@ -733,28 +733,11 @@ class OVOSDinkumVoiceService(Thread):
         LOG.debug(f"Wrote {wav_path}")
         return f"file://{wav_path.absolute()}"
 
-    def _upload_stt(self, wav_data, metadata):
-        """Upload the STT in a background thread."""
-
-        upload_url = Configuration().get("listener", {}).get('stt_upload', {}).get('url')
-
-        def upload(wav_data, metadata):
-            DatasetApi().upload_stt(wav_data, metadata, upload_url=upload_url)
-
-        if DatasetApi:
-            Thread(target=upload, daemon=True,
-                   args=(wav_data, metadata)).start()
-        else:
-            LOG.debug("`pip install ovos-backend-client` to enable upload")
-
     def _stt_audio(self, audio_bytes: bytes, stt_context: dict):
         try:
             listener = self.config["listener"]
             if listener["save_utterances"]:
                 stt_context["filename"] = self._save_stt(audio_bytes, stt_context)
-                upload_disabled = listener.get('stt_upload', {}).get('disable')
-                if self.config['opt_in'] and not upload_disabled:
-                    self._upload_stt(audio_bytes, stt_context)
         except Exception:
             LOG.exception("Error while saving STT audio")
         return stt_context
