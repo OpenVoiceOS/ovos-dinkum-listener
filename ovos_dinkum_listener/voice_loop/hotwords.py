@@ -20,6 +20,13 @@ class HotWordException(RuntimeWarning):
 
 
 class CyclicAudioBuffer:
+    """
+    Example:
+        >>> from ovos_dinkum_listener.voice_loop.hotwords import *  # NOQA
+        >>> self = CyclicAudioBuffer()
+        >>> self.append(b'hello-world')
+        >>> print(len(self.get()))
+    """
     def __init__(self, duration=0.98, initial_data=None,
                  sample_rate=16000, sample_width=2):
         self.size = self.duration_to_bytes(duration, sample_rate, sample_width)
