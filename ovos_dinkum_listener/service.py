@@ -1067,7 +1067,7 @@ class OVOSDinkumVoiceService(Thread):
             # Configuration changed, update status and reload
             self.status.set_alive()
 
-            if new_hash['stt'] != self._applied_config_hash['stt']:
+            if not self.disable_reload and new_hash['stt'] != self._applied_config_hash['stt']:
                 LOG.info("Reloading STT")
                 if self.stt:
                     LOG.debug(f"old={self.stt.__class__}: {self.stt.config}")
@@ -1079,7 +1079,7 @@ class OVOSDinkumVoiceService(Thread):
                 if self.stt:
                     LOG.debug(f"new={self.stt.__class__}: {self.stt.config}")
 
-            if new_hash['fallback'] != self._applied_config_hash['fallback']:
+            if not self.disable_reload and new_hash['fallback'] != self._applied_config_hash['fallback']:
                 LOG.info("Reloading Fallback STT")
                 if self.fallback_stt:
                     LOG.debug(f"old={self.fallback_stt.__class__}: "
@@ -1093,7 +1093,7 @@ class OVOSDinkumVoiceService(Thread):
                     LOG.debug(f"new={self.fallback_stt.__class__}: "
                               f"{self.fallback_stt.config}")
 
-            if new_hash['hotwords'] != self._applied_config_hash['hotwords']:
+            if not self.disable_hotword_reload and new_hash['hotwords'] != self._applied_config_hash['hotwords']:
                 LOG.info("Reloading Hotwords")
                 LOG.debug(f"old={self.hotwords.applied_hotwords_config}")
                 self._reload_event.clear()
