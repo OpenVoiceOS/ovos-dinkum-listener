@@ -808,7 +808,7 @@ class OVOSDinkumVoiceService(Thread):
                         dur = get_sound_duration(sound)
                     LOG.debug(f"{sound} duration: {dur} seconds")
                     self.voice_loop.confirmation_seconds_left = dur
-                except:
+                except Exception:
                     self.voice_loop.confirmation_seconds_left = self.voice_loop.confirmation_seconds
         else:
             self.voice_loop.state = ListeningState.BEFORE_COMMAND
@@ -1068,7 +1068,7 @@ class OVOSDinkumVoiceService(Thread):
             self.status.set_alive()
 
             if not self.disable_reload and new_hash['stt'] != self._applied_config_hash['stt']:
-                LOG.info(f"Reloading STT")
+                LOG.info("Reloading STT")
                 if self.stt:
                     LOG.debug(f"old={self.stt.__class__}: {self.stt.config}")
                 if hasattr(self.stt, "shutdown"):
@@ -1079,9 +1079,8 @@ class OVOSDinkumVoiceService(Thread):
                 if self.stt:
                     LOG.debug(f"new={self.stt.__class__}: {self.stt.config}")
 
-            if not self.disable_reload and not self.disable_fallback and new_hash['fallback'] != \
-                    self._applied_config_hash['fallback']:
-                LOG.info(f"Reloading Fallback STT")
+            if not self.disable_reload and not self.disable_fallback and new_hash['fallback'] != self._applied_config_hash['fallback']:
+                LOG.info("Reloading Fallback STT")
                 if self.fallback_stt:
                     LOG.debug(f"old={self.fallback_stt.__class__}: "
                               f"{self.fallback_stt.config}")
@@ -1095,7 +1094,7 @@ class OVOSDinkumVoiceService(Thread):
                               f"{self.fallback_stt.config}")
 
             if not self.disable_hotword_reload and new_hash['hotwords'] != self._applied_config_hash['hotwords']:
-                LOG.info(f"Reloading Hotwords")
+                LOG.info("Reloading Hotwords")
                 LOG.debug(f"old={self.hotwords.applied_hotwords_config}")
                 self._reload_event.clear()
                 self.voice_loop.stop()
@@ -1104,7 +1103,7 @@ class OVOSDinkumVoiceService(Thread):
                 LOG.debug(f"new={self.hotwords.applied_hotwords_config}")
 
             if new_hash['loop'] != self._applied_config_hash['loop']:
-                LOG.info(f"Reloading Listener")
+                LOG.info("Reloading Listener")
                 self._reload_event.clear()
                 self.voice_loop.stop()
 
