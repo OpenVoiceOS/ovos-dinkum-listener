@@ -20,6 +20,13 @@ class HotWordException(RuntimeWarning):
 
 
 class CyclicAudioBuffer:
+    """
+    Example:
+        >>> from ovos_dinkum_listener.voice_loop.hotwords import *  # NOQA
+        >>> self = CyclicAudioBuffer()
+        >>> self.append(b'hello-world')
+        >>> print(len(self.get()))
+    """
     def __init__(self, duration=0.98, initial_data=None,
                  sample_rate=16000, sample_width=2):
         self.size = self.duration_to_bytes(duration, sample_rate, sample_width)
@@ -97,8 +104,9 @@ class HotwordContainer:
     _loaded = Event()
 
     def __init__(self, bus=FakeBus(), expected_duration=3, sample_rate=16000,
-                 sample_width=2):
+                 sample_width=2, reload_allowed=True, autoload=False):
         self.bus = bus
+        self.reload_allowed = reload_allowed
         self.state = HotwordState.HOTWORD
         # used for old style non-streaming wakeword (deprecated)
         self.audio_buffer = CyclicAudioBuffer(expected_duration,
@@ -106,11 +114,16 @@ class HotwordContainer:
                                               sample_width=sample_width)
         self.reload_on_failure = False
         self.applied_hotwords_config = None
+        if autoload:
+            self.load_hotword_engines()
 
     def load_hotword_engines(self):
         """
         Load hotword objects from configuration
         """
+        if not self.reload_allowed and self._loaded.is_set():
+            LOG.debug("Hotwords already loaded! skipping reload")
+            return
         self._loaded.clear()
         LOG.info("creating hotword engines")
         config_core = Configuration()

@@ -12,18 +12,18 @@
 import base64
 import json
 import subprocess
-import time
 import wave
 from enum import Enum
 from hashlib import md5
 from os.path import dirname
 from pathlib import Path
+from shutil import which
 from tempfile import NamedTemporaryFile
 from threading import Thread, RLock, Event
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Union
 
 import speech_recognition as sr
-from distutils.spawn import find_executable
+import time
 from ovos_bus_client import MessageBusClient
 from ovos_bus_client.message import Message
 from ovos_bus_client.session import SessionManager
@@ -31,22 +31,22 @@ from ovos_config import Configuration
 from ovos_config.locations import get_xdg_data_save_path
 from ovos_plugin_manager.microphone import OVOSMicrophoneFactory
 from ovos_plugin_manager.stt import get_stt_lang_configs, get_stt_supported_langs, get_stt_module_configs
+from ovos_plugin_manager.templates.microphone import Microphone
+from ovos_plugin_manager.templates.stt import STT, StreamingSTT
+from ovos_plugin_manager.templates.vad import VADEngine
 from ovos_plugin_manager.utils.tts_cache import hash_sentence
-from ovos_plugin_manager.vad import OVOSVADFactory
-from ovos_plugin_manager.vad import get_vad_configs
+from ovos_plugin_manager.vad import OVOSVADFactory, get_vad_configs
 from ovos_plugin_manager.wakewords import get_ww_lang_configs, get_ww_supported_langs, get_ww_module_configs
+from ovos_utils.fakebus import FakeBus
 from ovos_utils.log import LOG, log_deprecation
 from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessState
 
-from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt
+from ovos_dinkum_listener._util import _TemplateFilenameFormatter
+from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt, FakeStreamingSTT
 from ovos_dinkum_listener.transformers import AudioTransformersService
 from ovos_dinkum_listener.voice_loop import DinkumVoiceLoop, ListeningMode, ListeningState
 from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer
-try:
-    from ovos_backend_client.api import DatasetApi
-except ImportError:
-    LOG.info("`ovos-backend-client` is not installed. Upload is disabled")
-    DatasetApi = None
+
 
 try:
     from ovos_utils.sound import get_sound_duration
@@ -63,11 +63,11 @@ def bytes2audiodata(data):
     recognizer = sr.Recognizer()
     with NamedTemporaryFile() as fp:
         fp.write(data)
-
-        if find_executable("ffmpeg"):
+        ffmpeg = which("ffmpeg")
+        if ffmpeg:
             p = fp.name + "converted.wav"
             # ensure file format
-            cmd = ["ffmpeg", "-i", fp.name, "-acodec", "pcm_s16le", "-ar",
+            cmd = [ffmpeg, "-i", fp.name, "-acodec", "pcm_s16le", "-ar",
                    "16000", "-ac", "1", "-f", "wav", p, "-y"]
             subprocess.call(cmd)
         else:
@@ -148,8 +148,16 @@ class OVOSDinkumVoiceService(Thread):
 
     def __init__(self, on_ready=on_ready, on_error=on_error,
                  on_stopping=on_stopping, on_alive=on_alive,
-                 on_started=on_started, watchdog=lambda: None, mic=None,
-                 bus=None, validate_source=True, *args, **kwargs):
+                 on_started=on_started, watchdog=lambda: None,
+                 mic: Optional[Microphone] = None,
+                 bus: Optional[Union[MessageBusClient, FakeBus]] = None,
+                 validate_source: bool = True,
+                 stt: Optional[STT] = None,
+                 fallback_stt: Optional[STT] = None,
+                 vad: Optional[VADEngine] = None,
+                 hotwords: Optional[HotwordContainer] = None,
+                 disable_fallback: bool = False,
+                 *args, **kwargs):
         """
         watchdog: (callable) function to call periodically indicating
           operational status.
@@ -184,10 +192,18 @@ class OVOSDinkumVoiceService(Thread):
 
         self.mic = mic or OVOSMicrophoneFactory.create(microphone_config)
 
-        self.hotwords = HotwordContainer(self.bus)
-        self.vad = OVOSVADFactory.create()
-        self.stt = load_stt_module()
-        self.fallback_stt = load_fallback_stt()
+        self.hotwords = hotwords or HotwordContainer(self.bus)
+        self.vad = vad or OVOSVADFactory.create()
+        if stt and not isinstance(stt, StreamingSTT):
+            stt = FakeStreamingSTT(stt)
+        self.stt = stt or load_stt_module()
+        self.disable_fallback = disable_fallback
+        self.disable_reload = stt is not None
+        self.disable_hotword_reload = hotwords is not None
+        if disable_fallback:
+            self.fallback_stt = None
+        else:
+            self.fallback_stt = fallback_stt or load_fallback_stt()
         self.transformers = AudioTransformersService(self.bus, self.config)
 
         self._load_lock = RLock()
@@ -373,6 +389,7 @@ class OVOSDinkumVoiceService(Thread):
 
         self.bus.on('recognizer_loop:sleep', self._handle_sleep)
         self.bus.on('recognizer_loop:wake_up', self._handle_wake_up)
+        self.bus.on('recognizer_loop:b64_transcribe', self._handle_b64_transcribe)
         self.bus.on('recognizer_loop:b64_audio', self._handle_b64_audio)
         self.bus.on('recognizer_loop:record_stop', self._handle_stop_recording)
         self.bus.on('recognizer_loop:state.set', self._handle_change_state)
@@ -424,7 +441,8 @@ class OVOSDinkumVoiceService(Thread):
             if hasattr(self.fallback_stt, "shutdown"):
                 self.fallback_stt.shutdown()
 
-            self.hotwords.shutdown()
+            if not self.disable_hotword_reload:
+                self.hotwords.shutdown()
 
             if hasattr(self.vad, "stop"):
                 self.vad.stop()
@@ -542,22 +560,6 @@ class OVOSDinkumVoiceService(Thread):
         LOG.debug(f"Wrote {wav_path}")
         return f"file://{wav_path.absolute()}"
 
-    def _upload_hotword(self, wav_data, metadata):
-        """Upload the wakeword in a background thread."""
-
-        upload_url = Configuration().get("listener", {}).get('wake_word_upload', {}).get('url')
-
-        def upload(wav_data, metadata):
-            DatasetApi().upload_wake_word(wav_data,
-                                          metadata,
-                                          upload_url=upload_url)
-
-        if DatasetApi is not None:
-            Thread(target=upload, daemon=True,
-                   args=(wav_data, metadata)).start()
-        else:
-            LOG.debug("`pip install ovos-backend-client` to enable upload")
-
     @staticmethod
     def _compile_ww_context(key_phrase, ww_module):
         """ creates metadata in the format expected by selene
@@ -591,11 +593,6 @@ class OVOSDinkumVoiceService(Thread):
             listener = self.config["listener"]
             if listener["record_wake_words"]:
                 payload["filename"] = self._save_ww(audio_bytes, ww_context)
-
-            upload_disabled = listener.get('wake_word_upload',
-                                           {}).get('disable')
-            if self.config['opt_in'] and not upload_disabled:
-                self._upload_hotword(audio_bytes, ww_context)
 
             utterance = ww_context.get("utterance")
             if utterance:
@@ -658,20 +655,38 @@ class OVOSDinkumVoiceService(Thread):
             )
         self.bus.emit(Message("recognizer_loop:record_end"))
 
-    def _stt_text(self, transcripts: List[Tuple[str, float]],
-                  stt_context: dict):
-        # Report utterance to intent service
-        if transcripts:
-            utts = [u[0] for u in transcripts]  # filter confidence
+    def __normtranscripts(self, transcripts: List[Tuple[str, float]]) -> List[str]:
+        # unfortunately common enough when using whisper to deserve a setting
+        # mainly happens on silent audio, not as a mistranscription
+        default_hallucinations = [
+            "thanks for watching!",
+            'thank you for watching!',
+            "so",
+            "beep!"
+            # "Thank you"  # this one can also be valid!!
+        ]
+        hallucinations = self.config.get("hallucination_list", default_hallucinations) \
+            if self.config.get("filter_hallucinations", True) else []
+        utts = [u[0].lstrip(" \"'").strip(" \"'") for u in transcripts if u[0]]
+        filtered_hutts = [u for u in utts if u and u.lower() not in hallucinations]
+        hutts = [u for u in utts if u not in filtered_hutts]
+        if hutts:
+            LOG.debug(f"Filtered hallucinations: {hutts}")
+        return filtered_hutts
+
+    def _stt_text(self, transcripts: List[Tuple[str, float]], stt_context: dict):
+        utts = self.__normtranscripts(transcripts) if transcripts else []
+        LOG.debug(f"STT: {utts}")
+        if utts:
             lang = stt_context.get("lang") or Configuration().get("lang", "en-us")
-            LOG.debug(f"STT: {utts}")
-            payload = {"utterances": utts,
-                       "lang": lang}
+            payload = {"utterances": utts, "lang": lang}
             self.bus.emit(Message("recognizer_loop:utterance", payload, stt_context))
-        elif self.voice_loop.listen_mode == ListeningMode.CONTINUOUS:
-            LOG.debug("ignoring transcription failure")
         else:
-            self.bus.emit(Message("recognizer_loop:speech.recognition.unknown", context=stt_context))
+            if self.voice_loop.listen_mode != ListeningMode.CONTINUOUS:
+                LOG.error("Empty transcription, either recorded silence or STT failed!")
+                self.bus.emit(Message("recognizer_loop:speech.recognition.unknown", context=stt_context))
+            else:
+                LOG.debug("Ignoring empty transcription in continuous listening mode")
 
     def _save_stt(self, audio_bytes, stt_meta, save_path=None):
         LOG.info("Saving Utterance Recording")
@@ -681,7 +696,28 @@ class OVOSDinkumVoiceService(Thread):
             stt_audio_dir = Path(f"{self.default_save_path}/utterances")
         stt_audio_dir.mkdir(parents=True, exist_ok=True)
 
-        filename = hash_sentence(stt_meta["transcription"])
+        listener = self.config.get("listener", {})
+
+        # Documented in ovos_config/mycroft.conf
+        default_template = "{md5}-{uuid4}"
+        utterance_filename = listener.get("utterance_filename", default_template)
+        formatter = _TemplateFilenameFormatter()
+
+        @formatter.register('md5')
+        def transcription_md5():
+            # Build a hash of the transcription
+
+            try:
+                # transcriptions should be : List[Tuple[str, int]]
+                text = stt_meta.get('transcriptions')[0][0]
+            except IndexError:
+                # handles legacy API
+                return stt_meta.get('transcription') or 'null'
+
+            return hash_sentence(text)
+
+        filename = formatter.format(utterance_filename)
+
         mic = self.voice_loop.mic
         wav_path = stt_audio_dir / f"{filename}.wav"
         meta_path = stt_audio_dir / f"{filename}.json"
@@ -697,28 +733,11 @@ class OVOSDinkumVoiceService(Thread):
         LOG.debug(f"Wrote {wav_path}")
         return f"file://{wav_path.absolute()}"
 
-    def _upload_stt(self, wav_data, metadata):
-        """Upload the STT in a background thread."""
-
-        upload_url = Configuration().get("listener", {}).get('stt_upload', {}).get('url')
-
-        def upload(wav_data, metadata):
-            DatasetApi().upload_stt(wav_data, metadata, upload_url=upload_url)
-
-        if DatasetApi:
-            Thread(target=upload, daemon=True,
-                   args=(wav_data, metadata)).start()
-        else:
-            LOG.debug("`pip install ovos-backend-client` to enable upload")
-
     def _stt_audio(self, audio_bytes: bytes, stt_context: dict):
         try:
             listener = self.config["listener"]
             if listener["save_utterances"]:
                 stt_context["filename"] = self._save_stt(audio_bytes, stt_context)
-                upload_disabled = listener.get('stt_upload', {}).get('disable')
-                if self.config['opt_in'] and not upload_disabled:
-                    self._upload_stt(audio_bytes, stt_context)
         except Exception:
             LOG.exception("Error while saving STT audio")
         return stt_context
@@ -882,8 +901,25 @@ class OVOSDinkumVoiceService(Thread):
         if self.voice_loop.state == ListeningState.CONFIRMATION:
             self.voice_loop.state = ListeningState.BEFORE_COMMAND
 
+    def _handle_b64_transcribe(self, message: Message):
+        """ transcribe base64 encoded audio and return result via message"""
+        LOG.debug("Handling Base64 STT request")
+        b64audio = message.data["audio"]
+        lang = message.data.get("lang", self.voice_loop.stt.lang)
+
+        wav_data = base64.b64decode(b64audio)
+
+        self.voice_loop.stt.stream_start()
+        audio = bytes2audiodata(wav_data)
+        utterances = self.voice_loop.stt.transcribe(audio, lang)
+        self.voice_loop.stt.stream_stop()
+
+        LOG.debug(f"transcripts: {utterances}")
+        self.bus.emit(message.response({"transcriptions": utterances, "lang": lang}))
+
     def _handle_b64_audio(self, message: Message):
-        """ transcribe base64 encoded audio """
+        """ transcribe base64 encoded audio and inject result into bus"""
+        LOG.debug("Handling Base64 Incoming Audio")
         b64audio = message.data["audio"]
         lang = message.data.get("lang", self.voice_loop.stt.lang)
 
@@ -1015,7 +1051,7 @@ class OVOSDinkumVoiceService(Thread):
         Configuration object reports a change
         """
         if self._config_hash() == self._applied_config_hash:
-            LOG.info("No relevant configuration changed")
+            LOG.debug("No relevant configuration changed")
             return
         LOG.info("Reloading changed configuration")
         if not self._load_lock.acquire(timeout=30):

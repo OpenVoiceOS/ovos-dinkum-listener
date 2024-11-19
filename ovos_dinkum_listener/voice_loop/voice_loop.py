@@ -207,7 +207,9 @@ class DinkumVoiceLoop(VoiceLoop):
             chunk = self.mic.read_chunk()
             if not self._is_running:  # handle shutdown in middle of read_chunk
                 break
-            assert chunk is not None, "No audio from microphone"
+            if chunk is None:
+                #LOG.warning("No audio from microphone")
+                continue
 
             if self.is_muted:
                 # Soft mute
@@ -781,12 +783,10 @@ class DinkumVoiceLoop(VoiceLoop):
             self._vad_remove_silence()
 
         utts, stt_context = self._get_tx(stt_context)
-
+        LOG.info(f"Raw transcription: {utts}")
         if utts:
             LOG.debug(f"transformers metadata: {stt_context}")
-            LOG.info(f"transcribed: {utts}")
-        else:
-            LOG.info("nothing transcribed")
+
         # Voice command has finished recording
         if self.stt_audio_callback is not None:
             self.stt_audio_callback(self.stt_audio_bytes, stt_context)

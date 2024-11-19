@@ -1,12 +1,12 @@
 # Changelog
 
-## [0.2.0a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.2.0a1) (2024-09-11)
+## [0.3.3a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.3a1) (2024-11-19)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.1.3...0.2.0a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.2...0.3.3a1)
 
 **Merged pull requests:**
 
-- feat:fallback plugins [\#138](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/138) ([JarbasAl](https://github.com/JarbasAl))
+- deprecate:upload of ww/stt [\#159](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/159) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
