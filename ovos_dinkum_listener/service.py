@@ -1079,7 +1079,7 @@ class OVOSDinkumVoiceService(Thread):
                 if self.stt:
                     LOG.debug(f"new={self.stt.__class__}: {self.stt.config}")
 
-            if not self.disable_reload and new_hash['fallback'] != self._applied_config_hash['fallback']:
+            if not self.disable_reload and not self.disable_fallback and new_hash['fallback'] != self._applied_config_hash['fallback']:
                 LOG.info("Reloading Fallback STT")
                 if self.fallback_stt:
                     LOG.debug(f"old={self.fallback_stt.__class__}: "
