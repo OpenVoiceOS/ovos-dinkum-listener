@@ -1,12 +1,12 @@
 # Changelog
 
-## [0.3.2a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.2a1) (2024-11-05)
+## [0.3.3a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.3a1) (2024-11-19)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.1...0.3.2a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.2...0.3.3a1)
 
 **Merged pull requests:**
 
-- fix: allow latest bus client version [\#157](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/157) ([JarbasAl](https://github.com/JarbasAl))
+- deprecate:upload of ww/stt [\#159](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/159) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
