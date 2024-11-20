@@ -1,12 +1,12 @@
 # Changelog
 
-## [0.3.3a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.3a1) (2024-11-19)
+## [0.3.4a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.4a1) (2024-11-20)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.2...0.3.3a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.3...0.3.4a1)
 
 **Merged pull requests:**
 
-- deprecate:upload of ww/stt [\#159](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/159) ([JarbasAl](https://github.com/JarbasAl))
+- fix:remove unused dependency from extras [\#161](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/161) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
