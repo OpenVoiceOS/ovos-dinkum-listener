@@ -1,12 +1,12 @@
 # Changelog
 
-## [0.3.4a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.4a1) (2024-11-20)
+## [0.3.5a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.5a1) (2025-01-04)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.3...0.3.4a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.4...0.3.5a1)
 
 **Merged pull requests:**
 
-- fix:remove unused dependency from extras [\#161](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/161) ([JarbasAl](https://github.com/JarbasAl))
+- chore: add warnings [\#163](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/163) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
