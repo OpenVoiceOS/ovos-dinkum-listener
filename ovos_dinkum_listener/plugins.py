@@ -74,6 +74,7 @@ class FakeStreamingSTT(StreamingSTT):
             audiod = audio
         else:
             raise ValueError(f"'audio' must be 'bytes' or 'AudioData', got '{type(audio)}'")
+        LOG.debug(f"Transcribing with lang: {lang}")
         return self.engine.transcribe(audiod, lang)
 
 
