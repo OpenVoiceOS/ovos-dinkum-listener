@@ -700,6 +700,7 @@ class DinkumVoiceLoop(VoiceLoop):
         @return: string transcription and dict context
         """
         # handle lang detection from speech
+        lang = self.stt.lang
         if "stt_lang" in stt_context:
             lang = self._validate_lang(stt_context["stt_lang"])
             stt_context["stt_lang"] = lang
@@ -711,7 +712,7 @@ class DinkumVoiceLoop(VoiceLoop):
 
         # get text and trigger callback
         try:
-            utts = self.stt.transcribe() or []
+            utts = self.stt.transcribe(lang=lang) or []
         except:
             LOG.exception("STT failed")
             utts = []
@@ -719,7 +720,7 @@ class DinkumVoiceLoop(VoiceLoop):
         if not utts and self.fallback_stt is not None:
             LOG.info("Attempting fallback STT plugin")
             try:
-                utts = self.fallback_stt.transcribe() or []
+                utts = self.fallback_stt.transcribe(lang=lang) or []
             except:
                 LOG.exception("Fallback STT failed")
 
