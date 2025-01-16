@@ -41,6 +41,7 @@ from ovos_utils.fakebus import FakeBus
 from ovos_utils.log import LOG, log_deprecation
 from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessState
 
+import warnings
 from ovos_dinkum_listener._util import _TemplateFilenameFormatter
 from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt, FakeStreamingSTT
 from ovos_dinkum_listener.transformers import AudioTransformersService
@@ -310,6 +311,11 @@ class OVOSDinkumVoiceService(Thread):
 
     @property
     def state(self):
+        warnings.warn(
+            "reference `self.status.state` instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         log_deprecation("This property is deprecated, reference `status.state`",
                         "0.1.0")
         if self.status.state in (ProcessState.NOT_STARTED, ProcessState.ALIVE):
