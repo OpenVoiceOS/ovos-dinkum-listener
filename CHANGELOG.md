@@ -1,12 +1,12 @@
 # Changelog
 
-## [0.3.7a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.7a1) (2025-03-19)
+## [0.3.8a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.8a1) (2025-04-02)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.6...0.3.7a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.7...0.3.8a1)
 
 **Merged pull requests:**
 
-- fix: allow latest ovos-config [\#167](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/167) ([JarbasAl](https://github.com/JarbasAl))
+- fix: pin onnx.txt [\#169](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/169) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
