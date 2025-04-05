@@ -1,12 +1,16 @@
 # Changelog
 
-## [0.3.8a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.8a1) (2025-04-02)
+## [0.4.0a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.4.0a1) (2025-04-05)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.7...0.3.8a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.8...0.4.0a1)
+
+**Closed issues:**
+
+- \[FEAT\] Support multiple response sounds [\#171](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/171)
 
 **Merged pull requests:**
 
-- fix: pin onnx.txt [\#169](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/169) ([JarbasAl](https://github.com/JarbasAl))
+- feat: support multiple sounds [\#172](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/172) ([mikejgray](https://github.com/mikejgray))
 
 
 
