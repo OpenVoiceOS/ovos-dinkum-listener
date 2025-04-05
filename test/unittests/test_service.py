@@ -1,11 +1,13 @@
 import shutil
 import unittest
+import platform
 
 from os import environ, makedirs
 from os.path import join, dirname
 from threading import Event
 from time import sleep
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
+from unittest import skipIf
 
 from ovos_utils.messagebus import FakeBus
 from ovos_bus_client.message import Message
@@ -246,6 +248,50 @@ class TestDinkumVoiceService(unittest.TestCase):
         # TODO
         pass
 
+    def test_hotword_audio_multiple_sounds(self):
+        """Test that when sound is a list, a random choice is made."""
+        # Save the original emit method to restore it later
+        original_emit = self.bus.emit
+        
+        # Use a spy to track calls without replacing functionality
+        self.bus.emit = MagicMock(wraps=original_emit)
+        
+        try:
+            with patch('random.choice') as mock_random_choice:
+                # Configure the mock to return a specific sound
+                expected_sound = "path/to/chosen_sound.wav"
+                mock_random_choice.return_value = expected_sound
+
+                # Create test data
+                audio_bytes = b"dummy_audio_data"
+                sound_list = ["path/to/sound1.wav", "path/to/sound2.wav", expected_sound]
+                ww_context = {
+                    "sound": sound_list,
+                    "key_phrase": "hey_mycroft",
+                    "listen": True
+                }
+
+                # Call the method under test
+                self.service._hotword_audio(audio_bytes, ww_context)
+
+                # Assertions
+                mock_random_choice.assert_called_once_with(sound_list)
+
+                # Find the audio play message in the emitted messages
+                audio_messages = [
+                    call for call in self.bus.emit.call_args_list 
+                    if call[0][0].msg_type == "mycroft.audio.play_sound"
+                ]
+
+                # Assert that the message was emitted with the correct sound
+                self.assertEqual(len(audio_messages), 1, "Expected exactly one audio play message")
+                audio_msg = audio_messages[0][0][0]  # Get the Message object
+                self.assertEqual(audio_msg.data["uri"], expected_sound)
+                self.assertTrue(audio_msg.data["force_unmute"])
+        finally:
+            # Restore the original emit method to prevent affecting other tests
+            self.bus.emit = original_emit
+
     def test_stt_text(self):
         # TODO
         pass
@@ -376,6 +422,7 @@ class TestDinkumVoiceService(unittest.TestCase):
         # TODO
         pass
 
+    @skipIf(platform.system() == 'Darwin', "Test doesn't work on macOS due to watchdog limitations")
     def test_reload_configuration(self):
         import ovos_dinkum_listener.service
         mock_create_stt = Mock()
