@@ -11,6 +11,7 @@
 # limitations under the License.
 import base64
 import json
+import random
 import subprocess
 import wave
 from enum import Enum
@@ -618,6 +619,10 @@ class OVOSDinkumVoiceService(Thread):
             sound = ww_context.get("sound")
             listen = ww_context.get("listen")
             event = ww_context.get("event")
+
+            if isinstance(sound, list):
+                # if sound is a list, pick a random one
+                sound = random.choice(sound)
 
             if sound:
                 LOG.debug(f"Handling listen sound: {sound}")
