@@ -180,6 +180,7 @@ class OVOSDinkumVoiceService(Thread):
         self._watchdog = watchdog
         self._shutdown_event = Event()
         self._stopping = False
+        self._tmp_muted = None
         self.status.set_alive()
         self.config = Configuration()
         self._applied_config_hash = self._config_hash()
@@ -392,13 +393,13 @@ class OVOSDinkumVoiceService(Thread):
         self.bus.on('mycroft.mic.get_status', self._handle_mic_get_status)
         self.bus.on('recognizer_loop:audio_output_start', self._handle_audio_start)
         self.bus.on('recognizer_loop:audio_output_end', self._handle_audio_end)
-        self.bus.on('mycroft.stop', self._handle_stop)
 
         self.bus.on('recognizer_loop:sleep', self._handle_sleep)
         self.bus.on('recognizer_loop:wake_up', self._handle_wake_up)
         self.bus.on('recognizer_loop:b64_transcribe', self._handle_b64_transcribe)
         self.bus.on('recognizer_loop:b64_audio', self._handle_b64_audio)
         self.bus.on('recognizer_loop:record_stop', self._handle_stop_recording)
+        self.bus.on('mycroft.stop', self._handle_stop_recording)
         self.bus.on('recognizer_loop:state.set', self._handle_change_state)
         self.bus.on('recognizer_loop:state.get', self._handle_get_state)
         self.bus.on("intent.service.skills.activated", self._handle_extend_listening)
@@ -787,12 +788,15 @@ class OVOSDinkumVoiceService(Thread):
     # mic bus api
     def _handle_mute(self, message: Message):
         self.voice_loop.is_muted = True
+        LOG.info(f"Microphone muted: {self.voice_loop.is_muted}")
 
     def _handle_unmute(self, message: Message):
         self.voice_loop.is_muted = False
+        LOG.info(f"Microphone muted: {self.voice_loop.is_muted}")
 
     def _handle_mute_toggle(self, message: Message):
         self.voice_loop.is_muted = not self.voice_loop.is_muted
+        LOG.info(f"Microphone muted: {self.voice_loop.is_muted}")
 
     def _handle_listen(self, message: Message):
         if not self._validate_message_context(message) or not self.voice_loop.running:
@@ -832,16 +836,16 @@ class OVOSDinkumVoiceService(Thread):
     def _handle_audio_start(self, message: Message):
         """audio output started"""
         if self.config.get("listener").get("mute_during_output"):
+            self._tmp_muted = self.voice_loop.is_muted
             self.voice_loop.is_muted = True
+        LOG.debug(f"Microphone muted: {self.voice_loop.is_muted}")
 
     def _handle_audio_end(self, message: Message):
         """audio output ended"""
         if self.config.get("listener").get("mute_during_output"):
-            self.voice_loop.is_muted = False  # restore
-
-    def _handle_stop(self, message: Message):
-        """Handler for mycroft.stop, i.e. button press."""
-        self.voice_loop.is_muted = False  # restore
+            self.voice_loop.is_muted = self._tmp_muted or False  # restore
+            self._tmp_muted = None
+        LOG.debug(f"Microphone muted: {self.voice_loop.is_muted}")
 
     # state events
     def _handle_change_state(self, message: Message):
@@ -884,6 +888,9 @@ class OVOSDinkumVoiceService(Thread):
 
     def _handle_stop_recording(self, message: Message):
         """Stop current recording session """
+        if self.voice_loop.state != ListeningState.RECORDING:
+            return
+
         self.voice_loop.stop_recording()
         sound = self.config.get('sounds', {}).get('end_listening')
         if sound:
