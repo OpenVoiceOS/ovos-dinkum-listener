@@ -7,7 +7,7 @@ ovos-stt-plugin-vosk>=0.0.1,<1.0.0
 ovos-vad-plugin-noise>=0.1.0,<1.0.0
 
 # Microphone plugins
-ovos-microphone-plugin-sounddevice>=0.0.0,<1.0.0
+ovos-microphone-plugin-sounddevice>=0.0.1,<1.0.0
 
 # Wake Word plugins
 # note: tflite_runtime or full tensorflow also need to be installed
