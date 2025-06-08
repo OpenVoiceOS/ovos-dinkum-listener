@@ -108,10 +108,6 @@ class HotwordContainer:
         self.bus = bus
         self.reload_allowed = reload_allowed
         self.state = HotwordState.HOTWORD
-        # used for old style non-streaming wakeword (deprecated)
-        self.audio_buffer = CyclicAudioBuffer(expected_duration,
-                                              sample_rate=sample_rate,
-                                              sample_width=sample_width)
         self.reload_on_failure = False
         self.applied_hotwords_config = None
         if autoload:
@@ -172,7 +168,7 @@ class HotwordContainer:
                 if not enabled:
                     continue
 
-                engine = OVOSWakeWordFactory.create_hotword(word, lang=lang)
+                engine = OVOSWakeWordFactory.create_hotword(word)
                 if engine is not None:
                     LOG.info(f"Loading hotword: {word} with engine: {engine}")
                     if hasattr(engine, "bind"):
@@ -279,15 +275,10 @@ class HotwordContainer:
         else:
             engines = self.hot_words
 
-        # streaming engines will ignore the byte_data
-        audio_data = self.audio_buffer.get()
         for ww_name, engine in engines.items():
             try:
                 assert isinstance(engine, HotWordEngine)
-                # non-streaming ww engines expect a 3-second cyclic buffer here
-                # streaming engines will ignore audio_data
-                # (got it via self.update)
-                if engine.found_wake_word(audio_data):
+                if engine.found_wake_word():
                     LOG.debug(f"Detected wake_word: {ww_name}")
                     return ww_name
             except AssertionError:
@@ -319,7 +310,6 @@ class HotwordContainer:
         Update appropriate engines based on self.state
         @param chunk: bytes of audio to feed to hotword engines
         """
-        self.audio_buffer.append(chunk)
         if self.state == HotwordState.LISTEN:
             # LOG.debug(f"Update listen_words")
             engines = self.listen_words.values()
@@ -335,7 +325,6 @@ class HotwordContainer:
 
         for engine in engines:
             try:
-                # old style engines will ignore the update
                 engine.update(chunk)
             except Exception as e:
                 LOG.error(e)
@@ -344,7 +333,6 @@ class HotwordContainer:
         """
         Clear the audio_buffer and reset all hotword engines
         """
-        self.audio_buffer.clear()
         for engine in self.plugins:
             try:
                 # TODO: Remove check when default method is added to base class

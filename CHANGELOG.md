@@ -1,16 +1,12 @@
 # Changelog
 
-## [0.4.0a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.4.0a1) (2025-04-05)
+## [0.4.1a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.4.1a1) (2025-06-08)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.8...0.4.0a1)
-
-**Closed issues:**
-
-- \[FEAT\] Support multiple response sounds [\#171](https://github.com/OpenVoiceOS/ovos-dinkum-listener/issues/171)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.4.0...0.4.1a1)
 
 **Merged pull requests:**
 
-- feat: support multiple sounds [\#172](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/172) ([mikejgray](https://github.com/mikejgray))
+- fix: opm 1.X.X compat [\#177](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/177) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
