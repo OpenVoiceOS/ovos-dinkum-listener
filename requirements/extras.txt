@@ -10,5 +10,5 @@ ovos-microphone-plugin-sounddevice>=0.0.1,<1.0.0
 
 # Wake Word plugins
 # note: tflite_runtime also need to be installed
-ovos-ww-plugin-precise-lite>=0.1,<1.0.0
-ovos-ww-plugin-vosk>=0.1,<1.0.0
+ovos-ww-plugin-precise-lite>=0.1.6,<1.0.0
+ovos-ww-plugin-vosk>=0.1.7,<1.0.0
