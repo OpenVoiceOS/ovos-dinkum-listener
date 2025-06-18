@@ -1,12 +1,12 @@
 # Changelog
 
-## [0.4.1a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.4.1a1) (2025-06-08)
+## [0.4.2a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.4.2a1) (2025-06-12)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.4.0...0.4.1a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.4.1...0.4.2a1)
 
 **Merged pull requests:**
 
-- fix: opm 1.X.X compat [\#177](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/177) ([JarbasAl](https://github.com/JarbasAl))
+- fix: ensure minimum extra plugins version [\#179](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/179) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
