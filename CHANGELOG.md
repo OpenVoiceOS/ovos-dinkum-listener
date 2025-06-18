@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.2a3](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.4.2a3) (2025-06-18)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.4.2a2...0.4.2a3)
+
+**Merged pull requests:**
+
+- Update pytest requirement from ~=7.1 to ~=8.1 in /requirements [\#95](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/95) ([dependabot[bot]](https://github.com/apps/dependabot))
+
+## [0.4.2a2](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.4.2a2) (2025-06-18)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.4.2a1...0.4.2a2)
+
 ## [0.4.2a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.4.2a1) (2025-06-12)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.4.1...0.4.2a1)
