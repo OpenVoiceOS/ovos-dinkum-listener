@@ -32,16 +32,6 @@ non exhaustive list of config options
     "microphone": {
       "module": "ovos-microphone-plugin-alsa"
     },
-    // wake word verifier plugins will double check a wake word prediction
-    // they are given a chance to reject wake word activations
-    "ww_verifiers": {
-        "ovos-ww-verifier-silero": {
-            "threshold": 0.1,
-            // does not make sense to enable if "vad_pre_wake_enabled" is set to true
-            "enabled": false
-        }
-    },
-
     // If enabled will only check for wakeword if VAD also detected speech
     // this should reduce false activations
     "vad_pre_wake_enabled": true,
