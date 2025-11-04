@@ -531,19 +531,15 @@ class DinkumVoiceLoop(VoiceLoop):
             LOG.debug(f"Wake word detected={ww}")
             ww_data = self.hotwords.get_ww(ww)
 
-            hotword_audio_bytes = bytes()
-            while self.hotword_chunks:
-                hotword_audio_bytes += self.hotword_chunks.popleft()
-
-            self.hotword_chunks.clear()
-
-            if not self.hotwords.verify(hotword_audio_bytes):
-                LOG.debug("wake word verifier plugins discarded detection")
-                return False
-
             # Callback to handle recorded hotword audio
             if self.listenword_audio_callback is not None:
+                hotword_audio_bytes = bytes()
+                while self.hotword_chunks:
+                    hotword_audio_bytes += self.hotword_chunks.popleft()
+
                 self.listenword_audio_callback(hotword_audio_bytes, ww_data)
+
+            self.hotword_chunks.clear()
 
             # Callback to handle wake up
             if self.wake_callback is not None:
