@@ -10,24 +10,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import audioop
+
 import time
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from threading import Event
 from typing import Callable, Deque, Optional
 
+import audioop
 from ovos_config import Configuration
 from ovos_plugin_manager.stt import StreamingSTT
+from ovos_plugin_manager.templates.microphone import Microphone
 from ovos_plugin_manager.vad import VADEngine
 from ovos_utils.log import LOG
-from ovos_bus_client.session import SessionManager
-from ovos_dinkum_listener.transformers import AudioTransformersService
-from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer, HotwordState, HotWordException
-from ovos_plugin_manager.templates.microphone import Microphone
 
 from ovos_dinkum_listener.plugins import FakeStreamingSTT
+from ovos_dinkum_listener.transformers import AudioTransformersService
+from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer, HotwordState, HotWordException
 
 
 class ListeningState(str, Enum):
@@ -44,6 +43,7 @@ class ListeningState(str, Enum):
     BEFORE_COMMAND = "before_cmd"
     IN_COMMAND = "in_cmd"
     AFTER_COMMAND = "after_cmd"
+    PRE_WAKE_VAD = "pre_wake_vad"
 
 
 class ListeningMode(str, Enum):
@@ -144,11 +144,18 @@ class DinkumVoiceLoop(VoiceLoop):
     is_muted: bool = False
     _is_running: bool = False
     _chunk_info: ChunkInfo = field(default_factory=ChunkInfo)
+    _vad_window_start: float = 0.0
+
+    # config flag for VAD-before-wakeword feature
+    vad_pre_wake_enabled: bool = field(default_factory=lambda: Configuration().get("listener", {}).get("vad_pre_wake_enabled", False))
 
     @property
     def running(self) -> bool:
         """
-        Return true while the loop is running
+        Indicates whether the voice loop is currently running.
+
+        Returns:
+            `true` if the loop is running, `false` otherwise.
         """
         return self._is_running is True
     
@@ -159,13 +166,12 @@ class DinkumVoiceLoop(VoiceLoop):
 
     def start(self):
         """
-        Start the Voice Loop; sets the listening mode based on configuration and
-        prepares the loop to be run.
+        Initialize and start the voice loop using configured listening mode.
+
+        Sets the internal running flag, selects ListeningMode from configuration (continuous, hybrid, or wakeword), sets the initial ListeningState to PRE_WAKE_VAD when vad_pre_wake_enabled is true otherwise DETECT_WAKEWORD, and resets the last wake-word timestamp.
         """
 
         self._is_running = True
-        self.state = ListeningState.DETECT_WAKEWORD
-        self.last_ww = -1
         listener_config = Configuration().get("listener", {})
         if listener_config.get("continuous_listen", False):
             self.listen_mode = ListeningMode.CONTINUOUS
@@ -174,19 +180,65 @@ class DinkumVoiceLoop(VoiceLoop):
         else:
             self.listen_mode = ListeningMode.WAKEWORD
 
+        # choose initial state based on config
+        if self.vad_pre_wake_enabled:
+            self.state = ListeningState.PRE_WAKE_VAD
+        else:
+            self.state = ListeningState.DETECT_WAKEWORD
+
+        self.last_ww = -1
         LOG.info(f"Listening mode: {self.listen_mode}")
+        LOG.info(f"VAD pre-wake enabled: {self.vad_pre_wake_enabled}")
         LOG.debug(f"STATE: {self.state}")
+
+    def _pre_wake_vad(self, chunk: bytes):
+        """
+        Monitor an audio chunk with VAD and transition to wake-word detection when speech is detected.
+
+        Sets self._chunk_info.is_speech according to the VAD result. If speech is detected, sets the loop state to ListeningState.DETECT_WAKEWORD and records the current time in self._vad_window_start. If no speech is detected, forwards the chunk to the audio transformers. On VAD errors, logs the error and treats the chunk as non-speech.
+
+        Parameters:
+            chunk (bytes): Raw audio bytes for VAD analysis.
+        """
+        self.hotword_chunks.append(chunk)  # we still keep chunks for wake word detection
+        try:
+            self._chunk_info.is_speech = not self.vad.is_silence(chunk)
+        except Exception as e:
+            LOG.error(f"VAD error in pre-wake: {e}")
+            self._chunk_info.is_speech = False
+        if self._chunk_info.is_speech:
+            LOG.debug("Speech detected - switching to wake word detection")
+            self.state = ListeningState.DETECT_WAKEWORD
+            self._vad_window_start = time.time()
+
+            rewind_chunks = []
+            while self.hotword_chunks:
+                rewind_chunks.append(self.hotword_chunks.popleft())
+
+            n_to_rewind = 5 # TODO from config
+            for chunk in rewind_chunks[-n_to_rewind:]:
+                # feed some pre-VAD detection audio to hotwords
+                # VAD is usually a bit too late
+                self.hotwords.update(chunk)
+        else:
+            self.transformers.feed_audio(chunk)
 
     def run(self):
         """
-        Run the VoiceLoop so long as `self._is_running` is True
+        Run the voice loop state machine, processing incoming audio chunks until the loop is stopped.
+
+        This method reads audio chunks from the microphone and advances the listening finite-state machine (pre-wake VAD, wakeword/hotword detection, waiting/recording/command handling, confirmation and teardown). It feeds audio to transformers and STT as appropriate, updates timers and per-chunk metadata, and invokes configured callbacks (chunk_callback, wake_callback, stt/audio/text callbacks, etc.). The loop continues while self._is_running and exits when the loop is stopped or the microphone read returns no audio.
         """
         # Voice command state
         self.speech_seconds_left = self.speech_seconds
         self.silence_seconds_left = self.silence_seconds
         self.timeout_seconds_left = self.timeout_seconds
-        self.timeout_seconds_with_silence_left = self.timeout_seconds_with_silence        
-        self.state = ListeningState.DETECT_WAKEWORD
+        self.timeout_seconds_with_silence_left = self.timeout_seconds_with_silence
+
+        if self.vad_pre_wake_enabled:
+            self.state = ListeningState.PRE_WAKE_VAD
+        else:
+            self.state = ListeningState.DETECT_WAKEWORD
 
         # Keep hotword/STT audio so they can (optionally) be saved to disk
         self.hotword_chunks = deque(maxlen=self.num_hotword_keep_chunks)
@@ -226,7 +278,12 @@ class DinkumVoiceLoop(VoiceLoop):
             # AFTER_COMMAND -> DETECT_HOTWORD
             #
 
-            if self.state == ListeningState.DETECT_WAKEWORD:
+            if self.state == ListeningState.PRE_WAKE_VAD:
+                self._pre_wake_vad(chunk) # might change state to ListeningState.DETECT_WAKEWORD
+
+            elif self.state == ListeningState.DETECT_WAKEWORD:
+                if self.vad_pre_wake_enabled and not self._vad_window_start:
+                    self._vad_window_start = time.time()
                 try:
                     if self.listen_mode == ListeningMode.CONTINUOUS:
                         LOG.info(f"Continuous listening mode, updating state")
@@ -238,6 +295,11 @@ class DinkumVoiceLoop(VoiceLoop):
                         LOG.info("Hotword detected")
                     else:
                         self.transformers.feed_audio(chunk)
+                        # handle timeout to return to VAD stage
+                        if self.vad_pre_wake_enabled and time.time() - self._vad_window_start > 5:
+                            LOG.debug("Wakeword not found within 5s - returning to PRE_WAKE_VAD")
+                            self.state = ListeningState.PRE_WAKE_VAD
+                            self._vad_window_start = 0
                 except HotWordException as e:
                     if self.hotwords.reload_on_failure:
                         LOG.warning(e)
@@ -808,6 +870,8 @@ class DinkumVoiceLoop(VoiceLoop):
         if self.listen_mode == ListeningMode.CONTINUOUS or \
                 self.listen_mode == ListeningMode.HYBRID:
             self.state = ListeningState.WAITING_CMD
+        elif self.vad_pre_wake_enabled:
+            self.state = ListeningState.PRE_WAKE_VAD
         else:
             self.state = ListeningState.DETECT_WAKEWORD
         LOG.debug(f"STATE: {self.state}")
