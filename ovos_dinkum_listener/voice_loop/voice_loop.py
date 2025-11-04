@@ -152,7 +152,10 @@ class DinkumVoiceLoop(VoiceLoop):
     @property
     def running(self) -> bool:
         """
-        Return true while the loop is running
+        Indicates whether the voice loop is currently running.
+        
+        Returns:
+            `true` if the loop is running, `false` otherwise.
         """
         return self._is_running is True
     
@@ -163,8 +166,9 @@ class DinkumVoiceLoop(VoiceLoop):
 
     def start(self):
         """
-        Start the Voice Loop; sets the listening mode based on configuration and
-        prepares the loop to be run.
+        Initialize and start the voice loop using configured listening mode.
+        
+        Sets the internal running flag, selects ListeningMode from configuration (continuous, hybrid, or wakeword), sets the initial ListeningState to PRE_WAKE_VAD when vad_pre_wake_enabled is true otherwise DETECT_WAKEWORD, and resets the last wake-word timestamp.
         """
 
         self._is_running = True
@@ -188,7 +192,14 @@ class DinkumVoiceLoop(VoiceLoop):
         LOG.debug(f"STATE: {self.state}")
 
     def _pre_wake_vad(self, chunk: bytes):
-        """Wait for VAD detection before enabling wake word engines"""
+        """
+        Monitor an audio chunk with VAD and transition to wake-word detection when speech is detected.
+        
+        Sets self._chunk_info.is_speech according to the VAD result. If speech is detected, sets the loop state to ListeningState.DETECT_WAKEWORD and records the current time in self._vad_window_start. If no speech is detected, forwards the chunk to the audio transformers. On VAD errors, logs the error and treats the chunk as non-speech.
+        
+        Parameters:
+            chunk (bytes): Raw audio bytes for VAD analysis.
+        """
         try:
             self._chunk_info.is_speech = not self.vad.is_silence(chunk)
         except Exception as e:
@@ -203,7 +214,9 @@ class DinkumVoiceLoop(VoiceLoop):
 
     def run(self):
         """
-        Run the VoiceLoop so long as `self._is_running` is True
+        Run the voice loop state machine, processing incoming audio chunks until the loop is stopped.
+        
+        This method reads audio chunks from the microphone and advances the listening finite-state machine (pre-wake VAD, wakeword/hotword detection, waiting/recording/command handling, confirmation and teardown). It feeds audio to transformers and STT as appropriate, updates timers and per-chunk metadata, and invokes configured callbacks (chunk_callback, wake_callback, stt/audio/text callbacks, etc.). The loop continues while self._is_running and exits when the loop is stopped or the microphone read returns no audio.
         """
         # Voice command state
         self.speech_seconds_left = self.speech_seconds
