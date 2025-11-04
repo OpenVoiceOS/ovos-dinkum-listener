@@ -198,7 +198,6 @@ class DinkumVoiceLoop(VoiceLoop):
             LOG.debug("Speech detected - switching to wake word detection")
             self.state = ListeningState.DETECT_WAKEWORD
             self._vad_window_start = time.time()
-            self.hotword_chunks.append(chunk) # TODO: should we also keep a couple chunks before this?
         else:
             self.transformers.feed_audio(chunk)
 
