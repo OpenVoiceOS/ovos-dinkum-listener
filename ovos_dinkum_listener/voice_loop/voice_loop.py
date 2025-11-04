@@ -153,7 +153,7 @@ class DinkumVoiceLoop(VoiceLoop):
     def running(self) -> bool:
         """
         Indicates whether the voice loop is currently running.
-        
+
         Returns:
             `true` if the loop is running, `false` otherwise.
         """
@@ -167,7 +167,7 @@ class DinkumVoiceLoop(VoiceLoop):
     def start(self):
         """
         Initialize and start the voice loop using configured listening mode.
-        
+
         Sets the internal running flag, selects ListeningMode from configuration (continuous, hybrid, or wakeword), sets the initial ListeningState to PRE_WAKE_VAD when vad_pre_wake_enabled is true otherwise DETECT_WAKEWORD, and resets the last wake-word timestamp.
         """
 
@@ -194,12 +194,13 @@ class DinkumVoiceLoop(VoiceLoop):
     def _pre_wake_vad(self, chunk: bytes):
         """
         Monitor an audio chunk with VAD and transition to wake-word detection when speech is detected.
-        
+
         Sets self._chunk_info.is_speech according to the VAD result. If speech is detected, sets the loop state to ListeningState.DETECT_WAKEWORD and records the current time in self._vad_window_start. If no speech is detected, forwards the chunk to the audio transformers. On VAD errors, logs the error and treats the chunk as non-speech.
-        
+
         Parameters:
             chunk (bytes): Raw audio bytes for VAD analysis.
         """
+        self.hotword_chunks.append(chunk)  # we still keep chunks for wake word detection
         try:
             self._chunk_info.is_speech = not self.vad.is_silence(chunk)
         except Exception as e:
@@ -209,13 +210,23 @@ class DinkumVoiceLoop(VoiceLoop):
             LOG.debug("Speech detected - switching to wake word detection")
             self.state = ListeningState.DETECT_WAKEWORD
             self._vad_window_start = time.time()
+
+            rewind_chunks = []
+            while self.hotword_chunks:
+                rewind_chunks.append(self.hotword_chunks.popleft())
+
+            n_to_rewind = 5 # TODO from config
+            for chunk in rewind_chunks[-n_to_rewind:]:
+                # feed some pre-VAD detection audio to hotwords
+                # VAD is usually a bit too late
+                self.hotwords.update(chunk)
         else:
             self.transformers.feed_audio(chunk)
 
     def run(self):
         """
         Run the voice loop state machine, processing incoming audio chunks until the loop is stopped.
-        
+
         This method reads audio chunks from the microphone and advances the listening finite-state machine (pre-wake VAD, wakeword/hotword detection, waiting/recording/command handling, confirmation and teardown). It feeds audio to transformers and STT as appropriate, updates timers and per-chunk metadata, and invokes configured callbacks (chunk_callback, wake_callback, stt/audio/text callbacks, etc.). The loop continues while self._is_running and exits when the loop is stopped or the microphone read returns no audio.
         """
         # Voice command state
@@ -270,7 +281,7 @@ class DinkumVoiceLoop(VoiceLoop):
             if self.state == ListeningState.PRE_WAKE_VAD:
                 self._pre_wake_vad(chunk) # might change state to ListeningState.DETECT_WAKEWORD
 
-            if self.state == ListeningState.DETECT_WAKEWORD:
+            elif self.state == ListeningState.DETECT_WAKEWORD:
                 if self.vad_pre_wake_enabled and not self._vad_window_start:
                     self._vad_window_start = time.time()
                 try:
@@ -859,6 +870,8 @@ class DinkumVoiceLoop(VoiceLoop):
         if self.listen_mode == ListeningMode.CONTINUOUS or \
                 self.listen_mode == ListeningMode.HYBRID:
             self.state = ListeningState.WAITING_CMD
+        elif self.vad_pre_wake_enabled:
+            self.state = ListeningState.PRE_WAKE_VAD
         else:
             self.state = ListeningState.DETECT_WAKEWORD
         LOG.debug(f"STATE: {self.state}")
