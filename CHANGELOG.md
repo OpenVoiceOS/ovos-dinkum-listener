@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.2a5](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.4.2a5) (2025-11-04)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.4.2a4...0.4.2a5)
+
+**Merged pull requests:**
+
+- Default to onnx [\#193](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/193) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.4.2a4](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.4.2a4) (2025-11-04)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.4.2a3...0.4.2a4)
