@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.2a4](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.4.2a4) (2025-11-04)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.4.2a3...0.4.2a4)
+
+**Merged pull requests:**
+
+- Add pre-wakeword VAD state for reduced false activations [\#189](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/189) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.4.2a3](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.4.2a3) (2025-06-18)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.4.2a2...0.4.2a3)
