@@ -10,23 +10,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+import audioop
 import time
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
+from threading import Event
 from typing import Callable, Deque, Optional
 
-import audioop
 from ovos_config import Configuration
 from ovos_plugin_manager.stt import StreamingSTT
-from ovos_plugin_manager.templates.microphone import Microphone
 from ovos_plugin_manager.vad import VADEngine
 from ovos_utils.log import LOG
-
-from ovos_dinkum_listener.plugins import FakeStreamingSTT
+from ovos_bus_client.session import SessionManager
 from ovos_dinkum_listener.transformers import AudioTransformersService
 from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer, HotwordState, HotWordException
+from ovos_plugin_manager.templates.microphone import Microphone
+
+from ovos_dinkum_listener.plugins import FakeStreamingSTT
 
 
 class ListeningState(str, Enum):
@@ -554,15 +555,19 @@ class DinkumVoiceLoop(VoiceLoop):
             LOG.debug(f"Wake word detected={ww}")
             ww_data = self.hotwords.get_ww(ww)
 
-            # Callback to handle recorded hotword audio
-            if self.listenword_audio_callback is not None:
-                hotword_audio_bytes = bytes()
-                while self.hotword_chunks:
-                    hotword_audio_bytes += self.hotword_chunks.popleft()
-
-                self.listenword_audio_callback(hotword_audio_bytes, ww_data)
+            hotword_audio_bytes = bytes()
+            while self.hotword_chunks:
+                hotword_audio_bytes += self.hotword_chunks.popleft()
 
             self.hotword_chunks.clear()
+
+            if not self.hotwords.verify(hotword_audio_bytes):
+                LOG.debug("wake word verifier plugins discarded detection")
+                return False
+
+            # Callback to handle recorded hotword audio
+            if self.listenword_audio_callback is not None:
+                self.listenword_audio_callback(hotword_audio_bytes, ww_data)
 
             # Callback to handle wake up
             if self.wake_callback is not None:

@@ -1,18 +1,14 @@
 from enum import Enum
 from os.path import dirname
 from threading import Event
-from typing import Optional
+from typing import Optional, List
 
 from ovos_config import Configuration
 from ovos_plugin_manager.wakewords import OVOSWakeWordFactory, HotWordEngine
+from ovos_plugin_manager.templates.hotwords import HotWordVerifier
 from ovos_utils.fakebus import FakeBus
 from ovos_utils.log import LOG
-try:
-    from ovos_utils.sound import get_sound_duration
-except ImportError:
-
-    def get_sound_duration(*args, **kwargs):
-        raise ImportError("please install ovos-utils>=0.1.0a25")
+from ovos_utils.sound import get_sound_duration
 
 
 class HotWordException(RuntimeWarning):
@@ -103,8 +99,7 @@ class HotwordContainer:
     _plugins = {}
     _loaded = Event()
 
-    def __init__(self, bus=FakeBus(), expected_duration=3, sample_rate=16000,
-                 sample_width=2, reload_allowed=True, autoload=False):
+    def __init__(self, bus=FakeBus(), verifiers: Optional[List[HotWordVerifier]] = None, reload_allowed=True, autoload=False):
         self.bus = bus
         self.reload_allowed = reload_allowed
         self.state = HotwordState.HOTWORD
@@ -112,6 +107,7 @@ class HotwordContainer:
         self.applied_hotwords_config = None
         if autoload:
             self.load_hotword_engines()
+        self.verifiers: List[HotWordVerifier] = verifiers or []
 
     def load_hotword_engines(self):
         """
@@ -304,6 +300,13 @@ class HotwordContainer:
         meta["module"] = plug.config["module"]
         meta["engine"] = plug.__class__.__name__
         return meta
+
+    def verify(self, ww_audio: bytes) -> bool:
+        for verifier in self.verifiers:
+            if not verifier.verify(ww_audio):
+                LOG.debug(f"{verifier.__class__.__name__}: verification failed - discarding wake word detection")
+                return False
+        return True
 
     def update(self, chunk: bytes):
         """

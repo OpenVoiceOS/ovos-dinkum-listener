@@ -13,6 +13,8 @@ import base64
 import json
 import random
 import subprocess
+import time
+import warnings
 import wave
 from enum import Enum
 from hashlib import md5
@@ -24,7 +26,6 @@ from threading import Thread, RLock, Event
 from typing import List, Tuple, Optional, Union
 
 import speech_recognition as sr
-import time
 from ovos_bus_client import MessageBusClient
 from ovos_bus_client.message import Message
 from ovos_bus_client.session import SessionManager
@@ -37,25 +38,18 @@ from ovos_plugin_manager.templates.stt import STT, StreamingSTT
 from ovos_plugin_manager.templates.vad import VADEngine
 from ovos_plugin_manager.utils.tts_cache import hash_sentence
 from ovos_plugin_manager.vad import OVOSVADFactory, get_vad_configs
+from ovos_plugin_manager.wakewords import find_wake_word_verifier_plugins
 from ovos_plugin_manager.wakewords import get_ww_lang_configs, get_ww_supported_langs, get_ww_module_configs
 from ovos_utils.fakebus import FakeBus
 from ovos_utils.log import LOG, log_deprecation
 from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessState
+from ovos_utils.sound import get_sound_duration
 
-import warnings
 from ovos_dinkum_listener._util import _TemplateFilenameFormatter
 from ovos_dinkum_listener.plugins import load_stt_module, load_fallback_stt, FakeStreamingSTT
 from ovos_dinkum_listener.transformers import AudioTransformersService
 from ovos_dinkum_listener.voice_loop import DinkumVoiceLoop, ListeningMode, ListeningState
 from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer
-
-
-try:
-    from ovos_utils.sound import get_sound_duration
-except ImportError:
-
-    def get_sound_duration(*args, **kwargs):
-        raise ImportError("please install ovos-utils>=0.1.0a25")
 
 # Seconds between systemd watchdog updates
 WATCHDOG_DELAY = 0.5
@@ -194,7 +188,25 @@ class OVOSDinkumVoiceService(Thread):
 
         self.mic = mic or OVOSMicrophoneFactory.create(microphone_config)
 
-        self.hotwords = hotwords or HotwordContainer(self.bus)
+        verifiers_cfg  = self.config.get("listener", {}).get("ww_verifiers", {})
+        verifier_plugs = {}
+        for plug_type, plug in find_wake_word_verifier_plugins().items():
+            cfg = verifiers_cfg.get(plug_type, {})
+            if not cfg.get("enabled", True): # plugins are enabled by default if installed, unless disabled in config
+                LOG.debug(f"wakeword verifier plugin disabled: {plug_type}")
+                continue
+            try:
+                verifier_plugs[plug_type] =  plug(config=cfg)
+            except Exception as e:
+                LOG.exception(f"Failed to load wakeword verifier plugin: {plug_type}")
+                continue
+
+        missing_modules = [k for k, v in verifiers_cfg.items() if v.get("active", True) and k not in verifier_plugs]
+        if missing_modules:
+            LOG.warning(f"wake word verifier plugins enabled in config but not loaded: {missing_modules}")
+        LOG.debug(f"Loaded wake word verifier plugins: {list(verifier_plugs)}")
+
+        self.hotwords = hotwords or HotwordContainer(bus=self.bus, verifiers=list(verifier_plugs.values()))
         self.vad = vad or OVOSVADFactory.create()
         if stt and not isinstance(stt, StreamingSTT):
             stt = FakeStreamingSTT(stt)

@@ -2,7 +2,7 @@
 ovos-stt-plugin-server>=0.1.2,<1.0.0
 
 # VAD plugins
-ovos-vad-plugin-silero>=0.0.5,<1.0.0
+ovos-vad-plugin-silero>=0.1.0a1,<1.0.0
 
 # Microphone plugins
 ovos-microphone-plugin-sounddevice>=0.0.1,<1.0.0
