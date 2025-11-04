@@ -84,7 +84,6 @@ setup(
     extras_require={
         "extras": required("requirements/extras.txt"),
         "linux": required("requirements/linux.txt"),
-        "onnx": required("requirements/onnx.txt"),
         "tests": required("requirements/tests.txt"),
     },
     classifiers=[
