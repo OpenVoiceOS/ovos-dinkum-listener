@@ -305,6 +305,10 @@ class HotwordContainer:
         meta["engine"] = plug.__class__.__name__
         return meta
 
+    def verify(self, ww_audio: bytes) -> bool:
+        # TODO new plugin type, to be added in upcoming PR
+        return True
+
     def update(self, chunk: bytes):
         """
         Update appropriate engines based on self.state

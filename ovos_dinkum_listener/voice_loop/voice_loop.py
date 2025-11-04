@@ -10,24 +10,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import audioop
+
 import time
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from threading import Event
 from typing import Callable, Deque, Optional
 
+import audioop
 from ovos_config import Configuration
 from ovos_plugin_manager.stt import StreamingSTT
+from ovos_plugin_manager.templates.microphone import Microphone
 from ovos_plugin_manager.vad import VADEngine
 from ovos_utils.log import LOG
-from ovos_bus_client.session import SessionManager
-from ovos_dinkum_listener.transformers import AudioTransformersService
-from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer, HotwordState, HotWordException
-from ovos_plugin_manager.templates.microphone import Microphone
 
 from ovos_dinkum_listener.plugins import FakeStreamingSTT
+from ovos_dinkum_listener.transformers import AudioTransformersService
+from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer, HotwordState, HotWordException
 
 
 class ListeningState(str, Enum):
@@ -44,6 +43,7 @@ class ListeningState(str, Enum):
     BEFORE_COMMAND = "before_cmd"
     IN_COMMAND = "in_cmd"
     AFTER_COMMAND = "after_cmd"
+    PRE_WAKE_VAD = "pre_wake_vad"
 
 
 class ListeningMode(str, Enum):
@@ -144,6 +144,10 @@ class DinkumVoiceLoop(VoiceLoop):
     is_muted: bool = False
     _is_running: bool = False
     _chunk_info: ChunkInfo = field(default_factory=ChunkInfo)
+    _vad_window_start: float = 0.0
+
+    # config flag for VAD-before-wakeword feature
+    vad_pre_wake_enabled: bool = field(default_factory=lambda: Configuration().get("listener", {}).get("vad_pre_wake_enabled", False))
 
     @property
     def running(self) -> bool:
@@ -164,8 +168,6 @@ class DinkumVoiceLoop(VoiceLoop):
         """
 
         self._is_running = True
-        self.state = ListeningState.DETECT_WAKEWORD
-        self.last_ww = -1
         listener_config = Configuration().get("listener", {})
         if listener_config.get("continuous_listen", False):
             self.listen_mode = ListeningMode.CONTINUOUS
@@ -174,8 +176,31 @@ class DinkumVoiceLoop(VoiceLoop):
         else:
             self.listen_mode = ListeningMode.WAKEWORD
 
+        # choose initial state based on config
+        if self.vad_pre_wake_enabled:
+            self.state = ListeningState.PRE_WAKE_VAD
+        else:
+            self.state = ListeningState.DETECT_WAKEWORD
+
+        self.last_ww = -1
         LOG.info(f"Listening mode: {self.listen_mode}")
+        LOG.info(f"VAD pre-wake enabled: {self.vad_pre_wake_enabled}")
         LOG.debug(f"STATE: {self.state}")
+
+    def _pre_wake_vad(self, chunk: bytes):
+        """Wait for VAD detection before enabling wake word engines"""
+        try:
+            self._chunk_info.is_speech = not self.vad.is_silence(chunk)
+        except Exception as e:
+            LOG.error(f"VAD error in pre-wake: {e}")
+            self._chunk_info.is_speech = False
+        if self._chunk_info.is_speech:
+            LOG.debug("Speech detected - switching to wake word detection")
+            self.state = ListeningState.DETECT_WAKEWORD
+            self._vad_window_start = time.time()
+            self.hotword_chunks.append(chunk) # TODO: should we also keep a couple chunks before this?
+        else:
+            self.transformers.feed_audio(chunk)
 
     def run(self):
         """
@@ -185,8 +210,12 @@ class DinkumVoiceLoop(VoiceLoop):
         self.speech_seconds_left = self.speech_seconds
         self.silence_seconds_left = self.silence_seconds
         self.timeout_seconds_left = self.timeout_seconds
-        self.timeout_seconds_with_silence_left = self.timeout_seconds_with_silence        
-        self.state = ListeningState.DETECT_WAKEWORD
+        self.timeout_seconds_with_silence_left = self.timeout_seconds_with_silence
+
+        if self.vad_pre_wake_enabled:
+            self.state = ListeningState.PRE_WAKE_VAD
+        else:
+            self.state = ListeningState.DETECT_WAKEWORD
 
         # Keep hotword/STT audio so they can (optionally) be saved to disk
         self.hotword_chunks = deque(maxlen=self.num_hotword_keep_chunks)
@@ -226,7 +255,12 @@ class DinkumVoiceLoop(VoiceLoop):
             # AFTER_COMMAND -> DETECT_HOTWORD
             #
 
+            if self.state == ListeningState.PRE_WAKE_VAD:
+                self._pre_wake_vad(chunk) # might change state to ListeningState.DETECT_WAKEWORD
+
             if self.state == ListeningState.DETECT_WAKEWORD:
+                if self.vad_pre_wake_enabled and not self._vad_window_start:
+                    self._vad_window_start = time.time()
                 try:
                     if self.listen_mode == ListeningMode.CONTINUOUS:
                         LOG.info(f"Continuous listening mode, updating state")
@@ -238,6 +272,11 @@ class DinkumVoiceLoop(VoiceLoop):
                         LOG.info("Hotword detected")
                     else:
                         self.transformers.feed_audio(chunk)
+                        # handle timeout to return to VAD stage
+                        if self.vad_pre_wake_enabled and time.time() - self._vad_window_start > 5:
+                            LOG.debug("Wakeword not found within 5s - returning to PRE_WAKE_VAD")
+                            self.state = ListeningState.PRE_WAKE_VAD
+                            self._vad_window_start = 0
                 except HotWordException as e:
                     if self.hotwords.reload_on_failure:
                         LOG.warning(e)
@@ -492,15 +531,19 @@ class DinkumVoiceLoop(VoiceLoop):
             LOG.debug(f"Wake word detected={ww}")
             ww_data = self.hotwords.get_ww(ww)
 
-            # Callback to handle recorded hotword audio
-            if self.listenword_audio_callback is not None:
-                hotword_audio_bytes = bytes()
-                while self.hotword_chunks:
-                    hotword_audio_bytes += self.hotword_chunks.popleft()
-
-                self.listenword_audio_callback(hotword_audio_bytes, ww_data)
+            hotword_audio_bytes = bytes()
+            while self.hotword_chunks:
+                hotword_audio_bytes += self.hotword_chunks.popleft()
 
             self.hotword_chunks.clear()
+
+            if not self.hotwords.verify(hotword_audio_bytes):
+                LOG.debug("wake word verifier plugins discarded detection")
+                return False
+
+            # Callback to handle recorded hotword audio
+            if self.listenword_audio_callback is not None:
+                self.listenword_audio_callback(hotword_audio_bytes, ww_data)
 
             # Callback to handle wake up
             if self.wake_callback is not None:
