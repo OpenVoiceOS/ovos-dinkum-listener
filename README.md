@@ -4,20 +4,10 @@ Documentation can be found in [the technical manual](https://openvoiceos.github.
 
 ## Install
 
-`pip install ovos-dinkum-listener[extras]` to install this package and the default
-plugins. Note that by default, either `tensorflow` or `tflite_runtime` will need
-to be installed separately for wakeword detection.
+`pip install ovos-dinkum-listener[extras]` to install this package and the default plugins.
 
-> If unable to install tflite_runtime in your platform, you can find wheels
-> here https://whl.smartgic.io/. eg, for pyhon 3.11 in x86
-> `pip install https://whl.smartgic.io/tflite_runtime-2.13.0-cp311-cp311-linux_x86_64.whl`
+Without `extras` you will also need to manually install, and possibly configure STT, WW, and VAD modules as described below.
 
-Without `extras`, wakeword and STT audio upload will be disabled unless you install 
-[`ovos-backend-client`](https://github.com/OpenVoiceOS/ovos-backend-client) separately. You will also need to manually install,
-and possibly configure STT, WW, and VAD modules as described below.
-
-Using [ovos-vad-plugin-silero](https://github.com/OpenVoiceOS/ovos-vad-plugin-silero) 
-is strongly recommended
 
 ## Configuration
 
@@ -42,6 +32,20 @@ non exhaustive list of config options
     "microphone": {
       "module": "ovos-microphone-plugin-alsa"
     },
+    // wake word verifier plugins will double check a wake word prediction
+    // they are given a chance to reject wake word activations
+    "ww_verifiers": {
+        "ovos-ww-verifier-silero": {
+            "threshold": 0.1,
+            // does not make sense to enable if "vad_pre_wake_enabled" is set to true
+            "enabled": false
+        }
+    },
+
+    // If enabled will only check for wakeword if VAD also detected speech
+    // this should reduce false activations
+    "vad_pre_wake_enabled": true,
+    // Voice Activity Detection is used to determine when users are speaking
     VAD": {
      // recommended plugin: "ovos-vad-plugin-silero"
      "module": "ovos-vad-plugin-silero",
