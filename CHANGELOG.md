@@ -1,12 +1,40 @@
 # Changelog
 
-## [0.4.1a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.4.1a1) (2025-06-08)
+## [0.4.2a5](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.4.2a5) (2025-11-04)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.4.0...0.4.1a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.4.2a4...0.4.2a5)
 
 **Merged pull requests:**
 
-- fix: opm 1.X.X compat [\#177](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/177) ([JarbasAl](https://github.com/JarbasAl))
+- Default to onnx [\#193](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/193) ([JarbasAl](https://github.com/JarbasAl))
+
+## [0.4.2a4](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.4.2a4) (2025-11-04)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.4.2a3...0.4.2a4)
+
+**Merged pull requests:**
+
+- Add pre-wakeword VAD state for reduced false activations [\#189](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/189) ([JarbasAl](https://github.com/JarbasAl))
+
+## [0.4.2a3](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.4.2a3) (2025-06-18)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.4.2a2...0.4.2a3)
+
+**Merged pull requests:**
+
+- Update pytest requirement from ~=7.1 to ~=8.1 in /requirements [\#95](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/95) ([dependabot[bot]](https://github.com/apps/dependabot))
+
+## [0.4.2a2](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.4.2a2) (2025-06-18)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.4.2a1...0.4.2a2)
+
+## [0.4.2a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.4.2a1) (2025-06-12)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.4.1...0.4.2a1)
+
+**Merged pull requests:**
+
+- fix: ensure minimum extra plugins version [\#179](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/179) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
