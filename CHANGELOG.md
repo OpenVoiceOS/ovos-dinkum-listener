@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.1a2](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.5.1a2) (2025-12-18)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.5.1a1...0.5.1a2)
+
+**Merged pull requests:**
+
+- chore: Configure Renovate [\#200](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/200) ([renovate[bot]](https://github.com/apps/renovate))
+
 ## [0.5.1a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.5.1a1) (2025-11-05)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.5.0...0.5.1a1)
