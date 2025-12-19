@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.1a3](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.5.1a3) (2025-12-19)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.5.1a2...0.5.1a3)
+
+**Merged pull requests:**
+
+- chore\(deps\): update dependency python to 3.14 [\#201](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/201) ([renovate[bot]](https://github.com/apps/renovate))
+
 ## [0.5.1a2](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.5.1a2) (2025-12-18)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.5.1a1...0.5.1a2)
