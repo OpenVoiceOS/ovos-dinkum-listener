@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.1a4](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.5.1a4) (2026-01-09)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.5.1a3...0.5.1a4)
+
+**Merged pull requests:**
+
+- refactor: drop speech\_recognition [\#208](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/208) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.5.1a3](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.5.1a3) (2025-12-19)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.5.1a2...0.5.1a3)
