@@ -63,6 +63,14 @@ class VoiceLoop:
     vad: VADEngine
     transformers: AudioTransformersService
 
+    @property
+    def sample_rate(self) -> int:
+        return self.mic.sample_rate
+
+    @property
+    def sample_width(self) -> int:
+        return self.mic.sample_width
+
     def start(self):
         raise NotImplementedError()
 

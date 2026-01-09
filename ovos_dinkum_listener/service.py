@@ -50,29 +50,8 @@ from ovos_dinkum_listener.transformers import AudioTransformersService
 from ovos_dinkum_listener.voice_loop import DinkumVoiceLoop, ListeningMode, ListeningState
 from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer
 
-
-
 # Seconds between systemd watchdog updates
 WATCHDOG_DELAY = 0.5
-
-
-def bytes2audiodata(data):
-    with NamedTemporaryFile() as fp:
-        fp.write(data)
-        ffmpeg = which("ffmpeg")
-        if ffmpeg:
-            p = fp.name + "converted.wav"
-            # ensure file format
-            cmd = [ffmpeg, "-i", fp.name, "-acodec", "pcm_s16le", "-ar",
-                   "16000", "-ac", "1", "-f", "wav", p, "-y"]
-            subprocess.call(cmd)
-        else:
-            LOG.warning("ffmpeg not found, please ensure audio is in a valid format")
-            p = fp.name
-
-        with AudioFile(p) as source:
-            audio = source.read()
-    return audio
 
 
 class ServiceState(str, Enum):
@@ -911,11 +890,13 @@ class OVOSDinkumVoiceService(Thread):
         LOG.debug("Handling Base64 STT request")
         b64audio = message.data["audio"]
         lang = message.data.get("lang", self.voice_loop.stt.lang)
+        sample_rate = message.data.get("sample_rate", self.voice_loop.sample_rate)
+        sample_width = message.data.get("sample_width", self.voice_loop.sample_width)
 
         wav_data = base64.b64decode(b64audio)
 
         self.voice_loop.stt.stream_start()
-        audio = bytes2audiodata(wav_data)
+        audio = AudioData(wav_data, sample_rate, sample_width)
         utterances = self.voice_loop.stt.transcribe(audio, lang)
         self.voice_loop.stt.stream_stop()
 
@@ -927,10 +908,12 @@ class OVOSDinkumVoiceService(Thread):
         LOG.debug("Handling Base64 Incoming Audio")
         b64audio = message.data["audio"]
         lang = message.data.get("lang", self.voice_loop.stt.lang)
+        sample_rate = message.data.get("sample_rate", self.voice_loop.sample_rate)
+        sample_width = message.data.get("sample_width", self.voice_loop.sample_width)
 
         wav_data = base64.b64decode(b64audio)
 
-        audio = bytes2audiodata(wav_data)
+        audio = AudioData(wav_data, sample_rate, sample_width)
 
         utterances = self.voice_loop.stt.transcribe(audio, lang)
         filtered = [u for u in utterances if u[1] >= self.voice_loop.min_stt_confidence]
