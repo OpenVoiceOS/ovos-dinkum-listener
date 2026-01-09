@@ -65,13 +65,30 @@ class VoiceLoop:
 
     @property
     def sample_rate(self) -> int:
+        """
+        Expose the microphone's sampling rate in hertz.
+        
+        Returns:
+            The microphone's sampling rate (samples per second).
+        """
         return self.mic.sample_rate
 
     @property
     def sample_width(self) -> int:
+        """
+        Microphone sample width in bytes per audio sample.
+        
+        Returns:
+            The sample width in bytes.
+        """
         return self.mic.sample_width
 
     def start(self):
+        """
+        Start the voice loop and begin processing audio input.
+        
+        Subclasses must implement this to initialize any required resources and transition the loop into an active/running state so audio capture, hotword detection, VAD and STT processing can commence.
+        """
         raise NotImplementedError()
 
     def run(self):
