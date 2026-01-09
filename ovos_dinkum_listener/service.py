@@ -23,7 +23,6 @@ from tempfile import NamedTemporaryFile
 from threading import Thread, RLock, Event
 from typing import List, Tuple, Optional, Union
 
-import speech_recognition as sr
 import time
 from ovos_bus_client import MessageBusClient
 from ovos_bus_client.message import Message
@@ -35,11 +34,13 @@ from ovos_plugin_manager.stt import get_stt_lang_configs, get_stt_supported_lang
 from ovos_plugin_manager.templates.microphone import Microphone
 from ovos_plugin_manager.templates.stt import STT, StreamingSTT
 from ovos_plugin_manager.templates.vad import VADEngine
+from ovos_plugin_manager.utils.audio import AudioData, AudioFile
 from ovos_plugin_manager.utils.tts_cache import hash_sentence
 from ovos_plugin_manager.vad import OVOSVADFactory, get_vad_configs
 from ovos_plugin_manager.wakewords import get_ww_lang_configs, get_ww_supported_langs, get_ww_module_configs
 from ovos_utils.fakebus import FakeBus
 from ovos_utils.log import LOG, log_deprecation
+from ovos_utils.sound import get_sound_duration
 from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessState
 
 import warnings
@@ -50,19 +51,12 @@ from ovos_dinkum_listener.voice_loop import DinkumVoiceLoop, ListeningMode, List
 from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer
 
 
-try:
-    from ovos_utils.sound import get_sound_duration
-except ImportError:
-
-    def get_sound_duration(*args, **kwargs):
-        raise ImportError("please install ovos-utils>=0.1.0a25")
 
 # Seconds between systemd watchdog updates
 WATCHDOG_DELAY = 0.5
 
 
 def bytes2audiodata(data):
-    recognizer = sr.Recognizer()
     with NamedTemporaryFile() as fp:
         fp.write(data)
         ffmpeg = which("ffmpeg")
@@ -76,8 +70,8 @@ def bytes2audiodata(data):
             LOG.warning("ffmpeg not found, please ensure audio is in a valid format")
             p = fp.name
 
-        with sr.AudioFile(p) as source:
-            audio = recognizer.record(source)
+        with AudioFile(p) as source:
+            audio = source.read()
     return audio
 
 

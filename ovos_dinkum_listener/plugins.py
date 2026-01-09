@@ -4,8 +4,8 @@ from ovos_config.config import Configuration
 from ovos_plugin_manager.stt import OVOSSTTFactory
 from ovos_plugin_manager.templates.stt import StreamingSTT, StreamThread
 from ovos_plugin_manager.utils import ReadWriteStream
+from ovos_plugin_manager.utils.audio import AudioData
 from ovos_utils.log import LOG
-from speech_recognition import AudioData
 
 
 class FakeStreamThread(StreamThread):
