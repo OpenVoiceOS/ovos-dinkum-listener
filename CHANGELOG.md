@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.1a6](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.5.1a6) (2026-01-09)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.5.1a5...0.5.1a6)
+
+## [0.5.1a5](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.5.1a5) (2026-01-09)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.5.1a4...0.5.1a5)
+
+**Merged pull requests:**
+
+- chore\(deps\): update actions/setup-python action to v6 [\#206](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/206) ([renovate[bot]](https://github.com/apps/renovate))
+- chore\(deps\): update actions/checkout action to v6 [\#205](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/205) ([renovate[bot]](https://github.com/apps/renovate))
+
 ## [0.5.1a4](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.5.1a4) (2026-01-09)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.5.1a3...0.5.1a4)
