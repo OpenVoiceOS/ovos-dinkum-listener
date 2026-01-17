@@ -161,29 +161,29 @@ class OVOSDinkumVoiceService(Thread):
                  disable_fallback: bool = False,
                  *args, **kwargs):
         """
-                 Initialize the OVOS Dinkum voice service and configure its audio, STT, VAD, hotword, and bus integrations.
-                 
-                 Parameters:
-                     on_ready (callable): Callback invoked when the service becomes ready.
-                     on_error (callable): Callback invoked when the service enters an error state.
-                     on_stopping (callable): Callback invoked when the service begins stopping.
-                     on_alive (callable): Callback invoked periodically to indicate liveness.
-                     on_started (callable): Callback invoked once the service has started.
-                     watchdog (callable): Function called periodically by the service watchdog.
-                     mic (Optional[Microphone]): Microphone implementation to use; if omitted a default plugin is created from configuration.
-                     bus (Optional[MessageBusClient|FakeBus]): Message bus client to use; if omitted the service will connect to a new bus.
-                     validate_source (bool): Whether incoming messages are validated against native audio sources.
-                     stt (Optional[STT]): Primary speech-to-text engine; non-streaming STT will be wrapped to behave as streaming.
-                     fallback_stt (Optional[STT]): Fallback speech-to-text engine used when primary STT fails or is disabled.
-                     vad (Optional[VADEngine]): Voice activity detection engine to use.
-                     hotwords (Optional[HotwordContainer]): Hotword detection container; if omitted a default container is created.
-                     disable_fallback (bool): If true, disables loading or using a fallback STT.
-                 
-                 Side effects:
-                     - Connects to the message bus.
-                     - Initializes and registers service status, microphone, hotword container, VAD, STT/fallback STT, audio transformers, and the voice loop.
-                     - Starts internal synchronization primitives used for config reloads and service lifecycle.
-                 """
+        Initialize the OVOS Dinkum voice service and configure its audio, STT, VAD, hotword, and bus integrations.
+        
+        Parameters:
+            on_ready (callable): Callback invoked when the service becomes ready.
+            on_error (callable): Callback invoked when the service enters an error state.
+            on_stopping (callable): Callback invoked when the service begins stopping.
+            on_alive (callable): Callback invoked periodically to indicate liveness.
+            on_started (callable): Callback invoked once the service has started.
+            watchdog (callable): Function called periodically by the service watchdog.
+            mic (Optional[Microphone]): Microphone implementation to use; if omitted a default plugin is created from configuration.
+            bus (Optional[MessageBusClient|FakeBus]): Message bus client to use; if omitted the service will connect to a new bus.
+            validate_source (bool): Whether incoming messages are validated against native audio sources.
+            stt (Optional[STT]): Primary speech-to-text engine; non-streaming STT will be wrapped to behave as streaming.
+            fallback_stt (Optional[STT]): Fallback speech-to-text engine used when primary STT fails.
+            vad (Optional[VADEngine]): Voice activity detection engine to use.
+            hotwords (Optional[HotwordContainer]): Hotword detection container; if omitted a default container is created.
+            disable_fallback (bool): If true, disables loading or using a fallback STT.
+        
+        Side effects:
+            - Connects to the message bus.
+            - Initializes and registers service status, microphone, hotword container, VAD, STT/fallback STT, audio transformers, and the voice loop.
+            - Starts internal synchronization primitives used for config reloads and service lifecycle.
+        """
         super().__init__(*args, **kwargs)
 
         LOG.info("Starting Voice Service")
