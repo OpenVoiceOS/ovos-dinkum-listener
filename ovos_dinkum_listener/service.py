@@ -161,9 +161,29 @@ class OVOSDinkumVoiceService(Thread):
                  disable_fallback: bool = False,
                  *args, **kwargs):
         """
-        watchdog: (callable) function to call periodically indicating
-          operational status.
-        """
+                 Initialize the OVOS Dinkum voice service and configure its audio, STT, VAD, hotword, and bus integrations.
+                 
+                 Parameters:
+                     on_ready (callable): Callback invoked when the service becomes ready.
+                     on_error (callable): Callback invoked when the service enters an error state.
+                     on_stopping (callable): Callback invoked when the service begins stopping.
+                     on_alive (callable): Callback invoked periodically to indicate liveness.
+                     on_started (callable): Callback invoked once the service has started.
+                     watchdog (callable): Function called periodically by the service watchdog.
+                     mic (Optional[Microphone]): Microphone implementation to use; if omitted a default plugin is created from configuration.
+                     bus (Optional[MessageBusClient|FakeBus]): Message bus client to use; if omitted the service will connect to a new bus.
+                     validate_source (bool): Whether incoming messages are validated against native audio sources.
+                     stt (Optional[STT]): Primary speech-to-text engine; non-streaming STT will be wrapped to behave as streaming.
+                     fallback_stt (Optional[STT]): Fallback speech-to-text engine used when primary STT fails or is disabled.
+                     vad (Optional[VADEngine]): Voice activity detection engine to use.
+                     hotwords (Optional[HotwordContainer]): Hotword detection container; if omitted a default container is created.
+                     disable_fallback (bool): If true, disables loading or using a fallback STT.
+                 
+                 Side effects:
+                     - Connects to the message bus.
+                     - Initializes and registers service status, microphone, hotword container, VAD, STT/fallback STT, audio transformers, and the voice loop.
+                     - Starts internal synchronization primitives used for config reloads and service lifecycle.
+                 """
         super().__init__(*args, **kwargs)
 
         LOG.info("Starting Voice Service")
@@ -385,6 +405,15 @@ class OVOSDinkumVoiceService(Thread):
 
     def register_event_handlers(self):
         # Register events
+        """
+        Register message bus event handlers used by the voice service.
+        
+        Registers handlers for microphone controls (mute/unmute/toggle, listen, get status),
+        audio output lifecycle, listening/state control (sleep, wake, start/stop recording,
+        b64 audio/transcribe, state set/get), intent/skill activation, OPM queries for STT/WW/VAD,
+        sound-played notifications, and volume change events used for fake barge-in behavior.
+        Also synchronizes the initial volume state.
+        """
         self.bus.on("mycroft.mic.mute", self._handle_mute)
         self.bus.on("mycroft.mic.unmute", self._handle_unmute)
         self.bus.on("mycroft.mic.mute.toggle", self._handle_mute_toggle)
@@ -787,18 +816,40 @@ class OVOSDinkumVoiceService(Thread):
 
     # mic bus api
     def _handle_mute(self, message: Message):
+        """
+        Mute the microphone on the voice loop in response to a bus message.
+        
+        Parameters:
+            message (Message): Bus message that triggered the mute action (unused).
+        """
         self.voice_loop.is_muted = True
         LOG.info(f"Microphone muted: {self.voice_loop.is_muted}")
 
     def _handle_unmute(self, message: Message):
+        """
+        Unmutes the microphone used by the voice loop.
+        
+        Sets the voice loop's `is_muted` flag to False.
+        """
         self.voice_loop.is_muted = False
         LOG.info(f"Microphone muted: {self.voice_loop.is_muted}")
 
     def _handle_mute_toggle(self, message: Message):
+        """
+        Toggle the voice loop's microphone mute state and log the updated state.
+        """
         self.voice_loop.is_muted = not self.voice_loop.is_muted
         LOG.info(f"Microphone muted: {self.voice_loop.is_muted}")
 
     def _handle_listen(self, message: Message):
+        """
+        Handle an incoming listen request from the message bus and start recording/STT.
+        
+        Validates the message context and that the voice loop is running; if invalid, the message is ignored. If valid, emits the wake callback (triggering recognizer_loop:record_begin), resets the speech timer, clears any existing STT audio buffer, and starts streaming on the primary and fallback STT engines. If `confirm_listening` is enabled, plays the configured start-listening sound, sets the loop state to CONFIRMATION, and sets the confirmation timeout to the sound's duration (falling back to the configured confirmation timeout on error). If `confirm_listening` is disabled, sets the loop state to BEFORE_COMMAND.
+        
+        Parameters:
+            message (Message): The incoming bus message that requested the listener to start.
+        """
         if not self._validate_message_context(message) or not self.voice_loop.running:
             # ignore mycroft.mic.listen, it is targeted to an external client
             return
@@ -834,14 +885,28 @@ class OVOSDinkumVoiceService(Thread):
         self.bus.emit(message.response(data))
 
     def _handle_audio_start(self, message: Message):
-        """audio output started"""
+        """
+        Handle the start of system audio output by muting the microphone if configured.
+        
+        Saves the current microphone mute state so it can be restored later and sets the microphone to muted when the "mute_during_output" listener setting is true.
+        
+        Parameters:
+            message (Message): The bus message indicating audio playback has started.
+        """
         if self.config.get("listener").get("mute_during_output"):
             self._tmp_muted = self.voice_loop.is_muted
             self.voice_loop.is_muted = True
         LOG.debug(f"Microphone muted: {self.voice_loop.is_muted}")
 
     def _handle_audio_end(self, message: Message):
-        """audio output ended"""
+        """
+        Restore microphone mute state after audio playback ends.
+        
+        If the listener is configured to mute during output, restores the microphone mute state that was saved when audio playback began and clears the temporary storage. The resulting mute state is logged.
+        
+        Parameters:
+            message (Message): Message bus event for audio output end.
+        """
         if self.config.get("listener").get("mute_during_output"):
             self.voice_loop.is_muted = self._tmp_muted or False  # restore
             self._tmp_muted = None
@@ -849,7 +914,18 @@ class OVOSDinkumVoiceService(Thread):
 
     # state events
     def _handle_change_state(self, message: Message):
-        """Set listening state."""
+        """
+        Update the voice loop's listening state and listen mode based on values in a bus message.
+        
+        Inspects message.data for the keys "state" and "mode". If "state" is present, updates the voice loop by calling:
+        - go_to_sleep for ListeningState.SLEEPING,
+        - reset_state for ListeningState.DETECT_WAKEWORD or ListeningState.WAITING_CMD,
+        - start_recording with optional "recording_name" for ListeningState.RECORDING.
+        If "mode" is present, sets the voice loop's listen_mode to one of ListeningMode.WAKEWORD, ListeningMode.CONTINUOUS, ListeningMode.HYBRID, or ListeningMode.SLEEPING. Invalid state or mode values are logged as errors. After applying changes, emits the current state via _handle_get_state.
+        
+        Parameters:
+        	message (Message): Bus message whose data may include "state", "mode", and optionally "recording_name".
+        """
         # TODO - unify this api, should match ovos-listener exactly
         state = message.data.get("state")
         mode = message.data.get("mode")
@@ -887,7 +963,15 @@ class OVOSDinkumVoiceService(Thread):
         self.bus.emit(message.reply("recognizer_loop:state", data))
 
     def _handle_stop_recording(self, message: Message):
-        """Stop current recording session """
+        """
+        Stop an active recording and optionally play the configured end-listening sound.
+        
+        If no recording is in progress this is a no-op. When a recording is stopped, emits a forwarded
+        "mycroft.audio.play_sound" message with the configured `sounds.end_listening` URI if present.
+        
+        Parameters:
+            message (Message): Incoming bus message used to forward the play_sound event.
+        """
         if self.voice_loop.state != ListeningState.RECORDING:
             return
 
