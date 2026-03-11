@@ -1,8 +1,9 @@
 """Comprehensive unit tests for DinkumVoiceLoop methods."""
+
 import time
 import unittest
 from collections import deque
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 
 CHUNK_SIZE = 4096
@@ -32,16 +33,16 @@ def _make_loop(**kwargs):
     hotwords.verify.return_value = True
     hotwords.reload_on_failure = False
     hotwords.get_ww.return_value = {
-        'engine': 'TestEngine',
-        'key_phrase': 'hey_test',
-        'module': 'test',
-        'listen': True,
-        'wakeup': False,
-        'stopword': False,
-        'sound': None,
-        'bus_event': None,
-        'utterance': None,
-        'stt_lang': 'en-us',
+        "engine": "TestEngine",
+        "key_phrase": "hey_test",
+        "module": "test",
+        "listen": True,
+        "wakeup": False,
+        "stopword": False,
+        "sound": None,
+        "bus_event": None,
+        "utterance": None,
+        "stt_lang": "en-us",
     }
 
     stt = Mock()
@@ -83,6 +84,7 @@ class TestDebiasedEnergy(unittest.TestCase):
     def test_silent_audio_low_energy(self):
         """All-zero audio produces energy of zero."""
         from ovos_dinkum_listener.voice_loop.voice_loop import VoiceLoop
+
         energy = VoiceLoop.debiased_energy(SILENT_CHUNK, SAMPLE_WIDTH)
         self.assertAlmostEqual(energy, 0.0, places=1)
 
@@ -90,16 +92,18 @@ class TestDebiasedEnergy(unittest.TestCase):
         """Alternating +/-1 signal (zero mean) produces non-zero debiased energy."""
         import struct
         from ovos_dinkum_listener.voice_loop.voice_loop import VoiceLoop
+
         # Alternating +1 and -1 samples → zero DC bias, non-zero AC energy
         n_samples = CHUNK_SIZE // SAMPLE_WIDTH
         samples = [127, -127] * (n_samples // 2)
-        audio = struct.pack('<' + 'h' * n_samples, *samples)
+        audio = struct.pack("<" + "h" * n_samples, *samples)
         energy = VoiceLoop.debiased_energy(audio, SAMPLE_WIDTH)
         self.assertGreater(energy, 0)
 
     def test_returns_float(self):
         """debiased_energy always returns a numeric value."""
         from ovos_dinkum_listener.voice_loop.voice_loop import VoiceLoop
+
         result = VoiceLoop.debiased_energy(SILENT_CHUNK, SAMPLE_WIDTH)
         self.assertIsInstance(result, (int, float))
 
@@ -110,6 +114,7 @@ class TestPreWakeVad(unittest.TestCase):
     def test_speech_detected_switches_state(self):
         """When VAD detects speech, state changes to DETECT_WAKEWORD."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         loop.state = ListeningState.PRE_WAKE_VAD
         loop.vad.is_silence.return_value = False  # speech
@@ -124,6 +129,7 @@ class TestPreWakeVad(unittest.TestCase):
     def test_silence_feeds_transformers(self):
         """When VAD detects silence, audio is fed to transformers."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         loop.state = ListeningState.PRE_WAKE_VAD
         loop.vad.is_silence.return_value = True  # silence
@@ -137,6 +143,7 @@ class TestPreWakeVad(unittest.TestCase):
     def test_vad_exception_treated_as_silence(self):
         """VAD exception causes is_speech to be False; state unchanged."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         loop.state = ListeningState.PRE_WAKE_VAD
         loop.vad.is_silence.side_effect = RuntimeError("vad error")
@@ -153,6 +160,7 @@ class TestConfirmationSound(unittest.TestCase):
     def test_instant_listen_skips_to_before_cmd(self):
         """With instant_listen=True, state immediately becomes BEFORE_COMMAND."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop(instant_listen=True)
         loop.state = ListeningState.CONFIRMATION
         loop.confirmation_seconds_left = 1.0
@@ -168,6 +176,7 @@ class TestConfirmationSound(unittest.TestCase):
     def test_timeout_moves_to_before_cmd(self):
         """When confirmation_seconds_left drops to 0, state → BEFORE_COMMAND."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         loop.state = ListeningState.CONFIRMATION
         loop.confirmation_seconds_left = SECONDS_PER_CHUNK * 0.5  # less than one chunk
@@ -179,6 +188,7 @@ class TestConfirmationSound(unittest.TestCase):
     def test_still_in_confirmation_when_not_expired(self):
         """State remains CONFIRMATION while timer has not expired."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         loop.state = ListeningState.CONFIRMATION
         loop.confirmation_seconds_left = 99.0
@@ -204,6 +214,7 @@ class TestBeforeCmd(unittest.TestCase):
     def test_timeout_moves_to_after_cmd(self):
         """When timeout expires, state → AFTER_COMMAND."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         loop.state = ListeningState.BEFORE_COMMAND
         # One chunk worth of timer → will expire after first pop
@@ -219,6 +230,7 @@ class TestBeforeCmd(unittest.TestCase):
     def test_speech_moves_to_in_cmd(self):
         """When speech is detected long enough, state → IN_COMMAND."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         loop.state = ListeningState.BEFORE_COMMAND
         loop.timeout_seconds_left = 99.0
@@ -236,6 +248,7 @@ class TestBeforeCmd(unittest.TestCase):
     def test_silence_resets_speech_timer(self):
         """Silence in BEFORE_COMMAND resets speech_seconds_left."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         loop.state = ListeningState.BEFORE_COMMAND
         loop.timeout_seconds_left = 99.0
@@ -253,6 +266,7 @@ class TestBeforeCmd(unittest.TestCase):
     def test_feeds_audio_to_transformers(self):
         """_before_cmd feeds audio to transformers."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         loop.state = ListeningState.BEFORE_COMMAND
         loop.timeout_seconds_left = 99.0
@@ -266,7 +280,6 @@ class TestBeforeCmd(unittest.TestCase):
 
     def test_streams_chunks_to_stt(self):
         """_before_cmd streams queued chunks to STT."""
-        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
         loop = _make_loop()
         loop.timeout_seconds_left = 99.0
         loop.timeout_seconds_with_silence_left = 99.0
@@ -285,6 +298,7 @@ class TestInCmd(unittest.TestCase):
     def test_timeout_moves_to_after_cmd(self):
         """Overall timeout expires → AFTER_COMMAND."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         loop.state = ListeningState.IN_COMMAND
         loop.timeout_seconds_left = SECONDS_PER_CHUNK * 0.5
@@ -300,6 +314,7 @@ class TestInCmd(unittest.TestCase):
     def test_silence_countdown_ends_command(self):
         """Enough silence → AFTER_COMMAND."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         loop.state = ListeningState.IN_COMMAND
         loop.timeout_seconds_left = 99.0
@@ -315,6 +330,7 @@ class TestInCmd(unittest.TestCase):
     def test_speech_resets_silence_countdown(self):
         """Speech resets silence_seconds_left."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         loop.state = ListeningState.IN_COMMAND
         loop.timeout_seconds_left = 99.0
@@ -330,7 +346,6 @@ class TestInCmd(unittest.TestCase):
 
     def test_feeds_speech_to_transformers(self):
         """_in_cmd feeds audio to transformers.feed_speech."""
-        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
         loop = _make_loop()
         loop.timeout_seconds_left = 99.0
         loop.silence_seconds_left = 99.0
@@ -344,7 +359,6 @@ class TestInCmd(unittest.TestCase):
 
     def test_with_fallback_stt(self):
         """_in_cmd streams data to fallback STT when configured."""
-        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
         fallback = Mock()
         loop = _make_loop(fallback_stt=fallback)
         loop.timeout_seconds_left = 99.0
@@ -363,7 +377,11 @@ class TestAfterCmd(unittest.TestCase):
 
     def test_calls_text_callback_with_utts(self):
         """_after_cmd calls text_callback with STT transcripts."""
-        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState, ListeningMode
+        from ovos_dinkum_listener.voice_loop.voice_loop import (
+            ListeningState,
+            ListeningMode,
+        )
+
         loop = _make_loop()
         loop.state = ListeningState.AFTER_COMMAND
         loop.listen_mode = ListeningMode.WAKEWORD
@@ -382,12 +400,13 @@ class TestAfterCmd(unittest.TestCase):
 
     def test_calls_stt_audio_callback(self):
         """_after_cmd calls stt_audio_callback with recorded audio."""
-        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState, ListeningMode
+        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.WAKEWORD
         audio_cb = Mock()
         loop.stt_audio_callback = audio_cb
-        loop.stt_audio_bytes = b'\xFF' * 200
+        loop.stt_audio_bytes = b"\xff" * 200
         loop.stt_chunks = deque()
         loop.transformers.transform.return_value = (SILENT_CHUNK, {})
 
@@ -395,11 +414,12 @@ class TestAfterCmd(unittest.TestCase):
 
         audio_cb.assert_called_once()
         recorded_audio = audio_cb.call_args[0][0]
-        self.assertEqual(recorded_audio, b'\xFF' * 200)
+        self.assertEqual(recorded_audio, b"\xff" * 200)
 
     def test_calls_record_end_callback(self):
         """_after_cmd calls record_end_callback."""
-        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState, ListeningMode
+        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.WAKEWORD
         end_cb = Mock()
@@ -414,7 +434,11 @@ class TestAfterCmd(unittest.TestCase):
 
     def test_resets_to_detect_wakeword_in_wakeword_mode(self):
         """In WAKEWORD mode, _after_cmd resets state to DETECT_WAKEWORD."""
-        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState, ListeningMode
+        from ovos_dinkum_listener.voice_loop.voice_loop import (
+            ListeningState,
+            ListeningMode,
+        )
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.WAKEWORD
         loop.stt_audio_bytes = bytes()
@@ -427,7 +451,11 @@ class TestAfterCmd(unittest.TestCase):
 
     def test_resets_to_waiting_cmd_in_continuous_mode(self):
         """In CONTINUOUS mode, _after_cmd resets state to WAITING_CMD."""
-        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState, ListeningMode
+        from ovos_dinkum_listener.voice_loop.voice_loop import (
+            ListeningState,
+            ListeningMode,
+        )
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.CONTINUOUS
         loop.stt_audio_bytes = bytes()
@@ -440,7 +468,11 @@ class TestAfterCmd(unittest.TestCase):
 
     def test_resets_to_waiting_cmd_in_hybrid_mode(self):
         """In HYBRID mode, _after_cmd resets state to WAITING_CMD."""
-        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState, ListeningMode
+        from ovos_dinkum_listener.voice_loop.voice_loop import (
+            ListeningState,
+            ListeningMode,
+        )
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.HYBRID
         loop.stt_audio_bytes = bytes()
@@ -454,6 +486,7 @@ class TestAfterCmd(unittest.TestCase):
     def test_no_callbacks_when_not_set(self):
         """_after_cmd runs without error when no callbacks are configured."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.WAKEWORD
         loop.stt_audio_bytes = bytes()
@@ -465,6 +498,7 @@ class TestAfterCmd(unittest.TestCase):
     def test_clears_stt_chunks(self):
         """_after_cmd clears the STT chunk queue."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.WAKEWORD
         loop.stt_audio_bytes = bytes()
@@ -478,6 +512,7 @@ class TestAfterCmd(unittest.TestCase):
     def test_calls_vad_reset_if_available(self):
         """_after_cmd calls vad.reset() when the method exists."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.WAKEWORD
         loop.stt_audio_bytes = bytes()
@@ -492,6 +527,7 @@ class TestAfterCmd(unittest.TestCase):
     def test_stt_transcription_empty_does_not_crash(self):
         """_after_cmd handles empty STT result gracefully."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.WAKEWORD
         loop.stt.transcribe.return_value = []
@@ -683,6 +719,7 @@ class TestVadRemoveSilence(unittest.TestCase):
     def test_extracted_speech_replaces_buffer(self):
         """Extracted speech replaces the STT stream buffer."""
         from ovos_dinkum_listener.plugins import FakeStreamingSTT
+
         loop = _make_loop()
         # Set stt to FakeStreamingSTT type so the isinstance check passes
         loop.stt = Mock(spec=FakeStreamingSTT)
@@ -706,6 +743,7 @@ class TestVadRemoveSilence(unittest.TestCase):
     def test_short_extracted_speech_skips_replacement(self):
         """If extracted speech < 1 second, buffer is NOT replaced."""
         from ovos_dinkum_listener.plugins import FakeStreamingSTT
+
         loop = _make_loop()
         loop.stt = Mock(spec=FakeStreamingSTT)
         loop.stt.stream = Mock()
@@ -727,7 +765,11 @@ class TestWaitCmd(unittest.TestCase):
 
     def test_speech_decrements_timer_and_moves_to_in_cmd_continuous(self):
         """Enough speech in CONTINUOUS mode → IN_COMMAND state."""
-        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState, ListeningMode
+        from ovos_dinkum_listener.voice_loop.voice_loop import (
+            ListeningState,
+            ListeningMode,
+        )
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.CONTINUOUS
         loop.state = ListeningState.WAITING_CMD
@@ -740,7 +782,8 @@ class TestWaitCmd(unittest.TestCase):
 
     def test_silence_resets_speech_timer(self):
         """Silence in _wait_cmd resets speech_seconds_left."""
-        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState, ListeningMode
+        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.WAKEWORD
         loop.speech_seconds_left = 0.01  # partially decremented
@@ -753,7 +796,8 @@ class TestWaitCmd(unittest.TestCase):
 
     def test_silence_checks_hotwords(self):
         """Silence in _wait_cmd checks for hotwords."""
-        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState, ListeningMode
+        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.WAKEWORD
         loop.speech_seconds_left = 99.0
@@ -767,6 +811,7 @@ class TestWaitCmd(unittest.TestCase):
     def test_feeds_audio_to_transformers_when_no_hotword(self):
         """When no hotword found, audio is fed to transformers."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.WAKEWORD
         loop.vad.is_silence.return_value = True
@@ -779,6 +824,7 @@ class TestWaitCmd(unittest.TestCase):
     def test_continuous_mode_accumulates_audio(self):
         """In CONTINUOUS mode silence, audio is accumulated in stt buffers."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.CONTINUOUS
         loop.speech_seconds_left = 99.0
@@ -800,9 +846,10 @@ class TestInRecording(unittest.TestCase):
         """Stop word detection triggers stop_recording()."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
         from ovos_dinkum_listener.voice_loop.hotwords import HotwordState
+
         loop = _make_loop()
         loop.state = ListeningState.RECORDING
-        loop.hotwords.found.return_value = 'stop'
+        loop.hotwords.found.return_value = "stop"
         loop.hotwords.state = HotwordState.LISTEN
         record_end_cb = Mock()
         loop.record_end_callback = record_end_cb
@@ -817,6 +864,7 @@ class TestInRecording(unittest.TestCase):
     def test_no_stop_word_accumulates_audio(self):
         """Without stop word, audio is accumulated in stt_audio_bytes."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         loop.state = ListeningState.RECORDING
         loop.hotwords.found.return_value = None
@@ -831,6 +879,7 @@ class TestInRecording(unittest.TestCase):
     def test_silence_decrements_silence_timer(self):
         """Silence during recording decrements recording_seconds_with_silence_left."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         loop.state = ListeningState.RECORDING
         loop.hotwords.found.return_value = None
@@ -845,6 +894,7 @@ class TestInRecording(unittest.TestCase):
     def test_max_silence_stops_recording(self):
         """When silence timer expires, recording is stopped."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         loop.state = ListeningState.RECORDING
         loop.hotwords.found.return_value = None
@@ -861,9 +911,10 @@ class TestInRecording(unittest.TestCase):
     def test_stop_word_fires_stopword_audio_callback(self):
         """Stop word triggers stopword_audio_callback with accumulated audio."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         loop.state = ListeningState.RECORDING
-        loop.hotwords.found.return_value = 'stop'
+        loop.hotwords.found.return_value = "stop"
         stop_cb = Mock()
         loop.stopword_audio_callback = stop_cb
         loop.stt_audio_bytes = bytes()
@@ -883,11 +934,11 @@ class TestDetectWakeup(unittest.TestCase):
     def test_wakeup_word_found_exits_sleep(self):
         """Wakeup word detection exits sleep and calls wakeup_callback."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
-        from ovos_dinkum_listener.voice_loop.hotwords import HotwordState
+
         loop = _make_loop()
         loop.state = ListeningState.CHECK_WAKE_UP
         loop.last_ww = time.time()  # recent
-        loop.hotwords.found.return_value = 'wake_up'
+        loop.hotwords.found.return_value = "wake_up"
         wakeup_cb = Mock()
         loop.wakeup_callback = wakeup_cb
         loop.hotword_chunks = deque()
@@ -901,6 +952,7 @@ class TestDetectWakeup(unittest.TestCase):
     def test_wakeup_not_found_and_timeout_returns_to_sleep(self):
         """No wakeup word after 10s returns to SLEEPING."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         loop.state = ListeningState.CHECK_WAKE_UP
         loop.last_ww = time.time() - 15  # 15 seconds ago → timeout
@@ -914,10 +966,11 @@ class TestDetectWakeup(unittest.TestCase):
     def test_wakeup_audio_callback_fired(self):
         """Wakeup word fires wakeupword_audio_callback with audio data."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         loop.state = ListeningState.CHECK_WAKE_UP
         loop.last_ww = time.time()
-        loop.hotwords.found.return_value = 'wake_up'
+        loop.hotwords.found.return_value = "wake_up"
         wakeup_audio_cb = Mock()
         loop.wakeupword_audio_callback = wakeup_audio_cb
         loop.hotword_chunks = deque([bytes(100), bytes(100)])
@@ -934,17 +987,21 @@ class TestDetectWw(unittest.TestCase):
 
     def test_ww_detected_starts_stt_and_calls_callbacks(self):
         """Wake word detection starts STT streaming and calls wake_callback."""
-        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState, ListeningMode
+        from ovos_dinkum_listener.voice_loop.voice_loop import (
+            ListeningState,
+            ListeningMode,
+        )
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.WAKEWORD
         loop.state = ListeningState.DETECT_WAKEWORD
-        loop.hotwords.found.return_value = 'hey_test'
+        loop.hotwords.found.return_value = "hey_test"
         loop.hotwords.get_ww.return_value = {
-            'engine': 'TestEngine',
-            'key_phrase': 'hey_test',
-            'module': 'test',
-            'listen': True,
-            'sound': None,
+            "engine": "TestEngine",
+            "key_phrase": "hey_test",
+            "module": "test",
+            "listen": True,
+            "sound": None,
         }
         wake_cb = Mock()
         loop.wake_callback = wake_cb
@@ -959,6 +1016,7 @@ class TestDetectWw(unittest.TestCase):
     def test_ww_not_detected_returns_false(self):
         """No wake word → returns False, state unchanged."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         loop.state = ListeningState.DETECT_WAKEWORD
         loop.hotwords.found.return_value = None
@@ -969,18 +1027,22 @@ class TestDetectWw(unittest.TestCase):
 
     def test_ww_with_sound_goes_to_confirmation(self):
         """Wake word with 'sound' configured → CONFIRMATION state."""
-        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState, ListeningMode
+        from ovos_dinkum_listener.voice_loop.voice_loop import (
+            ListeningState,
+            ListeningMode,
+        )
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.WAKEWORD
         loop.state = ListeningState.DETECT_WAKEWORD
-        loop.hotwords.found.return_value = 'hey_test'
+        loop.hotwords.found.return_value = "hey_test"
         loop.hotwords.get_ww.return_value = {
-            'key_phrase': 'hey_test',
-            'module': 'test',
-            'engine': 'Test',
-            'listen': True,
-            'sound': 'beep.wav',
-            'sound_duration': 0.5,
+            "key_phrase": "hey_test",
+            "module": "test",
+            "engine": "Test",
+            "listen": True,
+            "sound": "beep.wav",
+            "sound_duration": 0.5,
         }
         loop.hotword_chunks = deque()
 
@@ -990,17 +1052,21 @@ class TestDetectWw(unittest.TestCase):
 
     def test_ww_without_sound_goes_to_before_command(self):
         """Wake word without 'sound' → BEFORE_COMMAND state."""
-        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState, ListeningMode
+        from ovos_dinkum_listener.voice_loop.voice_loop import (
+            ListeningState,
+            ListeningMode,
+        )
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.WAKEWORD
         loop.state = ListeningState.DETECT_WAKEWORD
-        loop.hotwords.found.return_value = 'hey_test'
+        loop.hotwords.found.return_value = "hey_test"
         loop.hotwords.get_ww.return_value = {
-            'key_phrase': 'hey_test',
-            'module': 'test',
-            'engine': 'Test',
-            'listen': True,
-            'sound': None,
+            "key_phrase": "hey_test",
+            "module": "test",
+            "engine": "Test",
+            "listen": True,
+            "sound": None,
         }
         loop.hotword_chunks = deque()
 
@@ -1011,15 +1077,16 @@ class TestDetectWw(unittest.TestCase):
     def test_ww_found_with_listen_returns_true(self):
         """When WW found and listen=True, _detect_ww returns True."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         loop.state = ListeningState.DETECT_WAKEWORD
-        loop.hotwords.found.return_value = 'hey_test'
+        loop.hotwords.found.return_value = "hey_test"
         loop.hotwords.get_ww.return_value = {
-            'key_phrase': 'hey_test',
-            'module': 'test',
-            'engine': 'Test',
-            'listen': True,
-            'sound': None,
+            "key_phrase": "hey_test",
+            "module": "test",
+            "engine": "Test",
+            "listen": True,
+            "sound": None,
         }
         loop.hotword_chunks = deque()
 
@@ -1029,17 +1096,21 @@ class TestDetectWw(unittest.TestCase):
 
     def test_sleeping_mode_goes_to_check_wake_up(self):
         """In SLEEPING mode, WW detection → CHECK_WAKE_UP state."""
-        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState, ListeningMode
+        from ovos_dinkum_listener.voice_loop.voice_loop import (
+            ListeningState,
+            ListeningMode,
+        )
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.SLEEPING
         loop.state = ListeningState.SLEEPING
-        loop.hotwords.found.return_value = 'hey_test'
+        loop.hotwords.found.return_value = "hey_test"
         loop.hotwords.get_ww.return_value = {
-            'key_phrase': 'hey_test',
-            'module': 'test',
-            'engine': 'Test',
-            'listen': True,
-            'sound': None,
+            "key_phrase": "hey_test",
+            "module": "test",
+            "engine": "Test",
+            "listen": True,
+            "sound": None,
         }
         loop.hotword_chunks = deque()
 
@@ -1050,15 +1121,16 @@ class TestDetectWw(unittest.TestCase):
     def test_listenword_audio_callback_fired(self):
         """Listenword audio callback is fired on WW detection."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.WAKEWORD
-        loop.hotwords.found.return_value = 'hey_test'
+        loop.hotwords.found.return_value = "hey_test"
         loop.hotwords.get_ww.return_value = {
-            'key_phrase': 'hey_test',
-            'module': 'test',
-            'engine': 'Test',
-            'listen': True,
-            'sound': None,
+            "key_phrase": "hey_test",
+            "module": "test",
+            "engine": "Test",
+            "listen": True,
+            "sound": None,
         }
         cb = Mock()
         loop.listenword_audio_callback = cb
@@ -1071,16 +1143,17 @@ class TestDetectWw(unittest.TestCase):
     def test_fallback_stt_started_on_ww(self):
         """Fallback STT stream_start() is called on WW detection."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
         fallback = Mock()
         loop = _make_loop(fallback_stt=fallback)
         loop.listen_mode = ListeningMode.WAKEWORD
-        loop.hotwords.found.return_value = 'hey_test'
+        loop.hotwords.found.return_value = "hey_test"
         loop.hotwords.get_ww.return_value = {
-            'key_phrase': 'hey_test',
-            'module': 'test',
-            'engine': 'Test',
-            'listen': True,
-            'sound': None,
+            "key_phrase": "hey_test",
+            "module": "test",
+            "engine": "Test",
+            "listen": True,
+            "sound": None,
         }
         loop.hotword_chunks = deque()
 
@@ -1094,8 +1167,12 @@ class TestResetState(unittest.TestCase):
 
     def test_wakeword_mode_resets_to_detect_wakeword(self):
         """In WAKEWORD mode, reset_state() → DETECT_WAKEWORD."""
-        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState, ListeningMode
+        from ovos_dinkum_listener.voice_loop.voice_loop import (
+            ListeningState,
+            ListeningMode,
+        )
         from ovos_dinkum_listener.voice_loop.hotwords import HotwordState
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.WAKEWORD
 
@@ -1106,7 +1183,11 @@ class TestResetState(unittest.TestCase):
 
     def test_continuous_mode_resets_to_waiting_cmd(self):
         """In CONTINUOUS mode, reset_state() → WAITING_CMD."""
-        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState, ListeningMode
+        from ovos_dinkum_listener.voice_loop.voice_loop import (
+            ListeningState,
+            ListeningMode,
+        )
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.CONTINUOUS
 
@@ -1121,6 +1202,7 @@ class TestGoToSleep(unittest.TestCase):
     def test_go_to_sleep_sets_sleeping_state(self):
         """go_to_sleep() sets state to SLEEPING."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         loop.go_to_sleep()
         self.assertEqual(loop.state, ListeningState.SLEEPING)
@@ -1132,6 +1214,7 @@ class TestStartStopRecording(unittest.TestCase):
     def test_start_recording_sets_state(self):
         """start_recording() sets state to RECORDING and calls wake_callback."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         loop = _make_loop()
         wake_cb = Mock()
         loop.wake_callback = wake_cb
@@ -1145,18 +1228,19 @@ class TestStartStopRecording(unittest.TestCase):
     def test_stop_recording_fires_callbacks_and_resets(self):
         """stop_recording() fires recording_audio_callback and record_end_callback."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
         loop = _make_loop()
         loop.listen_mode = ListeningMode.WAKEWORD
         rec_audio_cb = Mock()
         rec_end_cb = Mock()
         loop.recording_audio_callback = rec_audio_cb
         loop.record_end_callback = rec_end_cb
-        loop.stt_audio_bytes = b'\xAA' * 100
+        loop.stt_audio_bytes = b"\xaa" * 100
         loop.recording_filename = "test"
 
         loop.stop_recording()
 
-        rec_audio_cb.assert_called_once_with(b'\xAA' * 100, {"recording_name": "test"})
+        rec_audio_cb.assert_called_once_with(b"\xaa" * 100, {"recording_name": "test"})
         rec_end_cb.assert_called_once()
 
 
@@ -1174,5 +1258,5 @@ class TestStop(unittest.TestCase):
         self.assertFalse(loop.running)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -1,4 +1,5 @@
 """Extended unit tests for OVOSDinkumVoiceService methods."""
+
 import base64
 import shutil
 import unittest
@@ -16,27 +17,32 @@ class TestServiceCallbacks(unittest.TestCase):
     def test_on_ready(self):
         """on_ready() executes without error."""
         from ovos_dinkum_listener.service import on_ready
+
         on_ready()
 
     def test_on_alive(self):
         """on_alive() executes without error."""
         from ovos_dinkum_listener.service import on_alive
+
         on_alive()
 
     def test_on_started(self):
         """on_started() executes without error."""
         from ovos_dinkum_listener.service import on_started
+
         on_started()
 
     def test_on_error(self):
         """on_error() executes without error."""
         from ovos_dinkum_listener.service import on_error
+
         on_error()
         on_error("Test error message")
 
     def test_on_stopping(self):
         """on_stopping() executes without error."""
         from ovos_dinkum_listener.service import on_stopping
+
         on_stopping()
 
 
@@ -46,32 +52,34 @@ class TestServiceStaticMethods(unittest.TestCase):
     def test_compile_ww_context_keys(self):
         """_compile_ww_context() returns dict with all required keys."""
         from ovos_dinkum_listener.service import OVOSDinkumVoiceService
+
         result = OVOSDinkumVoiceService._compile_ww_context(
-            key_phrase="hey_mycroft",
-            ww_module="ovos-ww-plugin-precise"
+            key_phrase="hey_mycroft", ww_module="ovos-ww-plugin-precise"
         )
-        self.assertIn('name', result)
-        self.assertIn('engine', result)
-        self.assertIn('time', result)
-        self.assertIn('sessionId', result)
-        self.assertIn('accountId', result)
-        self.assertIn('model', result)
-        self.assertEqual(result['name'], 'hey_mycroft')
-        self.assertEqual(result['accountId'], 'Anon')
+        self.assertIn("name", result)
+        self.assertIn("engine", result)
+        self.assertIn("time", result)
+        self.assertIn("sessionId", result)
+        self.assertIn("accountId", result)
+        self.assertIn("model", result)
+        self.assertEqual(result["name"], "hey_mycroft")
+        self.assertEqual(result["accountId"], "Anon")
 
     def test_compile_ww_context_engine_is_md5(self):
         """_compile_ww_context() computes engine as MD5 hash of module name."""
         from hashlib import md5
         from ovos_dinkum_listener.service import OVOSDinkumVoiceService
+
         module = "test-module"
         result = OVOSDinkumVoiceService._compile_ww_context("ww", module)
-        expected_hash = md5(module.encode('utf-8')).hexdigest()
-        self.assertEqual(result['engine'], expected_hash)
+        expected_hash = md5(module.encode("utf-8")).hexdigest()
+        self.assertEqual(result["engine"], expected_hash)
 
     @patch("ovos_dinkum_listener.service.get_stt_lang_configs")
     def test_get_stt_lang_options_empty(self, mock_cfgs):
         """get_stt_lang_options() returns empty list when no configs available."""
         from ovos_dinkum_listener.service import OVOSDinkumVoiceService
+
         mock_cfgs.return_value = {}
         result = OVOSDinkumVoiceService.get_stt_lang_options("en-us")
         self.assertEqual(result, [])
@@ -80,12 +88,14 @@ class TestServiceStaticMethods(unittest.TestCase):
     def test_get_stt_lang_options_blacklist(self, mock_cfgs):
         """get_stt_lang_options() excludes engines in blacklist."""
         from ovos_dinkum_listener.service import OVOSDinkumVoiceService
+
         mock_cfgs.return_value = {
             "blocked_engine": [{"lang": "en-us"}],
             "good_engine": [{"lang": "en-us"}],
         }
         result = OVOSDinkumVoiceService.get_stt_lang_options(
-            "en-us", blacklist=["blocked_engine"])
+            "en-us", blacklist=["blocked_engine"]
+        )
         engines = [opt["engine"] for opt in result]
         self.assertNotIn("blocked_engine", engines)
         self.assertIn("good_engine", engines)
@@ -94,6 +104,7 @@ class TestServiceStaticMethods(unittest.TestCase):
     def test_get_stt_lang_options_adds_metadata(self, mock_cfgs):
         """get_stt_lang_options() adds plugin_name, engine, lang to each config."""
         from ovos_dinkum_listener.service import OVOSDinkumVoiceService
+
         mock_cfgs.return_value = {
             "my_engine": [{}],
         }
@@ -107,6 +118,7 @@ class TestServiceStaticMethods(unittest.TestCase):
     def test_get_ww_lang_options_empty(self, mock_cfgs):
         """get_ww_lang_options() returns empty list when no configs available."""
         from ovos_dinkum_listener.service import OVOSDinkumVoiceService
+
         mock_cfgs.return_value = {}
         result = OVOSDinkumVoiceService.get_ww_lang_options("en-us")
         self.assertEqual(result, [])
@@ -115,12 +127,14 @@ class TestServiceStaticMethods(unittest.TestCase):
     def test_get_ww_lang_options_blacklist(self, mock_cfgs):
         """get_ww_lang_options() excludes engines in blacklist."""
         from ovos_dinkum_listener.service import OVOSDinkumVoiceService
+
         mock_cfgs.return_value = {
             "blocked": [{"lang": "en-us"}],
             "allowed": [{"lang": "en-us"}],
         }
         result = OVOSDinkumVoiceService.get_ww_lang_options(
-            "en-us", blacklist=["blocked"])
+            "en-us", blacklist=["blocked"]
+        )
         engines = [opt["engine"] for opt in result]
         self.assertNotIn("blocked", engines)
         self.assertIn("allowed", engines)
@@ -129,6 +143,7 @@ class TestServiceStaticMethods(unittest.TestCase):
     def test_get_vad_options_empty(self, mock_cfgs):
         """get_vad_options() returns empty list when no configs available."""
         from ovos_dinkum_listener.service import OVOSDinkumVoiceService
+
         mock_cfgs.return_value = {}
         result = OVOSDinkumVoiceService.get_vad_options()
         self.assertEqual(result, [])
@@ -137,6 +152,7 @@ class TestServiceStaticMethods(unittest.TestCase):
     def test_get_vad_options_blacklist(self, mock_cfgs):
         """get_vad_options() excludes engines in blacklist."""
         from ovos_dinkum_listener.service import OVOSDinkumVoiceService
+
         mock_cfgs.return_value = {
             "silero": [{}],
             "webrtc": [{}],
@@ -150,6 +166,7 @@ class TestServiceStaticMethods(unittest.TestCase):
     def test_get_vad_options_adds_metadata(self, mock_cfgs):
         """get_vad_options() adds plugin_name and engine to each config."""
         from ovos_dinkum_listener.service import OVOSDinkumVoiceService
+
         mock_cfgs.return_value = {"my_vad": [{"type": "silero"}]}
         result = OVOSDinkumVoiceService.get_vad_options()
         self.assertEqual(len(result), 1)
@@ -178,11 +195,15 @@ class _ServiceTestBase(unittest.TestCase):
         shutil.rmtree(cls.config_dir, ignore_errors=True)
 
     @classmethod
+    @patch("ovos_dinkum_listener.service.OVOSMicrophoneFactory.create")
+    @patch("ovos_dinkum_listener.service.OVOSVADFactory.create")
     @patch("ovos_dinkum_listener.voice_loop.DinkumVoiceLoop")
     @patch("ovos_dinkum_listener.plugins.load_fallback_stt")
     @patch("ovos_dinkum_listener.plugins.load_stt_module")
-    def _create_service(cls, load_stt, load_fallback, voice_loop):
+    def _create_service(cls, load_stt, load_fallback, voice_loop, vad, mic_factory):
         from ovos_dinkum_listener.service import OVOSDinkumVoiceService
+        from ovos_plugin_manager.templates.vad import VADEngine
+
         stt = Mock()
         stt.shutdown = Mock()
         stt.lang = "en-us"
@@ -192,6 +213,7 @@ class _ServiceTestBase(unittest.TestCase):
         fallback.shutdown = Mock()
         load_stt.return_value = stt
         load_fallback.return_value = fallback
+        vad.return_value = MagicMock(spec=VADEngine)
 
         mic = Mock()
         mic.stop = Mock()
@@ -271,8 +293,7 @@ class TestServiceMessageHandlers(_ServiceTestBase):
         """_handle_mic_get_status emits mute status response."""
         self.service.voice_loop.is_muted = False
         received = []
-        self.bus.on("mycroft.mic.is_muted.response",
-                    lambda m: received.append(m))
+        self.bus.on("mycroft.mic.is_muted.response", lambda m: received.append(m))
         msg = Message("mycroft.mic.is_muted")
         self.service._handle_mic_get_status(msg)
         # Response should have been emitted (via message.response)
@@ -305,66 +326,73 @@ class TestServiceMessageHandlers(_ServiceTestBase):
     def test_handle_change_state_sleeping(self):
         """_handle_change_state with SLEEPING state calls go_to_sleep."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
-        msg = Message("recognizer_loop:change_state",
-                      {"state": ListeningState.SLEEPING})
+
+        msg = Message(
+            "recognizer_loop:change_state", {"state": ListeningState.SLEEPING}
+        )
         self.service._handle_change_state(msg)
         self.service.voice_loop.go_to_sleep.assert_called()
 
     def test_handle_change_state_detect_wakeword(self):
         """_handle_change_state with DETECT_WAKEWORD calls reset_state."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         self.service.voice_loop.reset_state = Mock()
-        msg = Message("recognizer_loop:change_state",
-                      {"state": ListeningState.DETECT_WAKEWORD})
+        msg = Message(
+            "recognizer_loop:change_state", {"state": ListeningState.DETECT_WAKEWORD}
+        )
         self.service._handle_change_state(msg)
         self.service.voice_loop.reset_state.assert_called()
 
     def test_handle_change_state_recording(self):
         """_handle_change_state with RECORDING calls start_recording."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         self.service.voice_loop.start_recording = Mock()
-        msg = Message("recognizer_loop:change_state",
-                      {"state": ListeningState.RECORDING,
-                       "recording_name": "test_rec"})
+        msg = Message(
+            "recognizer_loop:change_state",
+            {"state": ListeningState.RECORDING, "recording_name": "test_rec"},
+        )
         self.service._handle_change_state(msg)
         self.service.voice_loop.start_recording.assert_called_with("test_rec")
 
     def test_handle_change_state_mode_wakeword(self):
         """_handle_change_state sets listen_mode to WAKEWORD."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
-        msg = Message("recognizer_loop:change_state",
-                      {"mode": ListeningMode.WAKEWORD})
+
+        msg = Message("recognizer_loop:change_state", {"mode": ListeningMode.WAKEWORD})
         self.service._handle_change_state(msg)
         self.assertEqual(self.service.voice_loop.listen_mode, ListeningMode.WAKEWORD)
 
     def test_handle_change_state_mode_continuous(self):
         """_handle_change_state sets listen_mode to CONTINUOUS."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
-        msg = Message("recognizer_loop:change_state",
-                      {"mode": ListeningMode.CONTINUOUS})
+
+        msg = Message(
+            "recognizer_loop:change_state", {"mode": ListeningMode.CONTINUOUS}
+        )
         self.service._handle_change_state(msg)
         self.assertEqual(self.service.voice_loop.listen_mode, ListeningMode.CONTINUOUS)
 
     def test_handle_change_state_mode_hybrid(self):
         """_handle_change_state sets listen_mode to HYBRID."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
-        msg = Message("recognizer_loop:change_state",
-                      {"mode": ListeningMode.HYBRID})
+
+        msg = Message("recognizer_loop:change_state", {"mode": ListeningMode.HYBRID})
         self.service._handle_change_state(msg)
         self.assertEqual(self.service.voice_loop.listen_mode, ListeningMode.HYBRID)
 
     def test_handle_change_state_mode_sleeping(self):
         """_handle_change_state sets listen_mode to SLEEPING."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
-        msg = Message("recognizer_loop:change_state",
-                      {"mode": ListeningMode.SLEEPING})
+
+        msg = Message("recognizer_loop:change_state", {"mode": ListeningMode.SLEEPING})
         self.service._handle_change_state(msg)
         self.assertEqual(self.service.voice_loop.listen_mode, ListeningMode.SLEEPING)
 
     def test_handle_change_state_invalid_state_logs_error(self):
         """_handle_change_state handles invalid state without raising."""
-        msg = Message("recognizer_loop:change_state",
-                      {"state": "invalid_state_xyz"})
+        msg = Message("recognizer_loop:change_state", {"state": "invalid_state_xyz"})
         # Should not raise
         self.service._handle_change_state(msg)
 
@@ -403,8 +431,8 @@ class TestServiceMessageHandlers(_ServiceTestBase):
 
     def test_handle_extend_listening_hybrid(self):
         """_handle_extend_listening updates last_ww in HYBRID mode."""
-        import time
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
         self.service.voice_loop.listen_mode = ListeningMode.HYBRID
         self.service.voice_loop.last_ww = 0.0
         msg = Message("intent.service.skills.activated")
@@ -414,6 +442,7 @@ class TestServiceMessageHandlers(_ServiceTestBase):
     def test_handle_extend_listening_non_hybrid(self):
         """_handle_extend_listening does nothing in non-HYBRID mode."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
         self.service.voice_loop.listen_mode = ListeningMode.WAKEWORD
         self.service.voice_loop.last_ww = 0.0
         msg = Message("intent.service.skills.activated")
@@ -427,6 +456,7 @@ class TestSttText(_ServiceTestBase):
     def test_emits_utterance_when_transcribed(self):
         """_stt_text emits recognizer_loop:utterance when transcripts available."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
         self.service.voice_loop.listen_mode = ListeningMode.WAKEWORD
         received = []
         self.bus.on("recognizer_loop:utterance", lambda m: received.append(m))
@@ -438,10 +468,12 @@ class TestSttText(_ServiceTestBase):
     def test_emits_unknown_when_empty_in_wakeword_mode(self):
         """_stt_text emits speech.recognition.unknown when no transcription in WW mode."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
         self.service.voice_loop.listen_mode = ListeningMode.WAKEWORD
         received = []
-        self.bus.on("recognizer_loop:speech.recognition.unknown",
-                    lambda m: received.append(m))
+        self.bus.on(
+            "recognizer_loop:speech.recognition.unknown", lambda m: received.append(m)
+        )
 
         self.service._stt_text([], {})
 
@@ -450,10 +482,12 @@ class TestSttText(_ServiceTestBase):
     def test_silent_in_continuous_mode(self):
         """_stt_text does not emit unknown in CONTINUOUS mode with empty transcription."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
         self.service.voice_loop.listen_mode = ListeningMode.CONTINUOUS
         received = []
-        self.bus.on("recognizer_loop:speech.recognition.unknown",
-                    lambda m: received.append(m))
+        self.bus.on(
+            "recognizer_loop:speech.recognition.unknown", lambda m: received.append(m)
+        )
 
         self.service._stt_text([], {})
 
@@ -462,22 +496,24 @@ class TestSttText(_ServiceTestBase):
     def test_filters_hallucinations(self):
         """_stt_text filters common hallucinations from transcripts."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
         self.service.voice_loop.listen_mode = ListeningMode.WAKEWORD
         self.service.config = {
             "filter_hallucinations": True,
-            "hallucination_list": ["thanks for watching!"]
+            "hallucination_list": ["thanks for watching!"],
         }
         received = []
         self.bus.on("recognizer_loop:utterance", lambda m: received.append(m))
         unknown_received = []
-        self.bus.on("recognizer_loop:speech.recognition.unknown",
-                    lambda m: unknown_received.append(m))
+        self.bus.on(
+            "recognizer_loop:speech.recognition.unknown",
+            lambda m: unknown_received.append(m),
+        )
 
         self.service._stt_text([("thanks for watching!", 0.9)], {})
 
         # Hallucination filtered → no utterance, gets speech.recognition.unknown
-        utterance_msgs = [m for m in received
-                         if "thanks for watching" in str(m.data)]
+        utterance_msgs = [m for m in received if "thanks for watching" in str(m.data)]
         self.assertEqual(len(utterance_msgs), 0)
 
 
@@ -530,9 +566,7 @@ class TestHotwordAudio(_ServiceTestBase):
         self.bus.on("recognizer_loop:utterance", lambda m: received.append(m))
 
         ww_ctx = self._make_ww_context(
-            listen=False,
-            utterance="hello world",
-            stt_lang="en-us"
+            listen=False, utterance="hello world", stt_lang="en-us"
         )
         self.service._hotword_audio(bytes(100), ww_ctx)
 
@@ -542,10 +576,7 @@ class TestHotwordAudio(_ServiceTestBase):
     def test_sound_list_picks_random(self):
         """_hotword_audio with list sound picks a random one without error."""
         self.service.config = {"listener": {"record_wake_words": False}}
-        ww_ctx = self._make_ww_context(
-            listen=False,
-            sound=["sound1.wav", "sound2.wav"]
-        )
+        ww_ctx = self._make_ww_context(listen=False, sound=["sound1.wav", "sound2.wav"])
         # Should not raise; random choice is made internally
         self.service._hotword_audio(bytes(100), ww_ctx)
 
@@ -555,10 +586,7 @@ class TestHotwordAudio(_ServiceTestBase):
         received = []
         self.bus.on("my.custom.event", lambda m: received.append(m))
 
-        ww_ctx = self._make_ww_context(
-            listen=False,
-            bus_event="my.custom.event"
-        )
+        ww_ctx = self._make_ww_context(listen=False, bus_event="my.custom.event")
         self.service._hotword_audio(bytes(100), ww_ctx)
 
         self.assertGreater(len(received), 0)
@@ -580,7 +608,9 @@ class TestHotwordAudio(_ServiceTestBase):
         received = []
         self.bus.on("recognizer_loop:stopword", lambda m: received.append(m))
 
-        ww_ctx = self._make_ww_context(listen=False, wakeup=False, stopword=True, bus_event=None)
+        ww_ctx = self._make_ww_context(
+            listen=False, wakeup=False, stopword=True, bus_event=None
+        )
         self.service._hotword_audio(bytes(100), ww_ctx)
 
         self.assertGreater(len(received), 0)
@@ -594,7 +624,8 @@ class TestHotwordAudio(_ServiceTestBase):
         ww_ctx = self._make_ww_context(listen=True, stt_lang="de-de")
         self.service._hotword_audio(bytes(100), ww_ctx)
 
-        # Should have been called - lang context handling covered
+        self.assertGreater(len(received), 0)
+        self.assertEqual(received[-1].context.get("stt_lang"), "de-de")
 
 
 class TestB64Audio(_ServiceTestBase):
@@ -612,8 +643,9 @@ class TestB64Audio(_ServiceTestBase):
         received = []
         self.bus.on("recognizer_loop:utterance", lambda m: received.append(m))
 
-        msg = Message("recognizer_loop:transcribe",
-                      {"audio": audio_b64, "lang": "en-us"})
+        msg = Message(
+            "recognizer_loop:transcribe", {"audio": audio_b64, "lang": "en-us"}
+        )
         self.service._handle_b64_audio(msg)
 
         self.assertGreater(len(received), 0)
@@ -628,11 +660,11 @@ class TestB64Audio(_ServiceTestBase):
 
         audio_b64 = base64.b64encode(bytes(100)).decode()
         received = []
-        self.bus.on("recognizer_loop:speech.recognition.unknown",
-                    lambda m: received.append(m))
+        self.bus.on(
+            "recognizer_loop:speech.recognition.unknown", lambda m: received.append(m)
+        )
 
-        msg = Message("recognizer_loop:transcribe",
-                      {"audio": audio_b64})
+        msg = Message("recognizer_loop:transcribe", {"audio": audio_b64})
         self.service._handle_b64_audio(msg)
 
         self.assertGreater(len(received), 0)
@@ -647,8 +679,9 @@ class TestB64Audio(_ServiceTestBase):
 
         audio_b64 = base64.b64encode(bytes(100)).decode()
         received = []
-        self.bus.on("recognizer_loop:speech.recognition.unknown",
-                    lambda m: received.append(m))
+        self.bus.on(
+            "recognizer_loop:speech.recognition.unknown", lambda m: received.append(m)
+        )
 
         msg = Message("recognizer_loop:transcribe", {"audio": audio_b64})
         self.service._handle_b64_audio(msg)
@@ -668,11 +701,13 @@ class TestB64Transcribe(_ServiceTestBase):
 
         audio_b64 = base64.b64encode(bytes(100)).decode()
         received = []
-        self.bus.on("recognizer_loop:b64_transcribe.response",
-                    lambda m: received.append(m))
+        self.bus.on(
+            "recognizer_loop:b64_transcribe.response", lambda m: received.append(m)
+        )
 
-        msg = Message("recognizer_loop:b64_transcribe",
-                      {"audio": audio_b64, "lang": "en-us"})
+        msg = Message(
+            "recognizer_loop:b64_transcribe", {"audio": audio_b64, "lang": "en-us"}
+        )
         self.service._handle_b64_transcribe(msg)
 
         # Transcribe should have been called on the stt
@@ -685,7 +720,9 @@ class TestOpmHandlers(_ServiceTestBase):
     @patch("ovos_dinkum_listener.service.get_stt_lang_configs")
     @patch("ovos_dinkum_listener.service.get_stt_module_configs")
     @patch("ovos_dinkum_listener.service.get_stt_supported_langs")
-    def test_handle_opm_stt_query(self, mock_supported, mock_module_configs, mock_lang_cfgs):
+    def test_handle_opm_stt_query(
+        self, mock_supported, mock_module_configs, mock_lang_cfgs
+    ):
         """_handle_opm_stt_query emits response with plugins and langs."""
         mock_supported.return_value = {"en-us": ["plugin_a"]}
         mock_module_configs.return_value = {}
@@ -701,7 +738,9 @@ class TestOpmHandlers(_ServiceTestBase):
     @patch("ovos_dinkum_listener.service.get_ww_lang_configs")
     @patch("ovos_dinkum_listener.service.get_ww_module_configs")
     @patch("ovos_dinkum_listener.service.get_ww_supported_langs")
-    def test_handle_opm_ww_query(self, mock_supported, mock_module_configs, mock_lang_cfgs):
+    def test_handle_opm_ww_query(
+        self, mock_supported, mock_module_configs, mock_lang_cfgs
+    ):
         """_handle_opm_ww_query emits response with plugins and langs."""
         mock_supported.return_value = {"en-us": ["precise"]}
         mock_module_configs.return_value = {}
@@ -735,10 +774,11 @@ class TestServiceSaveAudio(_ServiceTestBase):
     def test_compile_ww_context_time_is_string(self):
         """_compile_ww_context() returns time as a string of ms since epoch."""
         from ovos_dinkum_listener.service import OVOSDinkumVoiceService
+
         result = OVOSDinkumVoiceService._compile_ww_context("test", "module")
-        self.assertIsInstance(result['time'], str)
+        self.assertIsInstance(result["time"], str)
         # Should be a numeric string representing milliseconds
-        int(result['time'])  # should not raise
+        int(result["time"])  # should not raise
 
     def test_stt_audio_no_save_when_disabled(self):
         """_stt_audio does nothing when save_utterances is False."""
@@ -758,6 +798,7 @@ class TestServiceSaveAudio(_ServiceTestBase):
         self.service.config = {}
         self._setup_mic()
         import tempfile
+
         with tempfile.TemporaryDirectory() as tmpdir:
             ctx = {"recording_name": "test_rec"}
             result = self.service._save_recording(bytes(100), ctx, save_path=tmpdir)
@@ -768,25 +809,24 @@ class TestServiceSaveAudio(_ServiceTestBase):
         """_save_stt creates both a WAV file and a JSON metadata file."""
         import os
         import tempfile
+
         self._setup_mic()
         with tempfile.TemporaryDirectory() as tmpdir:
-            stt_meta = {
-                "transcriptions": [("hello world", 0.9)]
-            }
+            stt_meta = {"transcriptions": [("hello world", 0.9)]}
             path = self.service._save_stt(bytes(100), stt_meta, save_path=tmpdir)
             self.assertIsNotNone(path)
             self.assertTrue(path.startswith("file://"))
             # Files should exist
             files = os.listdir(tmpdir)
-            wav_files = [f for f in files if f.endswith('.wav')]
-            json_files = [f for f in files if f.endswith('.json')]
+            wav_files = [f for f in files if f.endswith(".wav")]
+            json_files = [f for f in files if f.endswith(".json")]
             self.assertGreater(len(wav_files), 0)
             self.assertGreater(len(json_files), 0)
 
     def test_save_stt_empty_transcriptions_list(self):
         """_save_stt handles empty transcriptions list (IndexError path)."""
-        import os
         import tempfile
+
         self._setup_mic()
         with tempfile.TemporaryDirectory() as tmpdir:
             # Empty transcriptions list → IndexError → fallback to transcription key
@@ -799,20 +839,21 @@ class TestServiceSaveAudio(_ServiceTestBase):
         """_save_recording creates both WAV and JSON files."""
         import os
         import tempfile
+
         self._setup_mic()
         with tempfile.TemporaryDirectory() as tmpdir:
             meta = {"recording_name": "my_recording"}
             path = self.service._save_recording(bytes(100), meta, save_path=tmpdir)
             self.assertTrue(path.startswith("file://"))
             files = os.listdir(tmpdir)
-            wav_files = [f for f in files if f.endswith('.wav')]
+            wav_files = [f for f in files if f.endswith(".wav")]
             self.assertGreater(len(wav_files), 0)
 
     def test_save_ww_creates_files(self):
         """_save_ww creates both WAV and JSON files."""
         import os
         import tempfile
-        from ovos_dinkum_listener.service import OVOSDinkumVoiceService
+
         self._setup_mic()
         with tempfile.TemporaryDirectory() as tmpdir:
             ww_meta = {
@@ -822,9 +863,9 @@ class TestServiceSaveAudio(_ServiceTestBase):
             path = self.service._save_ww(bytes(100), ww_meta, save_path=tmpdir)
             self.assertTrue(path.startswith("file://"))
             files = os.listdir(tmpdir)
-            wav_files = [f for f in files if f.endswith('.wav')]
+            wav_files = [f for f in files if f.endswith(".wav")]
             self.assertGreater(len(wav_files), 0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
