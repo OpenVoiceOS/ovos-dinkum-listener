@@ -15,7 +15,6 @@ class _TemplateFilenameFormatter:
         >>> template = 'my_filename_{now}_{uuid4}'
         >>> self = _TemplateFilenameFormatter()
         >>> name = self.format(template)
-        >>> # xdoctest: +IGNORE_WANT
         >>> print(f'name={name}')
         name=my_filename_2024-09-14 18:53:22.619838-05:00_...
 
@@ -24,7 +23,6 @@ class _TemplateFilenameFormatter:
         >>> template = 'my_filename_{now:%Y-%m-%dT%H%M%S%z}_{uuid4}'
         >>> self = _TemplateFilenameFormatter()
         >>> name = self.format(template)
-        >>> # xdoctest: +IGNORE_WANT
         >>> print(f'name={name}')
         name=my_filename_2024-09-14T185354-0500_6f0f6daf-cd81-4c5b-bf38-76a4466161c6
 
@@ -36,7 +34,6 @@ class _TemplateFilenameFormatter:
         >>> def custom_func():
         ...     return 'myval'
         >>> name = self.format(template)
-        >>> # xdoctest: +IGNORE_WANT
         >>> print(f'name={name}')
         name=myval.bar.2024--765176fa-7c80-431c-b43d-2ad14a58a249
 
@@ -47,7 +44,6 @@ class _TemplateFilenameFormatter:
         >>> import pytest
         >>> with pytest.raises(KeyError) as ex:
         ...     name = self.format(template)
-        >>> # xdoctest: +IGNORE_WANT
         >>> print(str(ex.value))
         "Template string contained unsupported keys ['doesnotexist']. "
         "Supported keys are: ['uuid4', 'now', 'utcnow']"
