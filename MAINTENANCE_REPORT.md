@@ -1,6 +1,17 @@
 
 # Maintenance Report — `ovos-dinkum-listener`
 
+## [2026-03-11] — CI failure fixes (lint, build, tests)
+
+- **AI Model**: claude-sonnet-4-6
+- **Actions Taken**:
+  - Fixed sdist build failure: `MANIFEST.in` missing `recursive-include requirements *.txt`
+  - Added `ruff` config to `pyproject.toml` (select E,F; exclude `_gh_automations`)
+  - Fixed 9 ruff violations across `service.py`, `hotwords.py`, `voice_loop.py`, `plugins.py`, `voice_loop/__init__.py`
+  - Fixed 3 pre-existing test failures: removed `test_verify_returns_true` (method from unmerged PR #191), corrected `test_speech_detected_switches_state` (hotword_chunks drained on speech detection), replaced `test_verify_failure_returns_false` with correct assertion
+  - All 251 unit tests pass
+- **Oversight**: Agent-driven; human review required before push
+
 ## [2026-03-11] — Extensive docs rewrite
 
 - **AI Model**: claude-sonnet-4-6
