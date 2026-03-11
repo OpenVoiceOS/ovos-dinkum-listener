@@ -2,11 +2,17 @@
 requires = [ "setuptools>=41.0.1",]
 build-backend = "setuptools.build_meta"
 
+[tool.ruff]
+exclude = ["_gh_automations", "setup.py"]
+
+[tool.ruff.lint]
+select = ["E", "F"]
+
 [tool.mypy]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-addopts = "--xdoctest --ignore-glob=setup.py"
+addopts = "--ignore-glob=setup.py"
 norecursedirs = ".git build __pycache__ docs"
 filterwarnings = [ "default", ]
 
@@ -33,6 +39,3 @@ exclude_lines = [
 omit = [
     "*/setup.py",
 ]
-
-[tool.xdoctest]
-options = ''
