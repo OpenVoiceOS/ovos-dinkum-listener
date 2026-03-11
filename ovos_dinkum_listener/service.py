@@ -12,14 +12,11 @@
 import base64
 import json
 import random
-import subprocess
 import wave
 from enum import Enum
 from hashlib import md5
 from os.path import dirname
 from pathlib import Path
-from shutil import which
-from tempfile import NamedTemporaryFile
 from threading import Thread, RLock, Event
 from typing import List, Tuple, Optional, Union
 
@@ -34,7 +31,7 @@ from ovos_plugin_manager.stt import get_stt_lang_configs, get_stt_supported_lang
 from ovos_plugin_manager.templates.microphone import Microphone
 from ovos_plugin_manager.templates.stt import STT, StreamingSTT
 from ovos_plugin_manager.templates.vad import VADEngine
-from ovos_plugin_manager.utils.audio import AudioData, AudioFile
+from ovos_plugin_manager.utils.audio import AudioData
 from ovos_plugin_manager.utils.tts_cache import hash_sentence
 from ovos_plugin_manager.vad import OVOSVADFactory, get_vad_configs
 from ovos_plugin_manager.wakewords import get_ww_lang_configs, get_ww_supported_langs, get_ww_module_configs

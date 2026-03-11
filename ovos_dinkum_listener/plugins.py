@@ -121,6 +121,6 @@ def load_fallback_stt(cfg: Dict[str, Any] = None) -> Optional[StreamingSTT]:
             LOG.debug(f"Using FakeStreamingSTT wrapper with config={config}")
             return FakeStreamingSTT(plug, config)
         return plug
-    except:
+    except Exception:
         LOG.exception("Failed to load fallback STT")
         return None

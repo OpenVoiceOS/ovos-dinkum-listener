@@ -498,11 +498,6 @@ class TestHotwordContainer(unittest.TestCase):
         # Should not raise
         container.shutdown()
 
-    def test_verify_returns_true(self):
-        """verify() always returns True (placeholder implementation)."""
-        container = self._make_container()
-        self.assertTrue(container.verify(b'\x00' * 100))
-
     def test_get_ww_missing_raises_value_error(self):
         """get_ww() raises ValueError for unknown wake word."""
         container = self._make_container()

@@ -175,8 +175,8 @@ class HotwordContainer:
                         engine.bind(self.bus)
                         # not all plugins implement this
                     if data.get('engine'):
-                        LOG.info(f"Engine previously defined. "
-                                 f"Deleting old instance.")
+                        LOG.info("Engine previously defined. "
+                                 "Deleting old instance.")
                         try:
                             data['engine'].stop()
                             del data['engine']
@@ -199,10 +199,10 @@ class HotwordContainer:
                                 dur = get_sound_duration(sound)
                             LOG.debug(f"{sound} duration: {dur} seconds")
                             self._plugins[word]["sound_duration"] = dur
-                        except:
+                        except Exception:
                             pass
 
-            except Exception as e:
+            except Exception:
                 LOG.error("Failed to load hotword: " + word)
 
         self._loaded.set()
@@ -267,7 +267,7 @@ class HotwordContainer:
             engines = self.listen_words
             if not engines:
                 raise HotWordException(
-                    f"Waiting for listen_words but none are available!")
+                    "Waiting for listen_words but none are available!")
         elif self.state == HotwordState.WAKEUP:
             engines = self.wakeup_words
         elif self.state == HotwordState.RECORDING:

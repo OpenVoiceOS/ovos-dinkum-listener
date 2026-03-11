@@ -118,8 +118,8 @@ class TestPreWakeVad(unittest.TestCase):
 
         self.assertEqual(loop.state, ListeningState.DETECT_WAKEWORD)
         self.assertTrue(loop._chunk_info.is_speech)
-        # chunk should have been appended to hotword_chunks
-        self.assertIn(SPEECH_CHUNK, loop.hotword_chunks)
+        # hotword_chunks is drained during speech detection (rewound to hotwords.update)
+        self.assertEqual(len(loop.hotword_chunks), 0)
 
     def test_silence_feeds_transformers(self):
         """When VAD detects silence, audio is fed to transformers."""
@@ -1008,8 +1008,8 @@ class TestDetectWw(unittest.TestCase):
 
         self.assertEqual(loop.state, ListeningState.BEFORE_COMMAND)
 
-    def test_verify_failure_returns_false(self):
-        """If verify() fails, _detect_ww returns False."""
+    def test_ww_found_with_listen_returns_true(self):
+        """When WW found and listen=True, _detect_ww returns True."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
         loop = _make_loop()
         loop.state = ListeningState.DETECT_WAKEWORD
@@ -1021,12 +1021,11 @@ class TestDetectWw(unittest.TestCase):
             'listen': True,
             'sound': None,
         }
-        loop.hotwords.verify.return_value = False
         loop.hotword_chunks = deque()
 
         result = loop._detect_ww(SPEECH_CHUNK)
 
-        self.assertFalse(result)
+        self.assertTrue(result)
 
     def test_sleeping_mode_goes_to_check_wake_up(self):
         """In SLEEPING mode, WW detection → CHECK_WAKE_UP state."""

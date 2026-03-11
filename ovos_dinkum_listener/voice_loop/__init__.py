@@ -14,3 +14,5 @@
 
 from ovos_dinkum_listener.voice_loop.voice_loop import DinkumVoiceLoop, \
     ListeningMode, ListeningState
+
+__all__ = ["DinkumVoiceLoop", "ListeningMode", "ListeningState"]

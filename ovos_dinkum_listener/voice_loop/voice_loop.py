@@ -311,7 +311,7 @@ class DinkumVoiceLoop(VoiceLoop):
                     self._vad_window_start = time.time()
                 try:
                     if self.listen_mode == ListeningMode.CONTINUOUS:
-                        LOG.info(f"Continuous listening mode, updating state")
+                        LOG.info("Continuous listening mode, updating state")
                         self.state = ListeningState.WAITING_CMD
                         LOG.debug(f"STATE: {self.state}")
                     elif self._detect_ww(chunk):
@@ -361,7 +361,7 @@ class DinkumVoiceLoop(VoiceLoop):
                 self._chunk_info.energy = \
                     self.debiased_energy(chunk, self.mic.sample_width)
                 self.chunk_callback(self._chunk_info)
-        LOG.info(f"Loop stopped running")
+        LOG.info("Loop stopped running")
 
     def reset_state(self):
         """
@@ -768,10 +768,10 @@ class DinkumVoiceLoop(VoiceLoop):
         """
         default_lang = Configuration().get("lang", "en-us")
         valid_langs = [default_lang] + Configuration().get("secondary_langs", [])
-        valid_langs = [l.lower().split("-")[0] for l in valid_langs]
-        l2 = lang.lower().split("-")[0]
-        if l2 in valid_langs:
-            if l2 != default_lang.lower().split("-")[0]:
+        valid_langs = [lg.lower().split("-")[0] for lg in valid_langs]
+        lang2 = lang.lower().split("-")[0]
+        if lang2 in valid_langs:
+            if lang2 != default_lang.lower().split("-")[0]:
                 LOG.info(f"replaced {default_lang} with {lang}")
                 return lang
         else:
@@ -857,7 +857,7 @@ class DinkumVoiceLoop(VoiceLoop):
             else:
                 LOG.debug("trimmed audio is too short! skipping VAD silence removal")
         else:
-            LOG.debug(f"skipping silence removal")
+            LOG.debug("skipping silence removal")
 
     def _after_cmd(self, chunk: bytes):
         """

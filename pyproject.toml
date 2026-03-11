@@ -2,6 +2,12 @@
 requires = [ "setuptools>=41.0.1",]
 build-backend = "setuptools.build_meta"
 
+[tool.ruff]
+exclude = ["_gh_automations", "setup.py"]
+
+[tool.ruff.lint]
+select = ["E", "F"]
+
 [tool.mypy]
 ignore_missing_imports = true
 
