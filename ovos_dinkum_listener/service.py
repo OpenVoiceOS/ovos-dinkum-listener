@@ -610,7 +610,7 @@ class OVOSDinkumVoiceService(Thread):
             else:
                 if ww_context.get("wakeup"):
                     wordtype = "wakeupword"
-                elif ww_context.get("stop"):
+                elif ww_context.get("stopword"):
                     wordtype = "stopword"
                 else:
                     wordtype = "hotword"

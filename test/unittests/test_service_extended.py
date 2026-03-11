@@ -574,6 +574,17 @@ class TestHotwordAudio(_ServiceTestBase):
 
         self.assertGreater(len(received), 0)
 
+    def test_stopword_type_emits_stopword(self):
+        """_hotword_audio with stopword=True emits recognizer_loop:stopword."""
+        self.service.config = {"listener": {"record_wake_words": False}}
+        received = []
+        self.bus.on("recognizer_loop:stopword", lambda m: received.append(m))
+
+        ww_ctx = self._make_ww_context(listen=False, wakeup=False, stopword=True, bus_event=None)
+        self.service._hotword_audio(bytes(100), ww_ctx)
+
+        self.assertGreater(len(received), 0)
+
     def test_stt_lang_in_context(self):
         """_hotword_audio includes stt_lang in context when specified."""
         self.service.config = {"listener": {"record_wake_words": False}}
