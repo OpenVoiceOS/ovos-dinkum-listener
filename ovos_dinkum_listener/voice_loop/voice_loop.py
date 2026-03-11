@@ -356,7 +356,8 @@ class DinkumVoiceLoop(VoiceLoop):
                             and time.time() - self._vad_window_start > 5
                         ):
                             LOG.debug(
-                                "Wakeword not found within 5s - returning to PRE_WAKE_VAD"
+                                "Wakeword not found within 5s, "
+                                "returning to PRE_WAKE_VAD"
                             )
                             self.state = ListeningState.PRE_WAKE_VAD
                             self._vad_window_start = 0

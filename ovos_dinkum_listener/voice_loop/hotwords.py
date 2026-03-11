@@ -157,7 +157,8 @@ class HotwordContainer:
                 # normalization step to avoid naming collisions
                 # TODO - move this to ovos_config package,
                 #  on changes to the hotwords section this should be enforced directly
-                # this approach does not fully solve the issue, config merging may be messed up
+                # this approach does not fully solve the issue,
+                # config merging may be messed up
                 word = word.replace(" ", "_")
 
                 sound = data.get("sound")
@@ -265,7 +266,7 @@ class HotwordContainer:
     @property
     @_safe_get_plugins
     def hot_words(self):
-        """hotwords only emit bus events / play sounds, they do not affect listening loop"""
+        """hotwords emit bus events / play sounds, no effect on listening loop"""
         return {
             k: v["engine"]
             for k, v in self._plugins.items()

@@ -466,7 +466,7 @@ class TestSttText(_ServiceTestBase):
         self.assertTrue(any("hello world" in str(m.data) for m in received))
 
     def test_emits_unknown_when_empty_in_wakeword_mode(self):
-        """_stt_text emits speech.recognition.unknown when no transcription in WW mode."""
+        """_stt_text emits unknown when no transcription in WW mode."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
 
         self.service.voice_loop.listen_mode = ListeningMode.WAKEWORD
@@ -480,7 +480,7 @@ class TestSttText(_ServiceTestBase):
         self.assertGreater(len(received), 0)
 
     def test_silent_in_continuous_mode(self):
-        """_stt_text does not emit unknown in CONTINUOUS mode with empty transcription."""
+        """_stt_text does not emit unknown in CONTINUOUS mode."""
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
 
         self.service.voice_loop.listen_mode = ListeningMode.CONTINUOUS

@@ -132,7 +132,7 @@ class TestPlugins(unittest.TestCase):
         stream.buffer = Mock()
         stream.buffer.read.return_value = b"\x00" * 100
         stt.stream = stream
-        result = stt.transcribe(audio=None, lang="en-us")
+        stt.transcribe(audio=None, lang="en-us")
         stream.buffer.clear.assert_called_once()
 
     def test_fake_stream_thread_handle_audio_stream(self):
