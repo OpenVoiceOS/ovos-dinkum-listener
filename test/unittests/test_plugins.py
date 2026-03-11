@@ -23,13 +23,149 @@ class MockStreamingSTT(StreamingSTT):
 
 
 class TestPlugins(unittest.TestCase):
-    def test_fake_stream_thread(self):
+    def test_fake_stream_thread_empty_buffer_returns_empty(self):
+        """FakeStreamThread.finalize() returns empty string when buffer is empty."""
+        from queue import Queue
         from ovos_dinkum_listener.plugins import FakeStreamThread
-        # TODO
+        engine = Mock()
+        thread = FakeStreamThread(Queue(), "en-us", engine, 16000, 2)
+        # Buffer is empty by default → finalize should return ""
+        result = thread.finalize()
+        self.assertEqual(result, "")
+        engine.execute.assert_not_called()
 
-    def test_fake_streaming_stt(self):
+    def test_fake_stream_thread_finalize_with_audio(self):
+        """FakeStreamThread.finalize() transcribes buffered audio via engine."""
+        from queue import Queue
+        from ovos_dinkum_listener.plugins import FakeStreamThread
+        engine = Mock()
+        engine.execute.return_value = "hello world"
+        thread = FakeStreamThread(Queue(), "en-us", engine, 16000, 2)
+        # Write some audio data
+        thread.update(b'\x00' * 100)
+        result = thread.finalize()
+        self.assertEqual(result, "hello world")
+        engine.execute.assert_called_once()
+
+    def test_fake_stream_thread_finalize_engine_exception(self):
+        """FakeStreamThread.finalize() returns None on engine exception."""
+        from queue import Queue
+        from ovos_dinkum_listener.plugins import FakeStreamThread
+        engine = Mock()
+        engine.execute.side_effect = RuntimeError("engine error")
+        thread = FakeStreamThread(Queue(), "en-us", engine, 16000, 2)
+        thread.update(b'\x00' * 100)
+        result = thread.finalize()
+        self.assertIsNone(result)
+
+    def test_fake_stream_thread_update_accumulates(self):
+        """FakeStreamThread.update() accumulates audio in buffer."""
+        from queue import Queue
+        from ovos_dinkum_listener.plugins import FakeStreamThread
+        engine = Mock()
+        engine.execute.return_value = ""
+        thread = FakeStreamThread(Queue(), "en-us", engine, 16000, 2)
+        thread.update(b'\xAA' * 50)
+        thread.update(b'\xBB' * 50)
+        # Verify both chunks are in buffer by finalizing
+        thread.finalize()
+        call_args = engine.execute.call_args
+        audio_data = call_args[0][0]
+        self.assertEqual(len(audio_data.get_wav_data()), 100 + 44)  # 44-byte WAV header
+
+    def test_fake_streaming_stt_transcribe_with_bytes(self):
+        """FakeStreamingSTT.transcribe() accepts bytes and wraps in AudioData."""
         from ovos_dinkum_listener.plugins import FakeStreamingSTT
-        # TODO
+        engine = Mock()
+        engine.transcribe.return_value = [("test", 0.9)]
+        stt = FakeStreamingSTT(engine=engine, config={})
+        # Create a mock stream
+        stream = Mock()
+        stream.sample_rate = 16000
+        stream.sample_width = 2
+        stt.stream = stream
+        result = stt.transcribe(audio=b'\x00' * 100, lang="en-us")
+        self.assertEqual(result, [("test", 0.9)])
+        engine.transcribe.assert_called_once()
+
+    def test_fake_streaming_stt_transcribe_invalid_type_raises(self):
+        """FakeStreamingSTT.transcribe() raises ValueError for unsupported types."""
+        from ovos_dinkum_listener.plugins import FakeStreamingSTT
+        engine = Mock()
+        stt = FakeStreamingSTT(engine=engine, config={})
+        stream = Mock()
+        stream.sample_rate = 16000
+        stream.sample_width = 2
+        stt.stream = stream
+        with self.assertRaises(ValueError):
+            stt.transcribe(audio=12345)
+
+    def test_fake_streaming_stt_transcribe_with_audio_data(self):
+        """FakeStreamingSTT.transcribe() passes AudioData directly to engine."""
+        from ovos_dinkum_listener.plugins import FakeStreamingSTT
+        from ovos_plugin_manager.utils.audio import AudioData
+        engine = Mock()
+        engine.transcribe.return_value = [("direct", 0.95)]
+        stt = FakeStreamingSTT(engine=engine, config={})
+        stream = Mock()
+        stream.sample_rate = 16000
+        stream.sample_width = 2
+        stt.stream = stream
+        audio = AudioData(b'\x00' * 100, sample_rate=16000, sample_width=2)
+        result = stt.transcribe(audio=audio, lang="en-us")
+        self.assertEqual(result, [("direct", 0.95)])
+
+    def test_fake_streaming_stt_transcribe_with_none_reads_buffer(self):
+        """FakeStreamingSTT.transcribe(None) reads audio from stream buffer."""
+        from ovos_dinkum_listener.plugins import FakeStreamingSTT
+        engine = Mock()
+        engine.transcribe.return_value = [("from buffer", 0.8)]
+        stt = FakeStreamingSTT(engine=engine, config={})
+        stream = Mock()
+        stream.sample_rate = 16000
+        stream.sample_width = 2
+        stream.buffer = Mock()
+        stream.buffer.read.return_value = b'\x00' * 100
+        stt.stream = stream
+        result = stt.transcribe(audio=None, lang="en-us")
+        stream.buffer.clear.assert_called_once()
+
+    def test_fake_stream_thread_handle_audio_stream(self):
+        """FakeStreamThread.handle_audio_stream() calls update() for each chunk."""
+        from queue import Queue
+        from ovos_dinkum_listener.plugins import FakeStreamThread
+        engine = Mock()
+        thread = FakeStreamThread(Queue(), "en-us", engine, 16000, 2)
+        chunks = [b'\xAA' * 10, b'\xBB' * 10, b'\xCC' * 10]
+        thread.handle_audio_stream(iter(chunks), "en-us")
+        # All chunks should be written to buffer (total 30 bytes)
+        engine.execute.return_value = ""
+        thread.finalize()
+        engine.execute.assert_called_once()
+
+    @patch("ovos_dinkum_listener.plugins.Configuration")
+    def test_fake_streaming_stt_create_streaming_thread(self, mock_config):
+        """FakeStreamingSTT.create_streaming_thread() returns FakeStreamThread."""
+        from queue import Queue
+        from ovos_dinkum_listener.plugins import FakeStreamingSTT, FakeStreamThread
+        mock_config.return_value = {"listener": {"sample_rate": 16000, "sample_width": 2}}
+        engine = Mock()
+        stt = FakeStreamingSTT(engine=engine, config={})
+        stt.queue = Queue()  # StreamThread requires queue from stream_start
+        thread = stt.create_streaming_thread()
+        self.assertIsInstance(thread, FakeStreamThread)
+
+    @patch("ovos_dinkum_listener.plugins.Configuration")
+    @patch("ovos_plugin_manager.stt.OVOSSTTFactory.create")
+    def test_load_stt_module_wraps_non_streaming(self, create, config):
+        """load_stt_module wraps non-StreamingSTT plugins in FakeStreamingSTT."""
+        from ovos_dinkum_listener.plugins import load_stt_module, FakeStreamingSTT
+        config.return_value = {"lang": "en-us", "stt": {"module": "test"}}
+        # Return a non-StreamingSTT mock
+        non_streaming = Mock()  # not StreamingSTT
+        create.return_value = non_streaming
+        stt = load_stt_module({"module": "test", "lang": "en-us"})
+        self.assertIsInstance(stt, FakeStreamingSTT)
 
     @patch("ovos_dinkum_listener.plugins.Configuration")
     @patch("ovos_plugin_manager.stt.OVOSSTTFactory.create")
