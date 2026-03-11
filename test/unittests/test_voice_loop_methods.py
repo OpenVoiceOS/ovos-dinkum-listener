@@ -1102,7 +1102,7 @@ class TestResetState(unittest.TestCase):
         loop.reset_state()
 
         self.assertEqual(loop.state, ListeningState.DETECT_WAKEWORD)
-        loop.hotwords.__setattr__('state', HotwordState.LISTEN)
+        self.assertEqual(loop.hotwords.state, HotwordState.LISTEN)
 
     def test_continuous_mode_resets_to_waiting_cmd(self):
         """In CONTINUOUS mode, reset_state() → WAITING_CMD."""

@@ -110,13 +110,12 @@ class TestTemplateFilenameFormatter(unittest.TestCase):
 
     def test_missing_key_message_lists_supported_keys(self):
         """KeyError message includes the list of supported keys."""
-        try:
+        with self.assertRaises(KeyError) as ctx:
             self.formatter.format('{bogus}')
-        except KeyError as e:
-            msg = str(e)
-            self.assertIn('uuid4', msg)
-            self.assertIn('now', msg)
-            self.assertIn('utcnow', msg)
+        msg = str(ctx.exception)
+        self.assertIn('uuid4', msg)
+        self.assertIn('now', msg)
+        self.assertIn('utcnow', msg)
 
 
 if __name__ == '__main__':

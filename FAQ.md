@@ -23,7 +23,7 @@ pip install ovos-dinkum-listener
 ```
 Or for development:
 ```bash
-uv pip install -e ovos-dinkum-listener/
+uv pip install -e .
 ```
 
 ## Where do I report bugs?
@@ -31,7 +31,7 @@ Open an issue on the GitHub repository. Ensure you are targeting the `dev` branc
 
 ## How do I run tests?
 ```bash
-uv run pytest ovos-dinkum-listener/test/ --cov=ovos_dinkum_listener
+uv run pytest test/ --cov=ovos_dinkum_listener
 ```
 
 ## How do I contribute?

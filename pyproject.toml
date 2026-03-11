@@ -12,7 +12,7 @@ select = ["E", "F"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-addopts = "--xdoctest --ignore-glob=setup.py"
+addopts = "--ignore-glob=setup.py"
 norecursedirs = ".git build __pycache__ docs"
 filterwarnings = [ "default", ]
 

@@ -588,7 +588,7 @@ class OVOSDinkumVoiceService(Thread):
             # indicate hotword was detected.
             sound = ww_context.get("sound")
             listen = ww_context.get("listen")
-            event = ww_context.get("event")
+            event = ww_context.get("bus_event")
 
             if isinstance(sound, list):
                 # if sound is a list, pick a random one

@@ -181,16 +181,18 @@ Calls `engine.reset()` on all loaded engines (if the method exists). Called afte
 
 Calls `engine.shutdown()` on all engines, then removes all entries from `_plugins`.
 
-### Properties (all decorated with `@_safe_get_plugins`)
+### Properties
 
-| Property | Returns | Description |
-|---|---|---|
-| `listen_words` | `{name: engine}` | Engines with `listen: true` — `hotwords.py:238` |
-| `wakeup_words` | `{name: engine}` | Engines with `wakeup: true` — `hotwords.py:231` |
-| `stop_words` | `{name: engine}` | Engines with `stopword: true` — `hotwords.py:244` |
-| `hot_words` | `{name: engine}` | Engines that are not listen, wakeup, or stop — `hotwords.py:251` |
-| `plugins` | `[engine, ...]` | All loaded engine instances — `hotwords.py:226` |
-| `ww_names` | `[str, ...]` | All loaded hotword names — `hotwords.py:220` |
+`ww_names` reads `_plugins` directly and is **not** guarded by `@_safe_get_plugins` — it does not wait on `_loaded` and will not raise `HotWordException`. All other properties below are decorated with `@_safe_get_plugins` and block until engines are loaded.
+
+| Property | Returns | Guarded | Description |
+|---|---|---|---|
+| `ww_names` | `[str, ...]` | No | All loaded hotword names — `hotwords.py:220` |
+| `listen_words` | `{name: engine}` | Yes | Engines with `listen: true` — `hotwords.py:238` |
+| `wakeup_words` | `{name: engine}` | Yes | Engines with `wakeup: true` — `hotwords.py:231` |
+| `stop_words` | `{name: engine}` | Yes | Engines with `stopword: true` — `hotwords.py:244` |
+| `hot_words` | `{name: engine}` | Yes | Engines that are not listen, wakeup, or stop — `hotwords.py:251` |
+| `plugins` | `[engine, ...]` | Yes | All loaded engine instances — `hotwords.py:226` |
 
 ---
 

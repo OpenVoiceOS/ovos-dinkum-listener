@@ -15,7 +15,7 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, Deque, Optional
+from typing import Callable, Deque, List, Optional, Tuple
 
 import audioop
 from ovos_config import Configuration
@@ -122,7 +122,7 @@ class ChunkInfo:
 
 
 RecordCallback = Callable[[], None]
-TextCallback = Callable[[str, dict], None]
+TextCallback = Callable[[List[Tuple[str, float]], dict], None]
 AudioCallback = Callable[[bytes, dict], None]
 ChunkCallback = Callable[[ChunkInfo], None]
 

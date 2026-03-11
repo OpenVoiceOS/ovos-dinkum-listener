@@ -557,7 +557,7 @@ class TestHotwordAudio(_ServiceTestBase):
 
         ww_ctx = self._make_ww_context(
             listen=False,
-            event="my.custom.event"  # key is 'event' in ww_context.get("event")
+            bus_event="my.custom.event"
         )
         self.service._hotword_audio(bytes(100), ww_ctx)
 
