@@ -1,6 +1,17 @@
 
 # Maintenance Report — `ovos-dinkum-listener`
 
+## [2026-03-11] — Extensive docs rewrite
+
+- **AI Model**: claude-sonnet-4-6
+- **Actions Taken**:
+  - Rewrote `docs/voice-loop.md` — full reference for `ListeningMode`, `ListeningState`, `VoiceLoop`, `DinkumVoiceLoop` fields/callbacks/all state methods, `ChunkInfo`, VAD pre-wake, STT transcription flow, testing notes; all methods cited with `voice_loop.py:LINE`
+  - Rewrote `docs/hotwords.md` — full reference for `CyclicAudioBuffer`, `HotwordState`, `HotwordContainer` (all methods, properties, class-level state, configuration), testing notes; all methods cited with `hotwords.py:LINE`
+  - Rewrote `docs/service.md` — full reference for `OVOSDinkumVoiceService` (constructor, startup sequence, voice loop init, config reload, source validation, hallucination filtering, fake barge-in, audio saving, all bus events); all sections cited with `service.py:LINE`
+  - Rewrote `docs/plugins.md` — full reference for `load_stt_module`, `load_fallback_stt`, `FakeStreamingSTT`, `FakeStreamThread` with all method behaviours; cited with `plugins.py:LINE`
+  - Rewrote `docs/transformers.md` — full reference for `AudioTransformersService` (discovery, priority ordering, all feed methods, transform pipeline, plugin API, voice loop integration points); cited with `transformers.py:LINE`
+- **Oversight**: Automated — human review recommended before merging
+
 ## [2026-03-11] — Test coverage raised from 48% to 88%
 
 - **AI Model**: claude-sonnet-4-6
