@@ -110,14 +110,14 @@ class HotwordContainer:
 
     def __init__(
         self,
-        bus=FakeBus(),
+        bus=None,
         expected_duration=3,
         sample_rate=16000,
         sample_width=2,
         reload_allowed=True,
         autoload=False,
     ):
-        self.bus = bus
+        self.bus = bus if bus is not None else FakeBus()
         self.reload_allowed = reload_allowed
         self.state = HotwordState.HOTWORD
         self.reload_on_failure = False

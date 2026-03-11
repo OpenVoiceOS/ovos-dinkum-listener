@@ -215,11 +215,10 @@ class OVOSDinkumVoiceService(Thread):
             return True
         destination = message.context.get("destination")
         if destination:
+            audio_config = Configuration().get("Audio", {})
             native_sources = (
                 native_sources
-                or Configuration()["Audio"].get(
-                    "native_sources", ["debug_cli", "audio"]
-                )
+                or audio_config.get("native_sources", ["debug_cli", "audio"])
                 or []
             )
             if any(s in destination for s in native_sources):
@@ -858,6 +857,8 @@ class OVOSDinkumVoiceService(Thread):
                     self.voice_loop.confirmation_seconds_left = (
                         self.voice_loop.confirmation_seconds
                     )
+            else:
+                self.voice_loop.state = ListeningState.BEFORE_COMMAND
         else:
             self.voice_loop.state = ListeningState.BEFORE_COMMAND
 
@@ -1231,11 +1232,26 @@ class OVOSDinkumVoiceService(Thread):
                 self.voice_loop.timeout_seconds = listener_config.get(
                     "recording_timeout", 10
                 )
+                self.voice_loop.timeout_seconds_with_silence = listener_config.get(
+                    "recording_timeout_with_silence", 5
+                )
+                self.voice_loop.recording_mode_max_silence_seconds = (
+                    listener_config.get("recording_mode_max_silence_seconds", 30)
+                )
                 self.voice_loop.num_stt_rewind_chunks = listener_config.get(
                     "utterance_chunks_to_rewind", 2
                 )
                 self.voice_loop.num_hotword_keep_chunks = listener_config.get(
                     "wakeword_chunks_to_save", 15
+                )
+                self.voice_loop.remove_silence = listener_config.get(
+                    "remove_silence", False
+                )
+                self.voice_loop.min_stt_confidence = listener_config.get(
+                    "min_stt_confidence", 0.6
+                )
+                self.voice_loop.max_transcripts = listener_config.get(
+                    "max_transcripts", 1
                 )
             if not self.voice_loop.running:
                 self.voice_loop.start()

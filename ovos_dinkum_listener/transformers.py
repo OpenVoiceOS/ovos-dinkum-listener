@@ -38,9 +38,8 @@ class AudioTransformersService:
         self.has_loaded = False
         self.bus = bus
         # to activate a plugin, just add an entry to mycroft.conf for it
-        self.config = (
-            self.config_core.get("listener").get("audio_transformers") or dict()
-        )
+        listener_config = self.config_core.get("listener") or {}
+        self.config = listener_config.get("audio_transformers") or {}
         self.load_plugins()
 
     def load_plugins(self):
