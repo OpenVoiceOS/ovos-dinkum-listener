@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.1a10](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.5.1a10) (2026-03-11)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.5.1a9...0.5.1a10)
+
+**Merged pull requests:**
+
+- chore: add tests, docs and migrate CI workflows to OpenVoiceOS gh-automations [\#216](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/216) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.5.1a9](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.5.1a9) (2026-01-09)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.5.1a6...0.5.1a9)
