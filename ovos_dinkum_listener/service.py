@@ -718,6 +718,9 @@ class OVOSDinkumVoiceService(Thread):
         if utts:
             lang = stt_context.get("lang") or Configuration().get("lang", "en-us")
             payload = {"utterances": utts, "lang": lang}
+            duration = stt_context.get("duration")
+            if duration:
+                payload["duration"] = duration
             self.bus.emit(Message("recognizer_loop:utterance", payload, stt_context))
         else:
             if self.voice_loop.listen_mode != ListeningMode.CONTINUOUS:
@@ -731,7 +734,7 @@ class OVOSDinkumVoiceService(Thread):
             else:
                 LOG.debug("Ignoring empty transcription in continuous listening mode")
 
-    def _save_stt(self, audio_bytes, stt_meta, save_path=None):
+    def _save_stt(self, audio_bytes, stt_meta, save_path=None, set_duration: bool = False):
         LOG.info("Saving Utterance Recording")
         if save_path:
             stt_audio_dir = Path(save_path)
@@ -769,6 +772,11 @@ class OVOSDinkumVoiceService(Thread):
             wav_file.setsampwidth(mic.sample_width)
             wav_file.setnchannels(mic.sample_channels)
             wav_file.writeframes(audio_bytes)
+
+        if set_duration:
+            frames = len(audio_bytes) // (mic.sample_width * mic.sample_channels)
+            stt_meta["duration"] = frames / float(mic.sample_rate)
+
         with open(meta_path, "w") as f:
             json.dump(stt_meta, f)
 
@@ -779,7 +787,7 @@ class OVOSDinkumVoiceService(Thread):
         try:
             listener = self.config["listener"]
             if listener["save_utterances"]:
-                stt_context["filename"] = self._save_stt(audio_bytes, stt_context)
+                stt_context["filename"] = self._save_stt(audio_bytes, stt_context, set_duration=True)
         except Exception:
             LOG.exception("Error while saving STT audio")
         return stt_context
