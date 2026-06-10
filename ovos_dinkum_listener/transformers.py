@@ -32,15 +32,14 @@ from ovos_utils.log import LOG
 
 
 class AudioTransformersService:
-
     def __init__(self, bus, config=None):
         self.config_core = config or {}
         self.loaded_plugins = {}
         self.has_loaded = False
         self.bus = bus
         # to activate a plugin, just add an entry to mycroft.conf for it
-        self.config = \
-            self.config_core.get("listener").get("audio_transformers") or dict()
+        listener_config = self.config_core.get("listener") or {}
+        self.config = listener_config.get("audio_transformers") or {}
         self.load_plugins()
 
     def load_plugins(self):
@@ -54,8 +53,9 @@ class AudioTransformersService:
                     self.loaded_plugins[plug_name].bind(self.bus)
                     LOG.info(f"loaded audio transformer plugin: {plug_name}")
                 except Exception:
-                    LOG.exception(f"Failed to load audio transformer plugin: "
-                                  f"{plug_name}")
+                    LOG.exception(
+                        f"Failed to load audio transformer plugin: {plug_name}"
+                    )
         self.has_loaded = True
 
     @property
@@ -68,8 +68,9 @@ class AudioTransformersService:
         A plugin of `priority` 1 will override any existing context keys and
         will be the last to modify `audio_data`
         """
-        return sorted(self.loaded_plugins.values(),
-                      key=lambda k: k.priority, reverse=True)
+        return sorted(
+            self.loaded_plugins.values(), key=lambda k: k.priority, reverse=True
+        )
 
     def shutdown(self):
         """
@@ -114,9 +115,11 @@ class AudioTransformersService:
         @param chunk: bytes of audio data
         @return: transformed audio data, dict context
         """
-        context = {'client_name': 'ovos_dinkum_listener',
-                   'source': 'audio',  # default native audio source
-                   'destination': ["skills"]}
+        context = {
+            "client_name": "ovos_dinkum_listener",
+            "source": "audio",  # default native audio source
+            "destination": ["skills"],
+        }
         for module in self.plugins:
             try:
                 LOG.debug(f"checking audio transformer: {module}")

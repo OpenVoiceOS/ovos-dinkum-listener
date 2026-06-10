@@ -10,24 +10,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import audioop
+
 import time
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from threading import Event
-from typing import Callable, Deque, Optional
+from typing import Callable, Deque, List, Optional, Tuple
 
+import audioop
 from ovos_config import Configuration
 from ovos_plugin_manager.stt import StreamingSTT
+from ovos_plugin_manager.templates.microphone import Microphone
 from ovos_plugin_manager.vad import VADEngine
 from ovos_utils.log import LOG
-from ovos_bus_client.session import SessionManager
-from ovos_dinkum_listener.transformers import AudioTransformersService
-from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer, HotwordState, HotWordException
-from ovos_plugin_manager.templates.microphone import Microphone
 
 from ovos_dinkum_listener.plugins import FakeStreamingSTT
+from ovos_dinkum_listener.transformers import AudioTransformersService
+from ovos_dinkum_listener.voice_loop.hotwords import (
+    HotwordContainer,
+    HotwordState,
+    HotWordException,
+)
 
 
 class ListeningState(str, Enum):
@@ -48,7 +51,8 @@ class ListeningState(str, Enum):
 
 
 class ListeningMode(str, Enum):
-    """ global listening mode """
+    """global listening mode"""
+
     WAKEWORD = "wakeword"
     CONTINUOUS = "continuous"
     HYBRID = "hybrid"
@@ -64,7 +68,34 @@ class VoiceLoop:
     vad: VADEngine
     transformers: AudioTransformersService
 
+    @property
+    def sample_rate(self) -> int:
+        """
+        Expose the microphone's sampling rate in hertz.
+
+        Returns:
+            The microphone's sampling rate (samples per second).
+        """
+        return self.mic.sample_rate
+
+    @property
+    def sample_width(self) -> int:
+        """
+        Microphone sample width in bytes per audio sample.
+
+        Returns:
+            The sample width in bytes.
+        """
+        return self.mic.sample_width
+
     def start(self):
+        """
+        Start the voice loop and begin processing audio input.
+
+        Subclasses must implement this to initialize any required resources and
+        transition the loop into an active/running state so audio capture,
+        hotword detection, VAD and STT processing can commence.
+        """
         raise NotImplementedError()
 
     def run(self):
@@ -81,9 +112,11 @@ class VoiceLoop:
         energy = -audioop.rms(audio_data, sample_width)
         energy_bytes = bytes([energy & 0xFF, (energy >> 8) & 0xFF])
         debiased_energy = audioop.rms(
-            audioop.add(audio_data,
-                        energy_bytes * (len(audio_data) // sample_width),
-                        sample_width),
+            audioop.add(
+                audio_data,
+                energy_bytes * (len(audio_data) // sample_width),
+                sample_width,
+            ),
             sample_width,
         )
 
@@ -98,7 +131,7 @@ class ChunkInfo:
 
 
 RecordCallback = Callable[[], None]
-TextCallback = Callable[[str, dict], None]
+TextCallback = Callable[[List[Tuple[str, float]], dict], None]
 AudioCallback = Callable[[bytes, dict], None]
 ChunkCallback = Callable[[ChunkInfo], None]
 
@@ -148,7 +181,11 @@ class DinkumVoiceLoop(VoiceLoop):
     _vad_window_start: float = 0.0
 
     # config flag for VAD-before-wakeword feature
-    vad_pre_wake_enabled: bool = field(default_factory=lambda: Configuration().get("listener", {}).get("vad_pre_wake_enabled", False))
+    vad_pre_wake_enabled: bool = field(
+        default_factory=lambda: (
+            Configuration().get("listener", {}).get("vad_pre_wake_enabled", False)
+        )
+    )
 
     @property
     def running(self) -> bool:
@@ -159,17 +196,20 @@ class DinkumVoiceLoop(VoiceLoop):
             `true` if the loop is running, `false` otherwise.
         """
         return self._is_running is True
-    
+
     def reset_speech_timer(self):
         self.speech_seconds_left = self.speech_seconds
         self.timeout_seconds_left = self.timeout_seconds
-        self.timeout_seconds_with_silence_left = self.timeout_seconds_with_silence  
+        self.timeout_seconds_with_silence_left = self.timeout_seconds_with_silence
 
     def start(self):
         """
         Initialize and start the voice loop using configured listening mode.
 
-        Sets the internal running flag, selects ListeningMode from configuration (continuous, hybrid, or wakeword), sets the initial ListeningState to PRE_WAKE_VAD when vad_pre_wake_enabled is true otherwise DETECT_WAKEWORD, and resets the last wake-word timestamp.
+        Sets the internal running flag, selects ListeningMode from configuration
+        (continuous, hybrid, or wakeword), sets the initial ListeningState
+        to PRE_WAKE_VAD when vad_pre_wake_enabled is true otherwise
+        DETECT_WAKEWORD, and resets the last wake-word timestamp.
         """
 
         self._is_running = True
@@ -194,14 +234,22 @@ class DinkumVoiceLoop(VoiceLoop):
 
     def _pre_wake_vad(self, chunk: bytes):
         """
-        Monitor an audio chunk with VAD and transition to wake-word detection when speech is detected.
+        Monitor an audio chunk with VAD and transition to wake-word
+        detection when speech is detected.
 
-        Sets self._chunk_info.is_speech according to the VAD result. If speech is detected, sets the loop state to ListeningState.DETECT_WAKEWORD and records the current time in self._vad_window_start. If no speech is detected, forwards the chunk to the audio transformers. On VAD errors, logs the error and treats the chunk as non-speech.
+        Sets self._chunk_info.is_speech according to the VAD result.
+        If speech is detected, sets the loop state to DETECT_WAKEWORD and
+        records the current time in self._vad_window_start. If no speech is
+        detected, forwards the chunk to the audio transformers.
+        On VAD errors, logs the error and treats the chunk as non-speech.
 
-        Parameters:
+        Args:
             chunk (bytes): Raw audio bytes for VAD analysis.
         """
-        self.hotword_chunks.append(chunk)  # we still keep chunks for wake word detection
+
+        self.hotword_chunks.append(
+            chunk
+        )  # we still keep chunks for wake word detection
         try:
             self._chunk_info.is_speech = not self.vad.is_silence(chunk)
         except Exception as e:
@@ -216,7 +264,7 @@ class DinkumVoiceLoop(VoiceLoop):
             while self.hotword_chunks:
                 rewind_chunks.append(self.hotword_chunks.popleft())
 
-            n_to_rewind = 5 # TODO from config
+            n_to_rewind = 5  # TODO from config
             for chunk in rewind_chunks[-n_to_rewind:]:
                 # feed some pre-VAD detection audio to hotwords
                 # VAD is usually a bit too late
@@ -226,9 +274,13 @@ class DinkumVoiceLoop(VoiceLoop):
 
     def run(self):
         """
-        Run the voice loop state machine, processing incoming audio chunks until the loop is stopped.
+        Run the voice loop state machine, processing incoming audio chunks
+        until the loop is stopped.
 
-        This method reads audio chunks from the microphone and advances the listening finite-state machine (pre-wake VAD, wakeword/hotword detection, waiting/recording/command handling, confirmation and teardown). It feeds audio to transformers and STT as appropriate, updates timers and per-chunk metadata, and invokes configured callbacks (chunk_callback, wake_callback, stt/audio/text callbacks, etc.). The loop continues while self._is_running and exits when the loop is stopped or the microphone read returns no audio.
+        This method reads audio chunks from the microphone and advances the
+        listening finite-state machine (pre-wake VAD, wakeword detection,
+        command handling, confirmation and teardown). It feeds audio to
+        transformers and STT, updates timers and invoking callbacks.
         """
         # Voice command state
         self.speech_seconds_left = self.speech_seconds
@@ -261,7 +313,7 @@ class DinkumVoiceLoop(VoiceLoop):
             if not self._is_running:  # handle shutdown in middle of read_chunk
                 break
             if chunk is None:
-                #LOG.warning("No audio from microphone")
+                # LOG.warning("No audio from microphone")
                 continue
 
             if self.is_muted:
@@ -280,14 +332,16 @@ class DinkumVoiceLoop(VoiceLoop):
             #
 
             if self.state == ListeningState.PRE_WAKE_VAD:
-                self._pre_wake_vad(chunk) # might change state to ListeningState.DETECT_WAKEWORD
+                self._pre_wake_vad(
+                    chunk
+                )  # might change state to ListeningState.DETECT_WAKEWORD
 
             elif self.state == ListeningState.DETECT_WAKEWORD:
                 if self.vad_pre_wake_enabled and not self._vad_window_start:
                     self._vad_window_start = time.time()
                 try:
                     if self.listen_mode == ListeningMode.CONTINUOUS:
-                        LOG.info(f"Continuous listening mode, updating state")
+                        LOG.info("Continuous listening mode, updating state")
                         self.state = ListeningState.WAITING_CMD
                         LOG.debug(f"STATE: {self.state}")
                     elif self._detect_ww(chunk):
@@ -297,8 +351,14 @@ class DinkumVoiceLoop(VoiceLoop):
                     else:
                         self.transformers.feed_audio(chunk)
                         # handle timeout to return to VAD stage
-                        if self.vad_pre_wake_enabled and time.time() - self._vad_window_start > 5:
-                            LOG.debug("Wakeword not found within 5s - returning to PRE_WAKE_VAD")
+                        if (
+                            self.vad_pre_wake_enabled
+                            and time.time() - self._vad_window_start > 5
+                        ):
+                            LOG.debug(
+                                "Wakeword not found within 5s, "
+                                "returning to PRE_WAKE_VAD"
+                            )
                             self.state = ListeningState.PRE_WAKE_VAD
                             self._vad_window_start = 0
                 except HotWordException as e:
@@ -334,10 +394,11 @@ class DinkumVoiceLoop(VoiceLoop):
                 self._after_cmd(chunk)
 
             if self.chunk_callback is not None:
-                self._chunk_info.energy = \
-                    self.debiased_energy(chunk, self.mic.sample_width)
+                self._chunk_info.energy = self.debiased_energy(
+                    chunk, self.mic.sample_width
+                )
                 self.chunk_callback(self._chunk_info)
-        LOG.info(f"Loop stopped running")
+        LOG.info("Loop stopped running")
 
     def reset_state(self):
         """
@@ -379,7 +440,9 @@ class DinkumVoiceLoop(VoiceLoop):
         Set the listening state to RECORDING and specify a file to record to
         @param filename: filename to record mic input to
         """
-        self.recording_seconds_with_silence_left = self.recording_mode_max_silence_seconds
+        self.recording_seconds_with_silence_left = (
+            self.recording_mode_max_silence_seconds
+        )
         self.recording_filename = filename or str(time.time())
         LOG.debug(f"Recording to {self.recording_filename}")
         self.state = ListeningState.RECORDING
@@ -431,8 +494,9 @@ class DinkumVoiceLoop(VoiceLoop):
                 hotword_audio_bytes = bytes()
                 while self.hotword_chunks:
                     hotword_audio_bytes += self.hotword_chunks.popleft()
-                self.stopword_audio_callback(hotword_audio_bytes,
-                                             self.hotwords.get_ww(ww))
+                self.stopword_audio_callback(
+                    hotword_audio_bytes, self.hotwords.get_ww(ww)
+                )
         else:
             # Recording audio until user requests stop
             self._chunk_info.is_speech = not self.vad.is_silence(chunk)
@@ -442,14 +506,18 @@ class DinkumVoiceLoop(VoiceLoop):
             self.transformers.feed_speech(chunk)
 
             if self._chunk_info.is_speech:
-                self.recording_seconds_with_silence_left = self.recording_mode_max_silence_seconds
+                self.recording_seconds_with_silence_left = (
+                    self.recording_mode_max_silence_seconds
+                )
             # check if maximum silence has been detected
             elif self.recording_seconds_with_silence_left <= 0:
                 LOG.info("Recording mode timed out, reached max silence time")
                 self.stop_recording()
             else:
                 n_chunks = len(chunk) / self.mic.chunk_size
-                self.recording_seconds_with_silence_left -= n_chunks * self.mic.seconds_per_chunk
+                self.recording_seconds_with_silence_left -= (
+                    n_chunks * self.mic.seconds_per_chunk
+                )
 
     def _before_wakeup(self, chunk: bytes):
         """
@@ -493,8 +561,9 @@ class DinkumVoiceLoop(VoiceLoop):
                 hotword_audio_bytes = bytes()
                 while self.hotword_chunks:
                     hotword_audio_bytes += self.hotword_chunks.popleft()
-                self.wakeupword_audio_callback(hotword_audio_bytes,
-                                               self.hotwords.get_ww(ww))
+                self.wakeupword_audio_callback(
+                    hotword_audio_bytes, self.hotwords.get_ww(ww)
+                )
 
             self.transformers.feed_hotword(chunk)
 
@@ -527,8 +596,9 @@ class DinkumVoiceLoop(VoiceLoop):
                 hotword_audio_bytes = bytes()
                 while self.hotword_chunks:
                     hotword_audio_bytes += self.hotword_chunks.popleft()
-                self.hotword_audio_callback(hotword_audio_bytes,
-                                            self.hotwords.get_ww(ww))
+                self.hotword_audio_callback(
+                    hotword_audio_bytes, self.hotwords.get_ww(ww)
+                )
                 self.transformers.feed_hotword(chunk)
                 return True
         return False
@@ -558,7 +628,6 @@ class DinkumVoiceLoop(VoiceLoop):
             hotword_audio_bytes = bytes()
             while self.hotword_chunks:
                 hotword_audio_bytes += self.hotword_chunks.popleft()
-
             self.hotword_chunks.clear()
 
             if not self.hotwords.verify(hotword_audio_bytes):
@@ -671,7 +740,10 @@ class DinkumVoiceLoop(VoiceLoop):
 
             self.timeout_seconds_left -= self.mic.seconds_per_chunk
             self.timeout_seconds_with_silence_left -= self.mic.seconds_per_chunk
-            if self.timeout_seconds_with_silence_left <= 0 or self.timeout_seconds_left <= 0:
+            if (
+                self.timeout_seconds_with_silence_left <= 0
+                or self.timeout_seconds_left <= 0
+            ):
                 # Recording has timed out
                 self.state = ListeningState.AFTER_COMMAND
                 LOG.debug(f"STATE: {self.state}")
@@ -682,9 +754,11 @@ class DinkumVoiceLoop(VoiceLoop):
             try:
                 self._chunk_info.is_speech = not self.vad.is_silence(stt_chunk)
             except Exception as e:
-                LOG.exception(f"Error processing chunk of "
-                              f"size={len(stt_chunk)} with "
-                              f"SR={self.vad.sample_rate}: {e}")
+                LOG.exception(
+                    f"Error processing chunk of "
+                    f"size={len(stt_chunk)} with "
+                    f"SR={self.vad.sample_rate}: {e}"
+                )
 
             if self._chunk_info.is_speech:
                 self.speech_seconds_left -= self.mic.seconds_per_chunk
@@ -748,15 +822,17 @@ class DinkumVoiceLoop(VoiceLoop):
         """
         default_lang = Configuration().get("lang", "en-us")
         valid_langs = [default_lang] + Configuration().get("secondary_langs", [])
-        valid_langs = [l.lower().split("-")[0] for l in valid_langs]
-        l2 = lang.lower().split("-")[0]
-        if l2 in valid_langs:
-            if l2 != default_lang.lower().split("-")[0]:
+        valid_langs = [lg.lower().split("-")[0] for lg in valid_langs]
+        lang2 = lang.lower().split("-")[0]
+        if lang2 in valid_langs:
+            if lang2 != default_lang.lower().split("-")[0]:
                 LOG.info(f"replaced {default_lang} with {lang}")
                 return lang
         else:
-            LOG.warning(f"ignoring classification: {lang} is not in enabled "
-                        f"languages: {valid_langs}")
+            LOG.warning(
+                f"ignoring classification: {lang} is not in enabled "
+                f"languages: {valid_langs}"
+            )
 
         return default_lang
 
@@ -804,11 +880,12 @@ class DinkumVoiceLoop(VoiceLoop):
             LOG.warning("STT transcription below minimum confidence level!!!")
 
         if filtered != utts:
-            LOG.info(f"Ignoring low confidence STT transcriptions: {[u for u in utts if u not in filtered]}")
+            ignored = [u for u in utts if u not in filtered]
+            LOG.info(f"Ignoring low confidence STT transcriptions: {ignored}")
 
         if len(filtered) > self.max_transcripts:
             LOG.debug(f"selecting top {self.max_transcripts} transcriptions")
-            filtered = filtered[:self.max_transcripts]
+            filtered = filtered[: self.max_transcripts]
 
         stt_context["transcriptions"] = filtered
         return filtered, stt_context
@@ -824,12 +901,16 @@ class DinkumVoiceLoop(VoiceLoop):
         if seconds > 1:
             extracted_speech = self.vad.extract_speech(self.stt_audio_bytes)
             if extracted_speech is None:
-                LOG.debug("audio appears to be full silence! skipping VAD silence removal")
+                LOG.debug(
+                    "audio appears to be full silence! skipping VAD silence removal"
+                )
                 return
             n_chunks = len(extracted_speech) / self.mic.chunk_size
             seconds2 = n_chunks * self.mic.seconds_per_chunk
-            LOG.debug(f"removed {seconds - seconds2} seconds of silence, "
-                      f"trimmed audio has {seconds2} seconds")
+            LOG.debug(
+                f"removed {seconds - seconds2} seconds of silence, "
+                f"trimmed audio has {seconds2} seconds"
+            )
             if extracted_speech and seconds2 >= 1:
                 self.stt.stream.buffer.clear()
                 # replace the stt buffer with cropped audio
@@ -837,7 +918,7 @@ class DinkumVoiceLoop(VoiceLoop):
             else:
                 LOG.debug("trimmed audio is too short! skipping VAD silence removal")
         else:
-            LOG.debug(f"skipping silence removal")
+            LOG.debug("skipping silence removal")
 
     def _after_cmd(self, chunk: bytes):
         """
@@ -872,8 +953,10 @@ class DinkumVoiceLoop(VoiceLoop):
             self.text_callback(utts, stt_context)
 
         # Back to detecting wake word
-        if self.listen_mode == ListeningMode.CONTINUOUS or \
-                self.listen_mode == ListeningMode.HYBRID:
+        if (
+            self.listen_mode == ListeningMode.CONTINUOUS
+            or self.listen_mode == ListeningMode.HYBRID
+        ):
             self.state = ListeningState.WAITING_CMD
         elif self.vad_pre_wake_enabled:
             self.state = ListeningState.PRE_WAKE_VAD
@@ -895,7 +978,7 @@ class DinkumVoiceLoop(VoiceLoop):
 
         self.timeout_seconds_left = self.timeout_seconds
         self.timeout_seconds_with_silence_left = self.timeout_seconds_with_silence
-        
+
     def stop(self):
         """
         Signal the VoiceLoop to stop processing audio.

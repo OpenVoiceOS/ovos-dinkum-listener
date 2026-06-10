@@ -4,11 +4,17 @@ from threading import Event
 from typing import Optional, List
 
 from ovos_config import Configuration
-from ovos_plugin_manager.wakewords import OVOSWakeWordFactory, HotWordEngine
 from ovos_plugin_manager.templates.hotwords import HotWordVerifier
+from ovos_plugin_manager.wakewords import OVOSWakeWordFactory, HotWordEngine
 from ovos_utils.fakebus import FakeBus
 from ovos_utils.log import LOG
-from ovos_utils.sound import get_sound_duration
+
+try:
+    from ovos_utils.sound import get_sound_duration
+except ImportError:
+
+    def get_sound_duration(*args, **kwargs):
+        raise ImportError("please install ovos-utils>=0.1.0a25")
 
 
 class HotWordException(RuntimeWarning):
@@ -23,12 +29,14 @@ class CyclicAudioBuffer:
         >>> self.append(b'hello-world')
         >>> print(len(self.get()))
     """
-    def __init__(self, duration=0.98, initial_data=None,
-                 sample_rate=16000, sample_width=2):
+
+    def __init__(
+        self, duration=0.98, initial_data=None, sample_rate=16000, sample_width=2
+    ):
         self.size = self.duration_to_bytes(duration, sample_rate, sample_width)
         initial_data = initial_data or self.get_silence(self.size)
         # Get at most size bytes from the end of the initial data
-        self._buffer = initial_data[-self.size:]
+        self._buffer = initial_data[-self.size :]
 
     def clear(self):
         """
@@ -37,8 +45,9 @@ class CyclicAudioBuffer:
         self._buffer = self.get_silence(self.size)
 
     @staticmethod
-    def duration_to_bytes(duration: float, sample_rate: int = 16000,
-                          sample_width: int = 2) -> int:
+    def duration_to_bytes(
+        duration: float, sample_rate: int = 16000, sample_width: int = 2
+    ) -> int:
         """
         Convert duration in seconds to a number of bytes
         @param duration: duration in seconds
@@ -55,7 +64,7 @@ class CyclicAudioBuffer:
         @param num_bytes: number of bytes to return
         @return: requested number of null bytes
         """
-        return b'\0' * num_bytes
+        return b"\0" * num_bytes
 
     def append(self, data: bytes):
         """
@@ -65,7 +74,7 @@ class CyclicAudioBuffer:
         """
         buff = self._buffer + data
         if len(buff) > self.size:
-            buff = buff[-self.size:]
+            buff = buff[-self.size :]
         self._buffer = buff
 
     def get(self) -> bytes:
@@ -76,7 +85,8 @@ class CyclicAudioBuffer:
 
 
 class HotwordState(str, Enum):
-    """ current listener state """
+    """current listener state"""
+
     LISTEN = "wakeword"
     HOTWORD = "hotword"
     RECORDING = "recording"
@@ -99,15 +109,24 @@ class HotwordContainer:
     _plugins = {}
     _loaded = Event()
 
-    def __init__(self, bus=FakeBus(), verifiers: Optional[List[HotWordVerifier]] = None, reload_allowed=True, autoload=False):
-        self.bus = bus
+    def __init__(
+        self,
+        bus=None,
+        verifiers: Optional[List[HotWordVerifier]] = None,
+        expected_duration=3,
+        sample_rate=16000,
+        sample_width=2,
+        reload_allowed=True,
+        autoload=False,
+    ):
+        self.bus = bus if bus is not None else FakeBus()
         self.reload_allowed = reload_allowed
         self.state = HotwordState.HOTWORD
         self.reload_on_failure = False
         self.applied_hotwords_config = None
+        self.verifiers: List[HotWordVerifier] = verifiers or []
         if autoload:
             self.load_hotword_engines()
-        self.verifiers: List[HotWordVerifier] = verifiers or []
 
     def load_hotword_engines(self):
         """
@@ -125,19 +144,24 @@ class HotwordContainer:
         global_listen = config_core.get("confirm_listening")
         global_sounds = config_core.get("sounds", {})
 
-        main_ww = config_core.get("listener",
-                                  {}).get("wake_word",
-                                          "hey_mycroft").replace(" ", "_")
-        wakeupw = config_core.get("listener",
-                                  {}).get("stand_up_word",
-                                          "wake_up").replace(" ", "_")
+        main_ww = (
+            config_core.get("listener", {})
+            .get("wake_word", "hey_mycroft")
+            .replace(" ", "_")
+        )
+        wakeupw = (
+            config_core.get("listener", {})
+            .get("stand_up_word", "wake_up")
+            .replace(" ", "_")
+        )
 
         for word, data in dict(hot_words).items():
             try:
                 # normalization step to avoid naming collisions
                 # TODO - move this to ovos_config package,
                 #  on changes to the hotwords section this should be enforced directly
-                # this approach does not fully solve the issue, config merging may be messed up
+                # this approach does not fully solve the issue,
+                # config merging may be messed up
                 word = word.replace(" ", "_")
 
                 sound = data.get("sound")
@@ -170,35 +194,37 @@ class HotwordContainer:
                     if hasattr(engine, "bind"):
                         engine.bind(self.bus)
                         # not all plugins implement this
-                    if data.get('engine'):
-                        LOG.info(f"Engine previously defined. "
-                                 f"Deleting old instance.")
+                    if data.get("engine"):
+                        LOG.info("Engine previously defined. Deleting old instance.")
                         try:
-                            data['engine'].stop()
-                            del data['engine']
+                            data["engine"].stop()
+                            del data["engine"]
                         except Exception as e:
                             LOG.error(e)
-                    self._plugins[word] = {"engine": engine,
-                                           "sound": sound,
-                                           "bus_event": event,
-                                           "utterance": utterance,
-                                           "stt_lang": lang,
-                                           "listen": listen,
-                                           "wakeup": wakeup,
-                                           "stopword": stopword}
+                    self._plugins[word] = {
+                        "engine": engine,
+                        "sound": sound,
+                        "bus_event": event,
+                        "utterance": utterance,
+                        "stt_lang": lang,
+                        "listen": listen,
+                        "wakeup": wakeup,
+                        "stopword": stopword,
+                    }
                     if sound:
                         try:
                             if sound.startswith("snd/"):
-                                dur = get_sound_duration(sound,
-                                                         base_dir=f"{dirname(dirname(__file__))}/res")
+                                dur = get_sound_duration(
+                                    sound, base_dir=f"{dirname(dirname(__file__))}/res"
+                                )
                             else:
                                 dur = get_sound_duration(sound)
                             LOG.debug(f"{sound} duration: {dur} seconds")
                             self._plugins[word]["sound_duration"] = dur
-                        except:
+                        except Exception:
                             pass
 
-            except Exception as e:
+            except Exception:
                 LOG.error("Failed to load hotword: " + word)
 
         self._loaded.set()
@@ -214,7 +240,7 @@ class HotwordContainer:
 
     @property
     def ww_names(self):
-        """ wakeup words exit sleep mode if detected after a listen word"""
+        """wakeup words exit sleep mode if detected after a listen word"""
         return list(self._plugins.keys())
 
     @property
@@ -225,32 +251,30 @@ class HotwordContainer:
     @property
     @_safe_get_plugins
     def wakeup_words(self):
-        """ wakeup words exit sleep mode if detected after a listen word"""
-        return {k: v["engine"] for k, v in self._plugins.items()
-                if v.get("wakeup")}
+        """wakeup words exit sleep mode if detected after a listen word"""
+        return {k: v["engine"] for k, v in self._plugins.items() if v.get("wakeup")}
 
     @property
     @_safe_get_plugins
     def listen_words(self):
-        """ listen words trigger the VAD/STT stages"""
-        return {k: v["engine"] for k, v in self._plugins.items()
-                if v.get("listen")}
+        """listen words trigger the VAD/STT stages"""
+        return {k: v["engine"] for k, v in self._plugins.items() if v.get("listen")}
 
     @property
     @_safe_get_plugins
     def stop_words(self):
-        """ stop only work during recording mode, they exit recording mode"""
-        return {k: v["engine"] for k, v in self._plugins.items()
-                if v.get("stopword")}
+        """stop only work during recording mode, they exit recording mode"""
+        return {k: v["engine"] for k, v in self._plugins.items() if v.get("stopword")}
 
     @property
     @_safe_get_plugins
     def hot_words(self):
-        """ hotwords only emit bus events / play sounds, they do not affect listening loop"""
-        return {k: v["engine"] for k, v in self._plugins.items()
-                if not v.get("stopword") and
-                not v.get("wakeup") and
-                not v.get("listen")}
+        """hotwords emit bus events / play sounds, no effect on listening loop"""
+        return {
+            k: v["engine"]
+            for k, v in self._plugins.items()
+            if not v.get("stopword") and not v.get("wakeup") and not v.get("listen")
+        }
 
     def found(self) -> Optional[str]:
         """
@@ -263,7 +287,8 @@ class HotwordContainer:
             engines = self.listen_words
             if not engines:
                 raise HotWordException(
-                    f"Waiting for listen_words but none are available!")
+                    "Waiting for listen_words but none are available!"
+                )
         elif self.state == HotwordState.WAKEUP:
             engines = self.wakeup_words
         elif self.state == HotwordState.RECORDING:
@@ -278,8 +303,7 @@ class HotwordContainer:
                     LOG.debug(f"Detected wake_word: {ww_name}")
                     return ww_name
             except AssertionError:
-                LOG.error(f"Expected HotWordEngine, but got: {engine} for "
-                          f"{ww_name}")
+                LOG.error(f"Expected HotWordEngine, but got: {engine} for {ww_name}")
                 # TODO: Add engine reload here?
             except Exception as e:
                 LOG.error(e)
@@ -302,10 +326,29 @@ class HotwordContainer:
         return meta
 
     def verify(self, ww_audio: bytes) -> bool:
+        """Run all registered verifier plugins against the wake word audio.
+
+        Verification is fail-open: if a verifier raises an unexpected exception
+        it is logged and the chain continues (the detection is not discarded).
+        Only an explicit ``False`` return from a verifier suppresses the wake.
+
+        @param ww_audio: raw PCM bytes of the audio that triggered the WW engine
+        @return: True if all verifiers accept (or none are configured), False if
+            any verifier rejects the audio
+        """
         for verifier in self.verifiers:
-            if not verifier.verify(ww_audio):
-                LOG.debug(f"{verifier.__class__.__name__}: verification failed - discarding wake word detection")
-                return False
+            try:
+                if not verifier.verify(ww_audio):
+                    LOG.debug(
+                        f"{verifier.__class__.__name__}: verification failed - "
+                        "discarding wake word detection"
+                    )
+                    return False
+            except Exception:
+                LOG.exception(
+                    f"{verifier.__class__.__name__}: raised an exception during "
+                    "verification - detection NOT discarded (fail-open)"
+                )
         return True
 
     def update(self, chunk: bytes):
@@ -339,7 +382,7 @@ class HotwordContainer:
         for engine in self.plugins:
             try:
                 # TODO: Remove check when default method is added to base class
-                if hasattr(engine, 'reset'):
+                if hasattr(engine, "reset"):
                     engine.reset()
             except Exception as e:
                 LOG.error(e)
