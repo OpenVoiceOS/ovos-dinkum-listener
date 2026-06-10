@@ -188,23 +188,9 @@ class OVOSDinkumVoiceService(Thread):
 
         self.mic = mic or OVOSMicrophoneFactory.create(microphone_config)
 
-        verifiers_cfg = self.config.get("listener", {}).get("ww_verifiers", {})
-        verifier_plugs = {}
-        for plug_type, plug in find_wake_word_verifier_plugins().items():
-            cfg = verifiers_cfg.get(plug_type, {})
-            if not cfg.get("enabled", True):
-                LOG.debug(f"wakeword verifier plugin disabled: {plug_type}")
-                continue
-            try:
-                verifier_plugs[plug_type] = plug(config=cfg)
-            except Exception:
-                LOG.exception(f"Failed to load wakeword verifier plugin: {plug_type}")
-        missing = [k for k in verifiers_cfg if verifiers_cfg[k].get("enabled", True) and k not in verifier_plugs]
-        if missing:
-            LOG.warning(f"wake word verifier plugins enabled in config but not loaded: {missing}")
-        LOG.debug(f"Loaded wake word verifier plugins: {list(verifier_plugs)}")
-
-        self.hotwords = hotwords or HotwordContainer(bus=self.bus, verifiers=list(verifier_plugs.values()))
+        self.hotwords = hotwords or HotwordContainer(
+            bus=self.bus, verifiers=self._load_ww_verifiers()
+        )
         self.vad = vad or OVOSVADFactory.create()
         if stt and not isinstance(stt, StreamingSTT):
             stt = FakeStreamingSTT(stt)
@@ -278,6 +264,46 @@ class OVOSDinkumVoiceService(Thread):
             "fallback": hash(json.dumps(stt_fallback)),
         }
         return config_hashes
+
+    def _load_ww_verifiers(self) -> List:
+        """Instantiate all enabled wake-word verifier plugins from configuration.
+
+        Reads ``listener.ww_verifiers`` from the active config.  Each key is an
+        OPM verifier plugin entry-point name; its value is the per-plugin config
+        dict (``enabled``, ``threshold``, etc.).
+
+        Plugins that are disabled (``"enabled": false``) are skipped silently.
+        Plugins that are listed in config but not installed produce a warning.
+        Plugins that fail to instantiate are logged and skipped (fail-open).
+
+        Returns:
+            List of instantiated :class:`~ovos_plugin_manager.templates.hotwords.HotWordVerifier`
+            objects, ready to be passed to :class:`~ovos_dinkum_listener.voice_loop.hotwords.HotwordContainer`.
+        """
+        from ovos_plugin_manager.templates.hotwords import HotWordVerifier  # local to avoid circular
+
+        verifiers_cfg: dict = self.config.get("listener", {}).get("ww_verifiers", {})
+        verifier_plugs: dict = {}
+        for plug_type, plug_cls in find_wake_word_verifier_plugins().items():
+            cfg = verifiers_cfg.get(plug_type, {})
+            if not cfg.get("enabled", True):
+                LOG.debug(f"wakeword verifier plugin disabled: {plug_type}")
+                continue
+            try:
+                instance: HotWordVerifier = plug_cls(config=cfg)
+                verifier_plugs[plug_type] = instance
+            except Exception:
+                LOG.exception(f"Failed to load wakeword verifier plugin: {plug_type}")
+        missing = [
+            k for k in verifiers_cfg
+            if verifiers_cfg[k].get("enabled", True) and k not in verifier_plugs
+        ]
+        if missing:
+            LOG.warning(
+                f"wake word verifier plugins enabled in config but not installed/loaded: {missing}"
+            )
+        LOG.debug(f"Loaded wake word verifier plugins: {list(verifier_plugs)}")
+        return list(verifier_plugs.values())
 
     def _init_voice_loop(self, listener_config: dict):
         """

@@ -148,6 +148,10 @@ class TestDinkumVoiceLoop(unittest.TestCase):
     def test_start(self, config):
         from ovos_dinkum_listener.voice_loop import ListeningMode, ListeningState
 
+        # Ensure vad_pre_wake_enabled is off so the initial state is predictable
+        # regardless of what the local machine config says.
+        self.loop.vad_pre_wake_enabled = False
+
         mock_config = {"listener": {"continuous_listen": False, "hybrid_listen": False}}
         config.return_value = mock_config
         self.loop.start()
@@ -173,7 +177,7 @@ class TestDinkumVoiceLoop(unittest.TestCase):
         self.loop._running = False
         self.loop.state = None
 
-        # Default, no config values
+        # Default, no config values — vad_pre_wake_enabled still forced off
         config.return_value = dict()
         self.loop.start()
         self.assertTrue(self.loop.running)
@@ -185,6 +189,11 @@ class TestDinkumVoiceLoop(unittest.TestCase):
 
     def test_run(self):
         from ovos_dinkum_listener.voice_loop import ListeningMode, ListeningState
+
+        # Override so the loop starts in DETECT_WAKEWORD regardless of machine config.
+        self.loop.vad_pre_wake_enabled = False
+        self.loop.listen_mode = ListeningMode.WAKEWORD
+        self.loop.state = ListeningState.DETECT_WAKEWORD
 
         def _raise(e, *args):
             raise e
