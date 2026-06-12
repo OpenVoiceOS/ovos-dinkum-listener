@@ -1,4 +1,6 @@
 pytest~=8.4
 ovos-vad-plugin-webrtcvad
 pytest-cov>=3.0.0
-coverage>=7.2.7 
+coverage>=7.2.7
+# e2e bus-sequence harness for the wake-word verifier gate (MiniVoiceLoop)
+ovoscope>=0.19.0a1

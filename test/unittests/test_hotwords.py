@@ -651,5 +651,116 @@ class TestHotwordContainer(unittest.TestCase):
         self.assertTrue(container._loaded.is_set())
 
 
+class TestHotwordVerifierChain(unittest.TestCase):
+    """Tests for HotwordContainer.verify() — the wake-word verifier chain.
+
+    Verifier behaviour (fail-open):
+    - All verifiers accept  → detection proceeds (verify returns True).
+    - Any verifier rejects  → detection suppressed (verify returns False).
+    - Verifier raises       → exception is logged; detection NOT suppressed.
+      The chain continues and the overall result is True unless another
+      verifier explicitly rejects.
+    """
+
+    def _make_container(self):
+        from threading import Event
+        from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer
+        from ovos_utils.fakebus import FakeBus
+
+        HotwordContainer._plugins = {}
+        HotwordContainer._loaded = Event()
+        return HotwordContainer(bus=FakeBus())
+
+    def _mock_verifier(self, returns=True, raises=None):
+        """Build a verifier-like mock."""
+        from ovos_plugin_manager.templates.hotwords import HotWordVerifier
+
+        v = Mock(spec=HotWordVerifier)
+        if raises is not None:
+            v.verify.side_effect = raises
+        else:
+            v.verify.return_value = returns
+        return v
+
+    def test_verify_no_verifiers_returns_true(self):
+        """With no verifiers configured, verify() always accepts."""
+        container = self._make_container()
+        self.assertEqual(container.verifiers, [])
+        self.assertTrue(container.verify(b"\x00" * 1024))
+
+    def test_verify_single_verifier_accepts(self):
+        """A verifier that returns True lets the wake through."""
+        container = self._make_container()
+        container.verifiers = [self._mock_verifier(returns=True)]
+        self.assertTrue(container.verify(b"\x01" * 512))
+        container.verifiers[0].verify.assert_called_once_with(b"\x01" * 512)
+
+    def test_verify_single_verifier_rejects(self):
+        """A verifier that returns False suppresses the wake."""
+        container = self._make_container()
+        container.verifiers = [self._mock_verifier(returns=False)]
+        self.assertFalse(container.verify(b"\x02" * 512))
+
+    def test_verify_multiple_all_accept(self):
+        """All verifiers must accept for the detection to proceed."""
+        container = self._make_container()
+        v1 = self._mock_verifier(returns=True)
+        v2 = self._mock_verifier(returns=True)
+        container.verifiers = [v1, v2]
+        self.assertTrue(container.verify(b"\x03" * 256))
+        v1.verify.assert_called_once()
+        v2.verify.assert_called_once()
+
+    def test_verify_first_verifier_rejects_short_circuits(self):
+        """If the first verifier rejects, the chain stops early."""
+        container = self._make_container()
+        v1 = self._mock_verifier(returns=False)
+        v2 = self._mock_verifier(returns=True)
+        container.verifiers = [v1, v2]
+        self.assertFalse(container.verify(b"\x04" * 256))
+        v1.verify.assert_called_once()
+        v2.verify.assert_not_called()
+
+    def test_verify_second_verifier_rejects(self):
+        """Second verifier rejecting suppresses despite first accepting."""
+        container = self._make_container()
+        v1 = self._mock_verifier(returns=True)
+        v2 = self._mock_verifier(returns=False)
+        container.verifiers = [v1, v2]
+        self.assertFalse(container.verify(b"\x05" * 256))
+
+    def test_verify_raising_verifier_is_fail_open(self):
+        """A verifier that raises must NOT suppress the detection (fail-open).
+
+        The exception is caught and logged; the chain continues.
+        When no other verifier rejects, verify() returns True.
+        """
+        container = self._make_container()
+        container.verifiers = [self._mock_verifier(raises=RuntimeError("sensor error"))]
+        # Should NOT raise, and should return True (fail-open)
+        self.assertTrue(container.verify(b"\x06" * 256))
+
+    def test_verify_raising_verifier_followed_by_rejecting_verifier(self):
+        """Raise-then-reject: fail-open for the raiser but reject from the second."""
+        container = self._make_container()
+        v_raise = self._mock_verifier(raises=ValueError("bad"))
+        v_reject = self._mock_verifier(returns=False)
+        container.verifiers = [v_raise, v_reject]
+        self.assertFalse(container.verify(b"\x07" * 256))
+
+    def test_verify_constructor_verifiers_param(self):
+        """Verifiers passed to the constructor are stored and used."""
+        from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer
+        from ovos_utils.fakebus import FakeBus
+
+        HotwordContainer._plugins = {}
+        HotwordContainer._loaded = __import__("threading").Event()
+
+        v = self._mock_verifier(returns=False)
+        container = HotwordContainer(bus=FakeBus(), verifiers=[v])
+        self.assertIn(v, container.verifiers)
+        self.assertFalse(container.verify(b"\x08" * 128))
+
+
 if __name__ == "__main__":
     unittest.main()

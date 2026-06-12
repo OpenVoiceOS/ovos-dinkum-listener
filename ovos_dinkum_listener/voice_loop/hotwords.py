@@ -1,9 +1,10 @@
 from enum import Enum
 from os.path import dirname
 from threading import Event
-from typing import Optional
+from typing import Optional, List
 
 from ovos_config import Configuration
+from ovos_plugin_manager.templates.hotwords import HotWordVerifier
 from ovos_plugin_manager.wakewords import OVOSWakeWordFactory, HotWordEngine
 from ovos_utils.fakebus import FakeBus
 from ovos_utils.log import LOG
@@ -111,6 +112,7 @@ class HotwordContainer:
     def __init__(
         self,
         bus=None,
+        verifiers: Optional[List[HotWordVerifier]] = None,
         expected_duration=3,
         sample_rate=16000,
         sample_width=2,
@@ -122,6 +124,7 @@ class HotwordContainer:
         self.state = HotwordState.HOTWORD
         self.reload_on_failure = False
         self.applied_hotwords_config = None
+        self.verifiers: List[HotWordVerifier] = verifiers or []
         if autoload:
             self.load_hotword_engines()
 
@@ -321,6 +324,32 @@ class HotwordContainer:
         meta["module"] = plug.config["module"]
         meta["engine"] = plug.__class__.__name__
         return meta
+
+    def verify(self, ww_audio: bytes) -> bool:
+        """Run all registered verifier plugins against the wake word audio.
+
+        Verification is fail-open: if a verifier raises an unexpected exception
+        it is logged and the chain continues (the detection is not discarded).
+        Only an explicit ``False`` return from a verifier suppresses the wake.
+
+        @param ww_audio: raw PCM bytes of the audio that triggered the WW engine
+        @return: True if all verifiers accept (or none are configured), False if
+            any verifier rejects the audio
+        """
+        for verifier in self.verifiers:
+            try:
+                if not verifier.verify(ww_audio):
+                    LOG.debug(
+                        f"{verifier.__class__.__name__}: verification failed - "
+                        "discarding wake word detection"
+                    )
+                    return False
+            except Exception:
+                LOG.exception(
+                    f"{verifier.__class__.__name__}: raised an exception during "
+                    "verification - detection NOT discarded (fail-open)"
+                )
+        return True
 
     def update(self, chunk: bytes):
         """

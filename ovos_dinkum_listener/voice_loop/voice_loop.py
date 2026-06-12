@@ -604,16 +604,26 @@ class DinkumVoiceLoop(VoiceLoop):
         return False
 
     def _detect_ww(self, chunk: bytes) -> bool:
-        """
-        Check for a wake word in a chunk of unknown audio. Audio is passed to
-        hotwords in all cases. If a wake word is detected
-        audio is passed to `listenword_audio_callback` and `wake_callback`.
+        """Check for a wake word in a chunk of audio.
 
-        If WW detected and sleeping, check for wakeup word in next audio chunks
-        else check for speech input for STT.
+        Every chunk is fed to the hotword engines.  When a wake word is
+        detected the accumulated hotword audio is collected and passed through
+        the verifier chain (``HotwordContainer.verify``).  If any registered
+        verifier rejects the audio the detection is silently discarded and this
+        method returns ``False`` — the listener continues waiting.
 
-        @param chunk:bytes of audio captured
-        @return: True if a wakeword was detected
+        When the detection survives verification:
+        - ``listenword_audio_callback`` receives the raw hotword audio.
+        - ``wake_callback`` is called to emit the record-begin event.
+        - If sleeping, transitions to :attr:`ListeningState.CHECK_WAKE_UP`;
+          otherwise starts the STT recording stage.
+
+        Args:
+            chunk: Raw PCM audio bytes for this audio frame.
+
+        Returns:
+            ``True`` if a wake word was detected and passed verification,
+            ``False`` otherwise.
         """
         self.hotwords.state = HotwordState.LISTEN
         self.hotword_chunks.append(chunk)
@@ -625,15 +635,18 @@ class DinkumVoiceLoop(VoiceLoop):
             LOG.debug(f"Wake word detected={ww}")
             ww_data = self.hotwords.get_ww(ww)
 
+            hotword_audio_bytes = bytes()
+            while self.hotword_chunks:
+                hotword_audio_bytes += self.hotword_chunks.popleft()
+            self.hotword_chunks.clear()
+
+            if not self.hotwords.verify(hotword_audio_bytes):
+                LOG.debug("wake word verifier plugins discarded detection")
+                return False
+
             # Callback to handle recorded hotword audio
             if self.listenword_audio_callback is not None:
-                hotword_audio_bytes = bytes()
-                while self.hotword_chunks:
-                    hotword_audio_bytes += self.hotword_chunks.popleft()
-
                 self.listenword_audio_callback(hotword_audio_bytes, ww_data)
-
-            self.hotword_chunks.clear()
 
             # Callback to handle wake up
             if self.wake_callback is not None:
