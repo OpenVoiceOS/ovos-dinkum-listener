@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.0a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.6.0a1) (2026-06-12)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.5.1a10...0.6.0a1)
+
+**Merged pull requests:**
+
+- feat: Hotword verifier [\#191](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/191) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.5.1a10](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.5.1a10) (2026-03-11)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.5.1a9...0.5.1a10)
