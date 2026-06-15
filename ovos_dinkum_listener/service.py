@@ -668,7 +668,11 @@ class OVOSDinkumVoiceService(Thread):
                     "utterances": [utterance],
                     "lang": stt_lang or Configuration().get("lang", "en-us"),
                 }
-                self.bus.emit(Message("recognizer_loop:utterance", payload, context))
+                # OVOS-AUDIO-IN-1 §5 utterance entry: legacy recognizer_loop:utterance
+                # or spec ovos.utterance.handle, per the 'legacy_namespace' config.
+                topic = "recognizer_loop:utterance" \
+                    if Configuration().get("legacy_namespace", True) else "ovos.utterance.handle"
+                self.bus.emit(Message(topic, payload, context))
                 return payload
 
             # If enabled, play a wave file with a short sound to audibly
@@ -761,7 +765,10 @@ class OVOSDinkumVoiceService(Thread):
         if utts:
             lang = stt_context.get("lang") or Configuration().get("lang", "en-us")
             payload = {"utterances": utts, "lang": lang}
-            self.bus.emit(Message("recognizer_loop:utterance", payload, stt_context))
+            # OVOS-AUDIO-IN-1 §5 utterance entry: legacy or spec namespace.
+            topic = "recognizer_loop:utterance" \
+                if Configuration().get("legacy_namespace", True) else "ovos.utterance.handle"
+            self.bus.emit(Message(topic, payload, stt_context))
         else:
             if self.voice_loop.listen_mode != ListeningMode.CONTINUOUS:
                 LOG.error("Empty transcription, either recorded silence or STT failed!")
@@ -1059,12 +1066,11 @@ class OVOSDinkumVoiceService(Thread):
             LOG.info(f"Ignoring low confidence STT transcriptions: {ignored}")
 
         if filtered:
-            self.bus.emit(
-                message.forward(
-                    "recognizer_loop:utterance",
-                    {"utterances": [u[0] for u in filtered], "lang": lang},
-                )
-            )
+            payload = {"utterances": [u[0] for u in filtered], "lang": lang}
+            # OVOS-AUDIO-IN-1 §5 utterance entry: legacy or spec namespace.
+            topic = "recognizer_loop:utterance" \
+                if Configuration().get("legacy_namespace", True) else "ovos.utterance.handle"
+            self.bus.emit(message.forward(topic, payload))
         else:
             self.bus.emit(message.forward("recognizer_loop:speech.recognition.unknown"))
 
