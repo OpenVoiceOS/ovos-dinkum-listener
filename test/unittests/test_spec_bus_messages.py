@@ -49,9 +49,10 @@ class TestUtteranceEntryNamespace(unittest.TestCase):
         self.seen = {}
         for topic in ("recognizer_loop:utterance", "ovos.utterance.handle"):
             self.bus.on(topic, lambda m: self.seen.__setitem__(m.msg_type, m))
+        self._orig_legacy_ns = Configuration().get("legacy_namespace", True)
 
     def tearDown(self):
-        Configuration()["legacy_namespace"] = True
+        Configuration()["legacy_namespace"] = self._orig_legacy_ns
 
     def test_legacy_namespace_emits_only_legacy_topic(self):
         Configuration()["legacy_namespace"] = True
