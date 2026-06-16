@@ -202,7 +202,7 @@ In `PRE_WAKE_VAD` state. Calls `vad.is_silence()`. On speech detected: transitio
 1. Appends chunk to both `hotword_chunks` and `stt_chunks`
 2. Calls `hotwords.update(chunk)` with state `LISTEN`
 3. Calls `hotwords.found()` → returns WW name or `None`
-4. On detection: calls `hotwords.verify()` (stub — always `True`)
+4. On detection: calls `hotwords.verify()` with the accumulated wake-word audio; if any verifier plugin rejects it, the detection is discarded and the method returns `False`
 5. Fires `listenword_audio_callback` with accumulated `hotword_chunks`
 6. Fires `wake_callback`
 7. If sleeping → `CHECK_WAKE_UP`; else if sound → `CONFIRMATION`; else → `BEFORE_COMMAND`

@@ -35,9 +35,9 @@ class TestDinkumVoiceService(unittest.TestCase):
 
     @patch("ovos_dinkum_listener.service.OVOSMicrophoneFactory.create")
     @patch("ovos_dinkum_listener.service.OVOSVADFactory.create")
-    @patch("ovos_dinkum_listener.voice_loop.DinkumVoiceLoop")
-    @patch("ovos_dinkum_listener.plugins.load_fallback_stt")
-    @patch("ovos_dinkum_listener.plugins.load_stt_module")
+    @patch("ovos_dinkum_listener.service.DinkumVoiceLoop")
+    @patch("ovos_dinkum_listener.service.load_fallback_stt")
+    @patch("ovos_dinkum_listener.service.load_stt_module")
     def _init_service(self, load_stt, load_fallback, voice_loop, vad, mic_factory):
         if not self.service:
             from ovos_dinkum_listener.service import OVOSDinkumVoiceService

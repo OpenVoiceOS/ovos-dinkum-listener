@@ -169,9 +169,15 @@ Returns a copy of `_plugins[ww]` enriched with:
 
 The `"engine"` field in the returned dict is the **class name string** (not the engine object).
 
-### `verify(ww_audio)` → `bool` — `hotwords.py:308`
+### `verify(ww_audio)` → `bool` — `hotwords.py:328`
 
-Stub — always returns `True`. Intended for future verifier plugins.
+Runs every registered verifier plugin (`self.verifiers`) against the wake-word
+audio. Returns `False` as soon as any verifier returns `False` (the detection is
+discarded); returns `True` if all accept or none are configured.
+
+**Fail-open:** a verifier that *raises* is logged and skipped — only an explicit
+`False` return suppresses the wake. Verifiers are loaded by the service from
+`listener.ww_verifiers` (see `MycroftDinkumService._load_ww_verifiers`).
 
 ### `reset()` — `hotwords.py:336`
 
