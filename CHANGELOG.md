@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.1a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.7.1a1) (2026-06-16)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.7.0a2...0.7.1a1)
+
+**Merged pull requests:**
+
+- fix: mic mute [\#176](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/176) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.7.0a2](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.7.0a2) (2026-06-16)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.7.0a1...0.7.0a2)
