@@ -382,17 +382,23 @@ class TestDinkumVoiceService(unittest.TestCase):
         pass
 
     def test_handle_audio_start(self):
-        # TODO
-        pass
+        # mute_during_output mutes the mic and remembers the prior state
+        self.service.config["listener"]["mute_during_output"] = True
+        self.service.voice_loop.is_muted = False
+        self.service._handle_audio_start(None)
+        self.assertTrue(self.service.voice_loop.is_muted)
+        self.assertFalse(self.service._tmp_muted)
 
     def test_handle_audio_end(self):
-        # TODO
-        pass
-
-    def test_handle_stop(self):
+        # a deliberately muted mic stays muted after playback (not unmuted)
+        self.service.config["listener"]["mute_during_output"] = True
         self.service.voice_loop.is_muted = True
-        self.service._handle_stop(None)
-        self.assertFalse(self.service.voice_loop.is_muted)
+        self.service._handle_audio_start(None)
+        self.service._handle_audio_end(None)
+        self.assertTrue(self.service.voice_loop.is_muted)
+
+    # _handle_stop was removed; mycroft.stop now routes to _handle_stop_recording.
+    # Full mute/stop behaviour is covered in test_mic_mute_e2e.py.
 
     def test_handle_change_state(self):
         # TODO

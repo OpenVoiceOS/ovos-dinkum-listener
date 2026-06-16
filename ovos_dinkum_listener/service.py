@@ -175,6 +175,7 @@ class OVOSDinkumVoiceService(Thread):
         self._watchdog = watchdog
         self._shutdown_event = Event()
         self._stopping = False
+        self._tmp_muted = None
         self.status.set_alive()
         self.config = Configuration()
         self._applied_config_hash = self._config_hash()
@@ -440,13 +441,15 @@ class OVOSDinkumVoiceService(Thread):
         self.bus.on("mycroft.mic.get_status", self._handle_mic_get_status)
         self.bus.on("recognizer_loop:audio_output_start", self._handle_audio_start)
         self.bus.on("recognizer_loop:audio_output_end", self._handle_audio_end)
-        self.bus.on("mycroft.stop", self._handle_stop)
 
         self.bus.on("recognizer_loop:sleep", self._handle_sleep)
         self.bus.on("recognizer_loop:wake_up", self._handle_wake_up)
         self.bus.on("recognizer_loop:b64_transcribe", self._handle_b64_transcribe)
         self.bus.on("recognizer_loop:b64_audio", self._handle_b64_audio)
         self.bus.on("recognizer_loop:record_stop", self._handle_stop_recording)
+        # a "stop" (e.g. button press) should end an active recording, not
+        # silently unmute the mic — see _handle_stop_recording for the guard
+        self.bus.on("mycroft.stop", self._handle_stop_recording)
         self.bus.on("recognizer_loop:state.set", self._handle_change_state)
         self.bus.on("recognizer_loop:state.get", self._handle_get_state)
         self.bus.on("intent.service.skills.activated", self._handle_extend_listening)
@@ -866,13 +869,19 @@ class OVOSDinkumVoiceService(Thread):
 
     # mic bus api
     def _handle_mute(self, message: Message):
+        """Mute the microphone."""
         self.voice_loop.is_muted = True
+        LOG.info(f"Microphone muted: {self.voice_loop.is_muted}")
 
     def _handle_unmute(self, message: Message):
+        """Unmute the microphone."""
         self.voice_loop.is_muted = False
+        LOG.info(f"Microphone muted: {self.voice_loop.is_muted}")
 
     def _handle_mute_toggle(self, message: Message):
+        """Toggle the microphone mute state."""
         self.voice_loop.is_muted = not self.voice_loop.is_muted
+        LOG.info(f"Microphone muted: {self.voice_loop.is_muted}")
 
     def _handle_listen(self, message: Message):
         if not self._validate_message_context(message) or not self.voice_loop.running:
@@ -918,18 +927,22 @@ class OVOSDinkumVoiceService(Thread):
         self.bus.emit(message.response(data))
 
     def _handle_audio_start(self, message: Message):
-        """audio output started"""
+        """Audio output started: mute during playback if configured.
+
+        Remember the mute state we had before muting, so a user who had
+        manually muted the mic stays muted once playback ends (rather than
+        being silently unmuted)."""
         if self.config.get("listener").get("mute_during_output"):
+            self._tmp_muted = self.voice_loop.is_muted
             self.voice_loop.is_muted = True
+        LOG.debug(f"Microphone muted: {self.voice_loop.is_muted}")
 
     def _handle_audio_end(self, message: Message):
-        """audio output ended"""
+        """Audio output ended: restore the pre-playback mute state."""
         if self.config.get("listener").get("mute_during_output"):
-            self.voice_loop.is_muted = False  # restore
-
-    def _handle_stop(self, message: Message):
-        """Handler for mycroft.stop, i.e. button press."""
-        self.voice_loop.is_muted = False  # restore
+            self.voice_loop.is_muted = self._tmp_muted or False  # restore
+            self._tmp_muted = None
+        LOG.debug(f"Microphone muted: {self.voice_loop.is_muted}")
 
     # state events
     def _handle_change_state(self, message: Message):
@@ -973,7 +986,13 @@ class OVOSDinkumVoiceService(Thread):
         self.bus.emit(message.reply("recognizer_loop:state", data))
 
     def _handle_stop_recording(self, message: Message):
-        """Stop current recording session"""
+        """Stop an active recording session.
+
+        No-op unless a recording is actually in progress. This also handles
+        `mycroft.stop`, so the guard prevents a stray "stop" (button press
+        with nothing recording) from emitting the end_listening sound."""
+        if self.voice_loop.state != ListeningState.RECORDING:
+            return
         self.voice_loop.stop_recording()
         sound = self.config.get("sounds", {}).get("end_listening")
         if sound:

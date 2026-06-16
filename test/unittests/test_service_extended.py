@@ -269,12 +269,19 @@ class TestServiceMessageHandlers(_ServiceTestBase):
         self.service._handle_mute_toggle(msg)
         self.assertFalse(self.service.voice_loop.is_muted)
 
-    def test_handle_stop_unmutes(self):
-        """_handle_stop restores is_muted to False."""
+    def test_stop_does_not_unmute(self):
+        """mycroft.stop must NOT unmute the mic (old _handle_stop behaviour).
+
+        It now routes to _handle_stop_recording; a deliberately muted mic
+        stays muted across a stop when nothing is recording."""
+        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
+        self.assertFalse(hasattr(self.service, "_handle_stop"))
         self.service.voice_loop.is_muted = True
-        msg = Message("mycroft.stop")
-        self.service._handle_stop(msg)
-        self.assertFalse(self.service.voice_loop.is_muted)
+        self.service.voice_loop.state = ListeningState.DETECT_WAKEWORD
+        self.service.config = {"sounds": {}}
+        self.service._handle_stop_recording(Message("mycroft.stop"))
+        self.assertTrue(self.service.voice_loop.is_muted)
 
     def test_handle_sleep(self):
         """_handle_sleep calls go_to_sleep on the voice loop."""
@@ -422,12 +429,25 @@ class TestServiceMessageHandlers(_ServiceTestBase):
         self.service._handle_get_languages_stt(msg)
 
     def test_handle_stop_recording(self):
-        """_handle_stop_recording calls stop_recording on voice loop."""
+        """_handle_stop_recording calls stop_recording when actually recording."""
+        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
         self.service.voice_loop.stop_recording = Mock()
+        self.service.voice_loop.state = ListeningState.RECORDING
         msg = Message("recognizer_loop:stop_recording")
         self.service.config = {"sounds": {}}
         self.service._handle_stop_recording(msg)
         self.service.voice_loop.stop_recording.assert_called_once()
+
+    def test_handle_stop_recording_noop_when_not_recording(self):
+        """No recording in progress → stop_recording is not called."""
+        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
+        self.service.voice_loop.stop_recording = Mock()
+        self.service.voice_loop.state = ListeningState.DETECT_WAKEWORD
+        self.service.config = {"sounds": {}}
+        self.service._handle_stop_recording(Message("recognizer_loop:stop_recording"))
+        self.service.voice_loop.stop_recording.assert_not_called()
 
     def test_handle_extend_listening_hybrid(self):
         """_handle_extend_listening updates last_ww in HYBRID mode."""
