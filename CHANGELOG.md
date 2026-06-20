@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.2a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.7.2a1) (2026-06-20)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.7.1a1...0.7.2a1)
+
+**Merged pull requests:**
+
+- fix: allow ovos-bus-client 2.x [\#228](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/228) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.7.1a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.7.1a1) (2026-06-16)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.7.0a2...0.7.1a1)
