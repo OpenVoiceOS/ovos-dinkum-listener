@@ -11,6 +11,7 @@ from unittest import skipIf
 
 from ovos_utils.messagebus import FakeBus
 from ovos_bus_client.message import Message
+from ovos_spec_tools import SpecMessage
 from ovos_utils.process_utils import ProcessState
 
 
@@ -166,12 +167,12 @@ class TestDinkumVoiceService(unittest.TestCase):
         for event in (
             "mycroft.mic.mute",
             "mycroft.mic.unmute",
-            "mycroft.mic.listen",
+            SpecMessage.MIC_LISTEN,
             "mycroft.mic.get_status",
-            "recognizer_loop:audio_output_start",
-            "recognizer_loop:audio_output_end",
+            SpecMessage.AUDIO_OUTPUT_STARTED,
+            SpecMessage.AUDIO_OUTPUT_ENDED,
             "mycroft.stop",
-            "recognizer_loop:sleep",
+            SpecMessage.LISTENER_SLEEP,
             "recognizer_loop:wake_up",
             "recognizer_loop:record_stop",
             "recognizer_loop:state.set",
@@ -239,7 +240,7 @@ class TestDinkumVoiceService(unittest.TestCase):
     def test_record_begin(self):
         handled = Event()
         handler = Mock(side_effect=handled.set())
-        self.bus.once("recognizer_loop:record_begin", handler)
+        self.bus.once(SpecMessage.LISTENER_RECORD_STARTED, handler)
         self.service._record_begin()
         handled.wait(5)
         handler.assert_called_once()

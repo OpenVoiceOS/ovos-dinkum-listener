@@ -8,6 +8,7 @@ from os.path import join, dirname
 from unittest.mock import Mock, patch, MagicMock
 
 from ovos_bus_client.message import Message
+from ovos_spec_tools import SpecMessage
 from ovos_utils.fakebus import FakeBus
 
 
@@ -285,7 +286,7 @@ class TestServiceMessageHandlers(_ServiceTestBase):
 
     def test_handle_sleep(self):
         """_handle_sleep calls go_to_sleep on the voice loop."""
-        msg = Message("recognizer_loop:sleep")
+        msg = Message(SpecMessage.LISTENER_SLEEP)
         self.service._handle_sleep(msg)
         self.service.voice_loop.go_to_sleep.assert_called()
 
@@ -479,7 +480,7 @@ class TestSttText(_ServiceTestBase):
 
         self.service.voice_loop.listen_mode = ListeningMode.WAKEWORD
         received = []
-        self.bus.on("recognizer_loop:utterance", lambda m: received.append(m))
+        self.bus.on(SpecMessage.UTTERANCE, lambda m: received.append(m))
 
         self.service._stt_text([("hello world", 0.9)], {"lang": "en-us"})
 
@@ -523,7 +524,7 @@ class TestSttText(_ServiceTestBase):
             "hallucination_list": ["thanks for watching!"],
         }
         received = []
-        self.bus.on("recognizer_loop:utterance", lambda m: received.append(m))
+        self.bus.on(SpecMessage.UTTERANCE, lambda m: received.append(m))
         unknown_received = []
         self.bus.on(
             "recognizer_loop:speech.recognition.unknown",
@@ -583,7 +584,7 @@ class TestHotwordAudio(_ServiceTestBase):
         """_hotword_audio with utterance emits recognizer_loop:utterance."""
         self.service.config = {"listener": {"record_wake_words": False}}
         received = []
-        self.bus.on("recognizer_loop:utterance", lambda m: received.append(m))
+        self.bus.on(SpecMessage.UTTERANCE, lambda m: received.append(m))
 
         ww_ctx = self._make_ww_context(
             listen=False, utterance="hello world", stt_lang="en-us"
@@ -661,7 +662,7 @@ class TestB64Audio(_ServiceTestBase):
 
         audio_b64 = base64.b64encode(bytes(100)).decode()
         received = []
-        self.bus.on("recognizer_loop:utterance", lambda m: received.append(m))
+        self.bus.on(SpecMessage.UTTERANCE, lambda m: received.append(m))
 
         msg = Message(
             "recognizer_loop:transcribe", {"audio": audio_b64, "lang": "en-us"}
