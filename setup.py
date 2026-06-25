@@ -80,6 +80,7 @@ setup(
     packages=['ovos_dinkum_listener'],
     package_data={'': package_files('ovos_dinkum_listener')},
     include_package_data=True,
+    python_requires=">=3.10",
     install_requires=required('requirements/requirements.txt'),
     extras_require={
         "extras": required("requirements/extras.txt"),
