@@ -24,7 +24,6 @@ import time
 from ovos_bus_client import MessageBusClient
 from ovos_bus_client.message import Message
 from ovos_bus_client.session import SessionManager
-from ovos_bus_client.util.migration import emit_migration_pair
 from ovos_config import Configuration
 from ovos_config.locations import get_xdg_data_save_path
 from ovos_plugin_manager.microphone import OVOSMicrophoneFactory
@@ -679,11 +678,8 @@ class OVOSDinkumVoiceService(Thread):
                 # gates the legacy emit; drop the dual-emit next major.
                 msg = Message("", payload, context)
                 if Configuration().get("legacy_namespace", True):
-                    emit_migration_pair(self.bus, msg,
-                                        "recognizer_loop:utterance",
-                                        "ovos.utterance.handle", payload)
-                else:
-                    self.bus.emit(msg.forward("ovos.utterance.handle", payload))
+                    self.bus.emit(msg.forward("recognizer_loop:utterance", payload))
+                self.bus.emit(msg.forward("ovos.utterance.handle", payload))
                 return payload
 
             # If enabled, play a wave file with a short sound to audibly
@@ -781,11 +777,8 @@ class OVOSDinkumVoiceService(Thread):
             # legacy_namespace gates the legacy emit; drop dual-emit next major.
             msg = Message("", payload, stt_context)
             if Configuration().get("legacy_namespace", True):
-                emit_migration_pair(self.bus, msg,
-                                    "recognizer_loop:utterance",
-                                    "ovos.utterance.handle", payload)
-            else:
-                self.bus.emit(msg.forward("ovos.utterance.handle", payload))
+                self.bus.emit(msg.forward("recognizer_loop:utterance", payload))
+            self.bus.emit(msg.forward("ovos.utterance.handle", payload))
         else:
             if self.voice_loop.listen_mode != ListeningMode.CONTINUOUS:
                 LOG.error("Empty transcription, either recorded silence or STT failed!")
@@ -1104,11 +1097,8 @@ class OVOSDinkumVoiceService(Thread):
             # namespace during the migration; consumers dedup on content.
             # legacy_namespace gates the legacy emit; drop dual-emit next major.
             if Configuration().get("legacy_namespace", True):
-                emit_migration_pair(self.bus, message,
-                                    "recognizer_loop:utterance",
-                                    "ovos.utterance.handle", payload)
-            else:
-                self.bus.emit(message.forward("ovos.utterance.handle", payload))
+                self.bus.emit(message.forward("recognizer_loop:utterance", payload))
+            self.bus.emit(message.forward("ovos.utterance.handle", payload))
         else:
             self.bus.emit(message.forward("recognizer_loop:speech.recognition.unknown"))
 
