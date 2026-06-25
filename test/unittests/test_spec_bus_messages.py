@@ -1,9 +1,12 @@
 """Namespace bus-message tests.
 
-The utterance entry topic is emitted in exactly one namespace, chosen by the
-``legacy_namespace`` config (default True): the legacy
-``recognizer_loop:utterance`` or the OVOS-AUDIO-IN-1 §5 ``ovos.utterance.handle``.
-Both modes are covered here.
+The listener emits the OVOS-AUDIO-IN-1 §5 spec utterance topic
+``ovos.utterance.handle`` (``SpecMessage.UTTERANCE``). Legacy compatibility on
+the ``recognizer_loop:utterance`` namespace is provided transparently by the
+bus-namespace translation layer (``ovos_bus_client.MessageBusClient`` /
+``ovos_utils.fakebus.FakeBus``) — both flags ON by default during migration — so
+that mirroring is verified there, not here. These tests pin the service-side
+contract: the spec topic is emitted with the transcribed utterances.
 """
 import shutil
 import unittest
@@ -11,7 +14,7 @@ from os import environ, makedirs
 from os.path import join, dirname
 from unittest.mock import Mock, MagicMock, patch
 
-from ovos_config.config import Configuration
+from ovos_spec_tools import SpecMessage
 from ovos_utils.messagebus import FakeBus
 
 
@@ -32,8 +35,8 @@ class TestUtteranceEntryNamespace(unittest.TestCase):
     @patch("ovos_dinkum_listener.service.OVOSMicrophoneFactory.create")
     @patch("ovos_dinkum_listener.service.OVOSVADFactory.create")
     @patch("ovos_dinkum_listener.voice_loop.DinkumVoiceLoop")
-    @patch("ovos_dinkum_listener.plugins.load_fallback_stt")
-    @patch("ovos_dinkum_listener.plugins.load_stt_module")
+    @patch("ovos_dinkum_listener.service.load_fallback_stt")
+    @patch("ovos_dinkum_listener.service.load_stt_module")
     def _make_service(self, load_stt, load_fallback, voice_loop, vad, mic_factory):
         from ovos_dinkum_listener.service import OVOSDinkumVoiceService
         from ovos_plugin_manager.templates.vad import VADEngine
@@ -47,28 +50,17 @@ class TestUtteranceEntryNamespace(unittest.TestCase):
         self.bus.started_running = True
         self.service = self._make_service()
         self.seen = {}
-        for topic in ("recognizer_loop:utterance", "ovos.utterance.handle"):
-            self.bus.on(topic, lambda m: self.seen.__setitem__(m.msg_type, m))
-        self._orig_legacy_ns = Configuration().get("legacy_namespace", True)
+        # listen on the spec topic; the bus may also mirror it onto the legacy
+        # topic, which is the translation layer's concern, not this service's.
+        self.bus.on(str(SpecMessage.UTTERANCE),
+                    lambda m: self.seen.__setitem__(m.msg_type, m))
 
-    def tearDown(self):
-        Configuration()["legacy_namespace"] = self._orig_legacy_ns
-
-    def test_legacy_namespace_emits_only_legacy_topic(self):
-        Configuration()["legacy_namespace"] = True
+    def test_emits_spec_utterance_topic(self):
         self.service._stt_text([("hello world", 0.9)], {"lang": "en-US"})
-        self.assertIn("recognizer_loop:utterance", self.seen)
-        self.assertNotIn("ovos.utterance.handle", self.seen)
-        self.assertEqual(self.seen["recognizer_loop:utterance"].data["utterances"],
-                         ["hello world"])
-
-    def test_spec_namespace_emits_only_spec_topic(self):
-        Configuration()["legacy_namespace"] = False
-        self.service._stt_text([("hello world", 0.9)], {"lang": "en-US"})
-        self.assertIn("ovos.utterance.handle", self.seen)
-        self.assertNotIn("recognizer_loop:utterance", self.seen)
-        self.assertEqual(self.seen["ovos.utterance.handle"].data["utterances"],
-                         ["hello world"])
+        self.assertIn(str(SpecMessage.UTTERANCE), self.seen)
+        self.assertEqual(
+            self.seen[str(SpecMessage.UTTERANCE)].data["utterances"],
+            ["hello world"])
 
 
 if __name__ == "__main__":
