@@ -21,6 +21,7 @@ from unittest.mock import Mock
 
 from ovos_utils.messagebus import FakeBus
 from ovos_bus_client.message import Message
+from ovos_spec_tools import SpecMessage
 
 from ovos_dinkum_listener.voice_loop import ListeningState
 
@@ -79,9 +80,9 @@ class TestMuteDuringOutput(unittest.TestCase):
         """Default case: mic unmuted, output mutes it, then restores to unmuted."""
         svc = _make_service(mute_during_output=True)
         self.assertFalse(svc.voice_loop.is_muted)
-        svc.bus.emit(Message("recognizer_loop:audio_output_start"))
+        svc.bus.emit(Message(SpecMessage.AUDIO_OUTPUT_STARTED))
         self.assertTrue(svc.voice_loop.is_muted)
-        svc.bus.emit(Message("recognizer_loop:audio_output_end"))
+        svc.bus.emit(Message(SpecMessage.AUDIO_OUTPUT_ENDED))
         self.assertFalse(svc.voice_loop.is_muted)
 
     def test_user_muted_stays_muted_after_output(self):
@@ -90,18 +91,18 @@ class TestMuteDuringOutput(unittest.TestCase):
         svc.bus.emit(Message("mycroft.mic.mute"))
         self.assertTrue(svc.voice_loop.is_muted)
 
-        svc.bus.emit(Message("recognizer_loop:audio_output_start"))
+        svc.bus.emit(Message(SpecMessage.AUDIO_OUTPUT_STARTED))
         self.assertTrue(svc.voice_loop.is_muted)
-        svc.bus.emit(Message("recognizer_loop:audio_output_end"))
+        svc.bus.emit(Message(SpecMessage.AUDIO_OUTPUT_ENDED))
         # Regression: old code set is_muted = False here.
         self.assertTrue(svc.voice_loop.is_muted)
 
     def test_disabled_does_not_touch_mute_state(self):
         svc = _make_service(mute_during_output=False)
         svc.bus.emit(Message("mycroft.mic.mute"))
-        svc.bus.emit(Message("recognizer_loop:audio_output_start"))
+        svc.bus.emit(Message(SpecMessage.AUDIO_OUTPUT_STARTED))
         self.assertTrue(svc.voice_loop.is_muted)
-        svc.bus.emit(Message("recognizer_loop:audio_output_end"))
+        svc.bus.emit(Message(SpecMessage.AUDIO_OUTPUT_ENDED))
         self.assertTrue(svc.voice_loop.is_muted)
 
 

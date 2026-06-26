@@ -23,6 +23,7 @@ from typing import List, Tuple, Optional, Union
 import time
 from ovos_bus_client import MessageBusClient
 from ovos_bus_client.message import Message
+from ovos_spec_tools import SpecMessage
 from ovos_bus_client.session import SessionManager
 from ovos_config import Configuration
 from ovos_config.locations import get_xdg_data_save_path
@@ -437,12 +438,12 @@ class OVOSDinkumVoiceService(Thread):
         self.bus.on("mycroft.mic.unmute", self._handle_unmute)
         self.bus.on("mycroft.mic.mute.toggle", self._handle_mute_toggle)
 
-        self.bus.on("mycroft.mic.listen", self._handle_listen)
+        self.bus.on(SpecMessage.MIC_LISTEN, self._handle_listen)
         self.bus.on("mycroft.mic.get_status", self._handle_mic_get_status)
-        self.bus.on("recognizer_loop:audio_output_start", self._handle_audio_start)
-        self.bus.on("recognizer_loop:audio_output_end", self._handle_audio_end)
+        self.bus.on(SpecMessage.AUDIO_OUTPUT_STARTED, self._handle_audio_start)
+        self.bus.on(SpecMessage.AUDIO_OUTPUT_ENDED, self._handle_audio_end)
 
-        self.bus.on("recognizer_loop:sleep", self._handle_sleep)
+        self.bus.on(SpecMessage.LISTENER_SLEEP, self._handle_sleep)
         self.bus.on("recognizer_loop:wake_up", self._handle_wake_up)
         self.bus.on("recognizer_loop:b64_transcribe", self._handle_b64_transcribe)
         self.bus.on("recognizer_loop:b64_audio", self._handle_b64_audio)
@@ -579,7 +580,7 @@ class OVOSDinkumVoiceService(Thread):
     # callbacks
     def _wakeup(self):
         """callback when voice loop exits SLEEP mode"""
-        self.bus.emit(Message("mycroft.awoken"))
+        self.bus.emit(Message(SpecMessage.LISTENER_AWOKEN))
 
     def _record_begin(self):
         LOG.debug("Record begin")
@@ -596,7 +597,7 @@ class OVOSDinkumVoiceService(Thread):
                     {"skill_id": "dinkum-listener"},
                 )
             )
-        self.bus.emit(Message("recognizer_loop:record_begin"))
+        self.bus.emit(Message(SpecMessage.LISTENER_RECORD_STARTED))
 
     def _save_ww(self, audio_bytes, ww_meta, save_path=None):
         if save_path:
@@ -671,11 +672,7 @@ class OVOSDinkumVoiceService(Thread):
                     "utterances": [utterance],
                     "lang": stt_lang or Configuration().get("lang", "en-us"),
                 }
-                # OVOS-AUDIO-IN-1 §5 utterance entry: legacy recognizer_loop:utterance
-                # or spec ovos.utterance.handle, per the 'legacy_namespace' config.
-                topic = "recognizer_loop:utterance" \
-                    if Configuration().get("legacy_namespace", True) else "ovos.utterance.handle"
-                self.bus.emit(Message(topic, payload, context))
+                self.bus.emit(Message(SpecMessage.UTTERANCE, payload, context))
                 return payload
 
             # If enabled, play a wave file with a short sound to audibly
@@ -738,7 +735,7 @@ class OVOSDinkumVoiceService(Thread):
                     {"skill_id": "dinkum-listener"},
                 )
             )
-        self.bus.emit(Message("recognizer_loop:record_end"))
+        self.bus.emit(Message(SpecMessage.LISTENER_RECORD_ENDED))
 
     def __normtranscripts(self, transcripts: List[Tuple[str, float]]) -> List[str]:
         # unfortunately common enough when using whisper to deserve a setting
@@ -768,10 +765,7 @@ class OVOSDinkumVoiceService(Thread):
         if utts:
             lang = stt_context.get("lang") or Configuration().get("lang", "en-us")
             payload = {"utterances": utts, "lang": lang}
-            # OVOS-AUDIO-IN-1 §5 utterance entry: legacy or spec namespace.
-            topic = "recognizer_loop:utterance" \
-                if Configuration().get("legacy_namespace", True) else "ovos.utterance.handle"
-            self.bus.emit(Message(topic, payload, stt_context))
+            self.bus.emit(Message(SpecMessage.UTTERANCE, payload, stt_context))
         else:
             if self.voice_loop.listen_mode != ListeningMode.CONTINUOUS:
                 LOG.error("Empty transcription, either recorded silence or STT failed!")
@@ -1085,11 +1079,12 @@ class OVOSDinkumVoiceService(Thread):
             LOG.info(f"Ignoring low confidence STT transcriptions: {ignored}")
 
         if filtered:
-            payload = {"utterances": [u[0] for u in filtered], "lang": lang}
-            # OVOS-AUDIO-IN-1 §5 utterance entry: legacy or spec namespace.
-            topic = "recognizer_loop:utterance" \
-                if Configuration().get("legacy_namespace", True) else "ovos.utterance.handle"
-            self.bus.emit(message.forward(topic, payload))
+            self.bus.emit(
+                message.forward(
+                    SpecMessage.UTTERANCE,
+                    {"utterances": [u[0] for u in filtered], "lang": lang},
+                )
+            )
         else:
             self.bus.emit(message.forward("recognizer_loop:speech.recognition.unknown"))
 
