@@ -1,9 +1,74 @@
 [build-system]
-requires = [ "setuptools>=41.0.1",]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "ovos-dinkum-listener"
+dynamic = ["version"]
+description = "ovos-core listener daemon client"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+]
+
+dependencies = [
+    "ovos-plugin-manager>=2.5.0a1,<3.0.0",
+    "ovos-utils>=0.8.4,<1.0.0",
+    "ovos-config>=1.2.2,<3.0.0",
+    "ovos_bus_client>=2.2.0a1,<3.0.0",
+    "ovos-spec-tools>=0.9.0a1,<1.0.0",
+    "audioop-lts; python_version >= '3.13'",  # removed from stdlib in py 3.13
+]
+
+[project.urls]
+Homepage = "https://github.com/OpenVoiceOS/ovos-dinkum-listener"
+Repository = "https://github.com/OpenVoiceOS/ovos-dinkum-listener"
+
+[project.optional-dependencies]
+extras = [
+    # STT plugins
+    "ovos-stt-plugin-server>=0.1.2,<1.0.0",
+    # VAD plugins
+    "ovos-vad-plugin-silero>=0.0.5,<1.0.0",
+    # Microphone plugins
+    "ovos-microphone-plugin-sounddevice>=0.0.2,<1.0.0",
+    # WakeWord plugins
+    "ovos-ww-plugin-vosk>=0.1.7,<1.0.0",
+    "ovos_ww_plugin_precise_onnx>=0.0.1,<1.0.0",
+]
+linux = [
+    # Microphone plugins
+    "ovos-microphone-plugin-alsa>=0.1.2,<1.0.0",
+]
+tests = [
+    "pytest~=8.4",
+    "ovos-vad-plugin-webrtcvad",
+    "pytest-cov>=3.0.0",
+    "coverage>=7.2.7",
+    # e2e bus-sequence harness for the wake-word verifier gate (MiniVoiceLoop)
+    "ovoscope>=0.19.0a1",
+]
+
+[project.scripts]
+ovos-dinkum-listener = "ovos_dinkum_listener.__main__:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["ovos_dinkum_listener*"]
+
+[tool.setuptools.package-data]
+ovos_dinkum_listener = ["res/**/*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "ovos_dinkum_listener.version.__version__"}
+
 [tool.ruff]
-exclude = ["_gh_automations", "setup.py"]
+exclude = ["_gh_automations"]
 
 [tool.ruff.lint]
 select = ["E", "F"]
@@ -12,30 +77,26 @@ select = ["E", "F"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-addopts = "--ignore-glob=setup.py"
 norecursedirs = ".git build __pycache__ docs"
-filterwarnings = [ "default", ]
+filterwarnings = ["default"]
 
 [tool.coverage.run]
 branch = true
 source = ["ovos_dinkum_listener"]
 
 [tool.coverage.report]
-exclude_lines = [ 
+exclude_lines = [
     "pragma: no cover",
-     ".*  # pragma: no cover",
-     ".*  # nocover",
-     "def __repr__",
-     "raise AssertionError",
-     "raise NotImplementedError",
-     "if 0:",
-     "if trace is not None",
-     "verbose = .*",
-     "^ *raise",
-     "^ *pass *$",
-     "if _debug:",
-     "if __name__ == .__main__.:",
-]
-omit = [
-    "*/setup.py",
+    ".*  # pragma: no cover",
+    ".*  # nocover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if trace is not None",
+    "verbose = .*",
+    "^ *raise",
+    "^ *pass *$",
+    "if _debug:",
+    "if __name__ == .__main__.:",
 ]
