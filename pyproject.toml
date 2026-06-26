@@ -44,7 +44,7 @@ linux = [
     "ovos-microphone-plugin-alsa>=0.1.2,<1.0.0",
 ]
 tests = [
-    "pytest~=8.4",
+    "pytest~=9.1",
     "ovos-vad-plugin-webrtcvad",
     "pytest-cov>=3.0.0",
     "coverage>=7.2.7",
