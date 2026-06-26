@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.0a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.8.0a1) (2026-06-26)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.7.2a1...0.8.0a1)
+
+**Merged pull requests:**
+
+- feat: migrate to OVOS spec bus namespace [\#232](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/232) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.7.2a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.7.2a1) (2026-06-20)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.7.1a1...0.7.2a1)
