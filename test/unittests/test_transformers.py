@@ -93,7 +93,56 @@ class TestTransformers(unittest.TestCase):
         service.shutdown()
         MockTransformer.shutdown.assert_called_once()
 
-    # TODO: Test priority load
+    @patch("ovos_plugin_manager.audio_transformers.find_audio_transformer_plugins")
+    def test_audio_transformer_ascending_priority_order(self, find_transformers):
+        """Per OVOS-TRANSFORM-1 §4 the chain runs in ascending priority order:
+        lower `priority` number = earlier in the chain."""
+        import ovos_dinkum_listener.transformers
+
+        ovos_dinkum_listener.transformers.find_audio_transformer_plugins = (
+            find_transformers
+        )
+        from ovos_dinkum_listener.transformers import AudioTransformersService
+
+        def _make(name, prio):
+            return type(
+                f"Mock_{name}",
+                (AudioTransformer,),
+                {
+                    "feed_audio_chunk": Mock(),
+                    "feed_hotword_chunk": Mock(),
+                    "feed_speech_chunk": Mock(),
+                    "feed_speech_utterance": Mock(return_value=b"0"),
+                    "transform": Mock(return_value=(b"1", {})),
+                    "shutdown": Mock(),
+                    "__init__": lambda self, n=name, p=prio: AudioTransformer.__init__(
+                        self, n, priority=p
+                    ),
+                },
+            )
+
+        # declare out of priority order on purpose
+        find_transformers.return_value = {
+            "late": _make("late", 90),
+            "early": _make("early", 5),
+            "mid": _make("mid", 50),
+        }
+        config = {
+            "listener": {
+                "audio_transformers": {
+                    "late": {"active": True},
+                    "early": {"active": True},
+                    "mid": {"active": True},
+                }
+            }
+        }
+        service = AudioTransformersService(self.bus, config)
+
+        ordered = [p.priority for p in service.plugins]
+        self.assertEqual(ordered, sorted(ordered))  # ascending
+        self.assertEqual(ordered, [5, 50, 90])
+        names = [p.name for p in service.plugins]
+        self.assertEqual(names, ["early", "mid", "late"])  # low prio runs first
 
 
 if __name__ == "__main__":

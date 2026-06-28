@@ -61,15 +61,17 @@ class AudioTransformersService:
     @property
     def plugins(self) -> list:
         """
-        Return loaded transformers in priority order, such that modules with a
-        higher `priority` rank are called first and changes from lower ranked
-        transformers are applied last.
+        Return loaded transformers in ascending priority order per
+        OVOS-TRANSFORM-1 §4: a transformer with ``priority = 1`` runs before
+        one with ``priority = 50`` runs before one with ``priority = 100``.
+        Lower number = earlier in the chain.
 
-        A plugin of `priority` 1 will override any existing context keys and
-        will be the last to modify `audio_data`
+        A plugin of `priority` 1 is the first to modify `audio_data`; later
+        (higher-priority-number) transformers see and may override the context
+        keys and audio earlier transformers produced.
         """
         return sorted(
-            self.loaded_plugins.values(), key=lambda k: k.priority, reverse=True
+            self.loaded_plugins.values(), key=lambda k: k.priority
         )
 
     def shutdown(self):
