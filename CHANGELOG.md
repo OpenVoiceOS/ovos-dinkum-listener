@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.2a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.8.2a1) (2026-06-28)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.8.1a1...0.8.2a1)
+
+**Merged pull requests:**
+
+- fix: lift ovos-spec-tools upper bound \(spec-tools 1.x\) [\#238](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/238) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.8.1a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.8.1a1) (2026-06-28)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.8.0a1...0.8.1a1)
