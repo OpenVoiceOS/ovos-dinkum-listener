@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.1a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.8.1a1) (2026-06-28)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.8.0a1...0.8.1a1)
+
+**Merged pull requests:**
+
+- fix: order audio-transformer chain ascending per OVOS-TRANSFORM-1 §4 [\#236](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/236) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.8.0a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.8.0a1) (2026-06-26)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.7.2a1...0.8.0a1)
