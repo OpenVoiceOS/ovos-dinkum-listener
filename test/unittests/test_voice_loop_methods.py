@@ -445,9 +445,17 @@ class TestAfterCmd(unittest.TestCase):
         loop.stt_chunks = deque()
         loop.transformers.transform.return_value = (SILENT_CHUNK, {})
 
+        # the reset state depends on the vad_pre_wake_enabled setting,
+        # pin both values instead of inheriting the ovos-config default
+        loop.vad_pre_wake_enabled = False
         loop._after_cmd(SILENT_CHUNK)
-
         self.assertEqual(loop.state, ListeningState.DETECT_WAKEWORD)
+
+        loop.stt_audio_bytes = bytes()
+        loop.stt_chunks = deque()
+        loop.vad_pre_wake_enabled = True
+        loop._after_cmd(SILENT_CHUNK)
+        self.assertEqual(loop.state, ListeningState.PRE_WAKE_VAD)
 
     def test_resets_to_waiting_cmd_in_continuous_mode(self):
         """In CONTINUOUS mode, _after_cmd resets state to WAITING_CMD."""
