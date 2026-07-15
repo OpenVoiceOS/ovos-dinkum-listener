@@ -15,7 +15,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "ovos-plugin-manager>=2.5.0a1,<3.0.0",
+    "ovos-plugin-manager>=2.10.0a1,<3.0.0",
     "ovos-utils>=0.8.4,<1.0.0",
     "ovos-config>=1.2.2,<3.0.0",
     "ovos_bus_client>=2.5.1a1,<3.0.0",
