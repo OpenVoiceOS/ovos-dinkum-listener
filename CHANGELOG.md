@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.2a2](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.8.2a2) (2026-07-17)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.8.2a1...0.8.2a2)
+
+**Merged pull requests:**
+
+- refactor: consume transformer runner services from ovos-plugin-manager [\#241](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/241) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.8.2a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.8.2a1) (2026-06-28)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.8.1a1...0.8.2a1)
