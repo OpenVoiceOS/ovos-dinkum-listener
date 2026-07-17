@@ -60,13 +60,15 @@ Sets `self.has_loaded = True` when done — `transformers.py:59`.
 
 ## `plugins` property — `transformers.py:62`
 
-Returns all loaded plugins sorted by **descending** priority — `transformers.py:71`:
+Returns all loaded plugins sorted by **ascending** priority (OVOS-TRANSFORM §4):
 
 ```python
-sorted(self.loaded_plugins.values(), key=lambda k: k.priority, reverse=True)
+sorted(self.loaded_plugins.values(), key=lambda k: k.priority)
 ```
 
-Higher `priority` number → called first. A plugin with `priority=1` runs last and has final say over both audio and context.
+Lower `priority` number → called first (default 50). A plugin with `priority=1` runs first; later plugins see and may override its audio and context. An explicit `"order"` list in the config section wins over priorities. The service is the canonical `AudioTransformersService` from `ovos_plugin_manager.transformer_services`; full contract → [`ovos-plugin-manager/docs/transformers.md`](../../ovos-plugin-manager/docs/transformers.md).
+
+**Split deployments:** ovos-stt-server, hivemind-audio-binary-protocol and the HiveMind satellites can run audio transformers too — enable each plugin in exactly one place or audio is processed twice.
 
 ---
 
@@ -152,7 +154,7 @@ Audio transformer plugins must implement (from the OPM base class):
 | `feed_speech_utterance(chunk)` | `transform()` | Complete utterance |
 | `transform(chunk)` → `(bytes, dict)` | `transform()` | Final transform + metadata |
 
-Attribute `priority: int` controls ordering (higher = runs first).
+Attribute `priority: int` controls ordering (lower = runs first).
 
 Entry point group: `opm.audio_transformer`
 
