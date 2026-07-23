@@ -20,6 +20,7 @@ dependencies = [
     "ovos-config>=1.2.2,<3.0.0",
     "ovos_bus_client>=2.5.1a1,<3.0.0",
     "ovos-spec-tools>=0.16.1a2",
+    "requests>=2.26, <3.0",
     "audioop-lts; python_version >= '3.13'",  # removed from stdlib in py 3.13
 ]
 
