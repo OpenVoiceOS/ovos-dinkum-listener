@@ -1,13 +1,13 @@
 # OVOSDinkumVoiceService
 
 **Module:** `ovos_dinkum_listener.service`
-**Class:** `OVOSDinkumVoiceService` — `service.py:84`
+**Class:** `OVOSDinkumVoiceService` - `service.py:84`
 
 Top-level daemon for `ovos-dinkum-listener`. A `Thread` subclass that owns all sub-components, manages the voice loop lifecycle, handles all bus events, and persists audio to disk.
 
 ---
 
-## Constructor — `service.py:84`
+## Constructor - `service.py:84`
 
 ```python
 OVOSDinkumVoiceService(
@@ -28,13 +28,13 @@ OVOSDinkumVoiceService(
 |---|---|
 | `on_ready` / `on_error` / `on_stopping` / `on_alive` / `on_started` | `ProcessStatus` lifecycle callbacks |
 | `watchdog` | Called every `WATCHDOG_DELAY` (0.5s) for systemd watchdog keepalive |
-| `mic` | Pre-created `Microphone`; loaded via `OVOSMicrophoneFactory` if `None` |
-| `bus` | `MessageBusClient`; created automatically if `None` |
+| `mic` | Pre-created `Microphone`, loaded via `OVOSMicrophoneFactory` if `None` |
+| `bus` | `MessageBusClient`, created automatically if `None` |
 | `validate_source` | If `True`, only handle `mycroft.mic.listen` from native audio destinations |
-| `stt` | Pre-created `StreamingSTT`; disables auto-reload on config change if provided |
+| `stt` | Pre-created `StreamingSTT`, disables auto-reload on config change if provided |
 | `fallback_stt` | Pre-created fallback `StreamingSTT` |
-| `vad` | Pre-created `VADEngine`; loaded via `OVOSVADFactory` if `None` |
-| `hotwords` | Pre-created `HotwordContainer`; disables auto-reload on config change if provided |
+| `vad` | Pre-created `VADEngine`, loaded via `OVOSVADFactory` if `None` |
+| `hotwords` | Pre-created `HotwordContainer`, disables auto-reload on config change if provided |
 | `disable_fallback` | If `True`, never load the fallback STT plugin |
 
 Default microphone plugin: `ovos-microphone-plugin-alsa`.
@@ -66,7 +66,7 @@ After `voice_loop.run()` returns:
 
 ---
 
-## Voice Loop Initialisation — `_init_voice_loop()`
+## Voice Loop Initialisation - `_init_voice_loop()`
 
 Creates `DinkumVoiceLoop` with all callbacks wired to service methods. Key bindings:
 
@@ -100,7 +100,7 @@ If `stt` or `hotwords` were passed as constructor arguments, they are not reload
 
 ---
 
-## Source Validation — `_validate_message_context(message)`
+## Source Validation - `_validate_message_context(message)`
 
 Guards `mycroft.mic.listen` so that only messages targeted at native audio sources are processed. Native sources are configured via `Audio.native_sources` (default: `["debug_cli", "audio"]`).
 
@@ -110,7 +110,7 @@ Set `validate_source=False` in the constructor to disable this check.
 
 ---
 
-## Hallucination Filtering — `_stt_text()`
+## Hallucination Filtering - `_stt_text()`
 
 After STT, transcripts are filtered using a block list. Enabled by `filter_hallucinations: true` (default: `true`). Additional strings can be added via `hallucination_list` in config.
 
@@ -136,14 +136,14 @@ Config: `listener.mute_during_output: true` mutes the mic entirely during TTS pl
 
 ## Audio Saving
 
-### Save Path — `default_save_path` (property)
+### Save Path - `default_save_path` (property)
 
 Base path is `listener.save_path` or `{XDG_DATA_DIR}/listener/`. Three subdirectories:
-- `utterances/` — STT audio
-- `wake_words/` — hotword audio
-- `recordings/` — free recording audio
+- `utterances/` - STT audio
+- `wake_words/` - hotword audio
+- `recordings/` - free recording audio
 
-`default_save_path` is a **read-only property** — it cannot be assigned directly.
+`default_save_path` is a **read-only property** - it cannot be assigned directly.
 
 ### `_save_stt(stt_meta, save_path=None)`
 
@@ -161,7 +161,7 @@ Saves free recording audio to the `recordings/` subdirectory.
 
 ---
 
-## `_compile_ww_context(key_phrase, ww_module)` — static method
+## `_compile_ww_context(key_phrase, ww_module)` - static method
 
 Returns a wakeword context dict for the bus event:
 
@@ -180,9 +180,9 @@ The `"engine"` field is an MD5 hex digest of the module name string, not the cla
 
 ---
 
-## `_hotword_audio(audio, ww_data)` — callback
+## `_hotword_audio(audio, ww_data)` - callback
 
-Called for all hotword types (listen, stop, wakeup, hotword). The `ww_data["event"]` key (if set) is used as the custom bus event type. Note: the key is `"event"`, not `"bus_event"` — the internal plugin record uses `"bus_event"` but `get_ww()` maps it to `"event"` in the returned dict.
+Called for all hotword types (listen, stop, wakeup, hotword). The `ww_data["event"]` key (if set) is used as the custom bus event type. Note: the key is `"event"`, not `"bus_event"` - the internal plugin record uses `"bus_event"` but `get_ww()` maps it to `"event"` in the returned dict.
 
 ---
 
@@ -254,7 +254,7 @@ Response format for STT/WW queries:
 
 ---
 
-## `_handle_change_state(message)` — `recognizer_loop:state.set`
+## `_handle_change_state(message)` - `recognizer_loop:state.set`
 
 Accepts a message with `data` keys:
 - `"mode"` → sets `voice_loop.listen_mode` (e.g. `"wakeword"`, `"continuous"`, `"hybrid"`)
@@ -264,7 +264,7 @@ If only `"mode"` is given, the FSM state is also reset to the appropriate defaul
 
 ---
 
-## `_handle_b64_transcribe(message)` — `recognizer_loop:b64_transcribe`
+## `_handle_b64_transcribe(message)` - `recognizer_loop:b64_transcribe`
 
 1. Decodes base64 audio from `message.data["audio"]`
 2. Runs through `transformers.transform()`
@@ -289,3 +289,6 @@ with patch("ovos_dinkum_listener.service.OVOSMicrophoneFactory"), \
 ```
 
 See `test/unittests/test_service.py` and `test/unittests/test_service_extended.py` for lifecycle and handler tests.
+
+---
+[← Hotwords](hotwords.md) · [Home](index.md) · [Transformers →](transformers.md)

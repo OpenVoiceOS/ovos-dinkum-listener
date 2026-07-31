@@ -1,7 +1,7 @@
 # AudioTransformersService
 
 **Module:** `ovos_dinkum_listener.transformers`
-**Class:** `AudioTransformersService` — `transformers.py:34`
+**Class:** `AudioTransformersService` - `transformers.py:34`
 
 Manages a prioritised pipeline of audio transformer plugins. Plugins can inspect and modify raw audio before and during STT processing, and can inject metadata into the utterance context (e.g. detected language) that is merged into `recognizer_loop:utterance`.
 
@@ -19,18 +19,18 @@ Config is read from `config["listener"]["audio_transformers"]`. If no config is 
 
 ---
 
-## Constructor — `transformers.py:36`
+## Constructor - `transformers.py:36`
 
 | Parameter | Description |
 |---|---|
-| `bus` | Message bus client; bound to each plugin via `plugin.bind(bus)` |
+| `bus` | Message bus client, bound to each plugin via `plugin.bind(bus)` |
 | `config` | Full config dict (e.g. `Configuration()`). `None` defaults to `{}` |
 
-On construction, `load_plugins()` is called immediately — `transformers.py:44`.
+On construction, `load_plugins()` is called immediately - `transformers.py:44`.
 
 ---
 
-## Plugin Discovery and Loading — `load_plugins()` — `transformers.py:46`
+## Plugin Discovery and Loading - `load_plugins()` - `transformers.py:46`
 
 Discovers all installed audio transformer plugins via `find_audio_transformer_plugins()` (OPM entry point group: `opm.audio_transformer`).
 
@@ -54,11 +54,11 @@ A plugin is loaded only if:
 
 Each loaded plugin is instantiated with `plug()` and bound to the bus with `plugin.bind(bus)`. Load errors are logged and skipped.
 
-Sets `self.has_loaded = True` when done — `transformers.py:59`.
+Sets `self.has_loaded = True` when done - `transformers.py:59`.
 
 ---
 
-## `plugins` property — `transformers.py:62`
+## `plugins` property - `transformers.py:62`
 
 Returns all loaded plugins sorted by **ascending** priority (OVOS-TRANSFORM §4):
 
@@ -66,9 +66,9 @@ Returns all loaded plugins sorted by **ascending** priority (OVOS-TRANSFORM §4)
 sorted(self.loaded_plugins.values(), key=lambda k: k.priority)
 ```
 
-Lower `priority` number → called first (default 50). A plugin with `priority=1` runs first; later plugins see and may override its audio and context. An explicit `"order"` list in the config section wins over priorities. The service is the canonical `AudioTransformersService` from `ovos_plugin_manager.transformer_services`; full contract → [`ovos-plugin-manager/docs/transformers.md`](../../ovos-plugin-manager/docs/transformers.md).
+Lower `priority` number → called first (default 50). A plugin with `priority=1` runs first, later plugins see and may override its audio and context. An explicit `"order"` list in the config section wins over priorities. The service is the canonical `AudioTransformersService` from `ovos_plugin_manager.transformer_services`, full contract → [`ovos-plugin-manager/docs/transformers.md`](../../ovos-plugin-manager/docs/transformers.md).
 
-**Split deployments:** ovos-stt-server, hivemind-audio-binary-protocol and the HiveMind satellites can run audio transformers too — enable each plugin in exactly one place or audio is processed twice.
+**Split deployments:** ovos-stt-server, hivemind-audio-binary-protocol and the HiveMind satellites can run audio transformers too - enable each plugin in exactly one place or audio is processed twice.
 
 ---
 
@@ -76,27 +76,27 @@ Lower `priority` number → called first (default 50). A plugin with `priority=1
 
 The voice loop calls these on each audio chunk to inform plugins of the audio type. Plugins implement the corresponding `feed_*_chunk()` method.
 
-### `feed_audio(chunk)` — `transformers.py:84`
+### `feed_audio(chunk)` - `transformers.py:84`
 
-Called for **ambient audio** — chunks where no hotword is active and no command is being recorded. Invoked in states: `DETECT_WAKEWORD`, `WAITING_CMD`, `PRE_WAKE_VAD`, `BEFORE_COMMAND`, `CONFIRMATION`.
+Called for **ambient audio** - chunks where no hotword is active and no command is being recorded. Invoked in states: `DETECT_WAKEWORD`, `WAITING_CMD`, `PRE_WAKE_VAD`, `BEFORE_COMMAND`, `CONFIRMATION`.
 
 Calls `module.feed_audio_chunk(chunk)` for each plugin in priority order.
 
-### `feed_hotword(chunk)` — `transformers.py:92`
+### `feed_hotword(chunk)` - `transformers.py:92`
 
 Called for the chunk in which a hotword/wake-word was detected. Allows plugins to process or log the moment of wakeword detection.
 
 Calls `module.feed_hotword_chunk(chunk)` for each plugin.
 
-### `feed_speech(chunk)` — `transformers.py:100`
+### `feed_speech(chunk)` - `transformers.py:100`
 
 Called for each chunk while the user is speaking an active command (`IN_COMMAND`, `RECORDING`).
 
-Calls `module.feed_speech_chunk(chunk)` for each plugin. Exceptions are caught and logged — `transformers.py:108`.
+Calls `module.feed_speech_chunk(chunk)` for each plugin. Exceptions are caught and logged - `transformers.py:108`.
 
 ---
 
-## `transform(chunk)` → `(bytes, dict)` — `transformers.py:111`
+## `transform(chunk)` → `(bytes, dict)` - `transformers.py:111`
 
 Called once per utterance at the end of a command (`AFTER_COMMAND`), after all speech audio has been recorded.
 
@@ -105,12 +105,12 @@ audio_bytes, context = svc.transform(chunk)
 # context is merged into message.context for recognizer_loop:utterance
 ```
 
-For each plugin in priority order — `transformers.py:120`:
+For each plugin in priority order - `transformers.py:120`:
 1. `module.feed_speech_utterance(chunk)` → plugin receives the complete utterance audio
 2. `module.transform(chunk)` → returns `(transformed_chunk, metadata_dict)`
-3. `context = merge_dict(context, metadata_dict)` — later plugins' keys override earlier ones
+3. `context = merge_dict(context, metadata_dict)` - later plugins' keys override earlier ones
 
-Default context initialised at the start of `transform()` — `transformers.py:117`:
+Default context initialised at the start of `transform()` - `transformers.py:117`:
 
 ```python
 {
@@ -132,7 +132,7 @@ The merged context becomes `message.context` in `recognizer_loop:utterance`.
 
 ---
 
-## `shutdown()` — `transformers.py:74`
+## `shutdown()` - `transformers.py:74`
 
 Calls `module.shutdown()` on each loaded plugin in priority order. Exceptions are caught and logged as warnings.
 
@@ -199,3 +199,6 @@ assert ctx["destination"] == ["skills"]
 ```
 
 See `test/unittests/test_transformers.py` for complete test coverage.
+
+---
+[← Service](service.md) · [Home](index.md) · [Plugins →](plugins.md)

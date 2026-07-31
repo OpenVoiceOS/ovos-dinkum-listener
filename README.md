@@ -1,6 +1,8 @@
-# OpenVoiceOS Dinkum Listener 
+# OpenVoiceOS Dinkum Listener
 
-Documentation can be found in [the technical manual](https://openvoiceos.github.io/ovos-technical-manual/speech_service/)
+`ovos-dinkum-listener` is the voice input daemon for [OpenVoiceOS](https://openvoiceos.com). It reads audio from the microphone, runs it through a wakeword, VAD, and STT pipeline, and emits the results on the message bus for the rest of OVOS to use.
+
+Full documentation lives in [the technical manual](https://openvoiceos.github.io/ovos-technical-manual/speech_service/) and in [docs/](docs/index.md).
 
 ## Install
 
@@ -211,6 +213,17 @@ Then start the listener and observe logs — a detected wake word followed by
 `"wake word verifier plugins discarded detection"` means the verifier rejected
 the audio (expected on a non-speech trigger).
 
+## Related projects
+
+- [OpenVoiceOS/ovos-core](https://github.com/OpenVoiceOS/ovos-core) - the assistant core that runs this listener
+- [OpenVoiceOS/ovos-plugin-manager](https://github.com/OpenVoiceOS/ovos-plugin-manager) - discovers and loads the STT, VAD, wakeword, and audio transformer plugins used here
+- [OpenVoiceOS/ovos-utterance-corrections-plugin](https://github.com/OpenVoiceOS/ovos-utterance-corrections-plugin) - fixes recurring STT transcription errors
+- [OpenVoiceOS/ovos-microphone-plugin-sounddevice](https://github.com/OpenVoiceOS/ovos-microphone-plugin-sounddevice) - microphone plugin for MacOS
+
 ## Credits
 
 Voice Loop state machine implementation by [@Synesthesiam](https://github.com/synesthesiam) for [mycroft-dinkum](https://github.com/MycroftAI/mycroft-dinkum)
+
+## License
+
+Apache License 2.0. See [LICENSE](LICENSE).
