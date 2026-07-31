@@ -15,7 +15,7 @@ continuously reads audio from the microphone, runs it through a deterministic fi
 | Voice Activity Detection | Determines speech start/end boundaries using a `VADEngine` plugin |
 | STT transcription | Streams accumulated audio to a `StreamingSTT` plugin (with optional fallback) |
 | Audio transformation | Runs audio through `AudioTransformersService` before and after STT |
-| Bus integration | Reports recording lifecycle, transcription results; handles remote listen/mute/sleep/state controls |
+| Bus integration | Reports recording lifecycle, transcription results, handles remote listen/mute/sleep/state controls |
 | Audio saving | Optionally saves utterance, hotword, and recording audio to disk with JSON metadata |
 
 ---
@@ -40,13 +40,13 @@ OVOSDinkumVoiceService (Thread)             service.py:84
             ├── PRE_WAKE_VAD        ← gate wakeword on speech presence (optional)
             ├── DETECT_WAKEWORD     ← feed audio to hotword engines
             ├── WAITING_CMD         ← continuous mode: accumulate audio until speech
-            ├── CONFIRMATION        ← playing listen sound; no STT buffering yet
+            ├── CONFIRMATION        ← playing listen sound, no STT buffering yet
             ├── BEFORE_COMMAND      ← waiting for VAD to confirm speech started
-            ├── IN_COMMAND          ← VAD confirmed; streaming audio to STT
+            ├── IN_COMMAND          ← VAD confirmed, streaming audio to STT
             ├── AFTER_COMMAND       ← silence end: finalise STT, fire callbacks
             ├── RECORDING           ← free recording mode (stop-word or max-silence exits)
-            ├── SLEEPING            ← suppressed; wakeup-word only
-            └── CHECK_WAKE_UP       ← heard WW while sleeping; waiting for wakeup word
+            ├── SLEEPING            ← suppressed, wakeup-word only
+            └── CHECK_WAKE_UP       ← heard WW while sleeping, waiting for wakeup word
 ```
 
 ---
@@ -55,10 +55,10 @@ OVOSDinkumVoiceService (Thread)             service.py:84
 
 | Document | Contents |
 |---|---|
-| [voice-loop.md](voice-loop.md) | `DinkumVoiceLoop` FSM — states, modes, callbacks, timing, all config fields |
+| [voice-loop.md](voice-loop.md) | `DinkumVoiceLoop` FSM - states, modes, callbacks, timing, all config fields |
 | [hotwords.md](hotwords.md) | `HotwordContainer`, hotword types, `HotwordState`, `CyclicAudioBuffer` |
-| [service.md](service.md) | `OVOSDinkumVoiceService` — startup, bus events, config reload, audio saving |
-| [transformers.md](transformers.md) | `AudioTransformersService` — feed methods, transform pipeline, plugin API |
+| [service.md](service.md) | `OVOSDinkumVoiceService` - startup, bus events, config reload, audio saving |
+| [transformers.md](transformers.md) | `AudioTransformersService` - feed methods, transform pipeline, plugin API |
 | [plugins.md](plugins.md) | STT loading, `FakeStreamingSTT`, fallback STT, plugin introspection bus API |
 
 ---
@@ -88,7 +88,7 @@ service.join()
 ```
 ovos_dinkum_listener/
 ├── __main__.py             # Entry point: ovos-dinkum-listener
-├── service.py              # OVOSDinkumVoiceService — main daemon thread
+├── service.py              # OVOSDinkumVoiceService - main daemon thread
 ├── voice_loop/
 │   ├── __init__.py         # Re-exports DinkumVoiceLoop, ListeningState, ListeningMode
 │   ├── voice_loop.py       # DinkumVoiceLoop FSM, VoiceLoop base, ChunkInfo
@@ -144,23 +144,23 @@ ovos_dinkum_listener/
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `stt.module` | `str` | — | OPM entry point name for the primary STT plugin |
-| `stt.fallback_module` | `str` | — | OPM entry point name for fallback STT |
+| `stt.module` | `str` | - | OPM entry point name for the primary STT plugin |
+| `stt.fallback_module` | `str` | - | OPM entry point name for fallback STT |
 
 ### Confirmation Sound
 
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `confirm_listening` | `bool` | `false` | Play a sound when wake word is detected |
-| `sounds.start_listening` | `str` | — | Path or name of the listen-start sound |
-| `sounds.end_listening` | `str` | — | Sound played when recording mode ends |
+| `sounds.start_listening` | `str` | - | Path or name of the listen-start sound |
+| `sounds.end_listening` | `str` | - | Sound played when recording mode ends |
 
 ### Miscellaneous
 
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `listener.fake_barge_in` | `bool` | `false` | Lower speaker volume during recording |
-| `listener.barge_in_volume` | `int` | `30` | Volume (0–100) during fake barge-in |
+| `listener.barge_in_volume` | `int` | `30` | Volume (0-100) during fake barge-in |
 | `listener.mute_during_output` | `bool` | `false` | Mute mic while audio is playing |
 | `filter_hallucinations` | `bool` | `true` | Remove known STT hallucinations from transcripts |
 | `hallucination_list` | `list[str]` | `[...]` | Additional strings to filter from STT output |
@@ -174,15 +174,15 @@ Each entry under `hotwords` in `mycroft.conf`:
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `module` | `str` | — | OPM wake word plugin entry point |
-| `active` | `bool\|null` | `null` | `true` to load; auto-enabled for main WW and stand-up word |
+| `module` | `str` | - | OPM wake word plugin entry point |
+| `active` | `bool\|null` | `null` | `true` to load, auto-enabled for main WW and stand-up word |
 | `listen` | `bool` | `false` | Starts the STT recording flow |
 | `wakeup` | `bool` | `false` | Exits sleep mode |
 | `stopword` | `bool` | `false` | Ends free recording mode |
-| `sound` | `str\|list` | — | Sound file (or list of choices) played on detection |
-| `bus_event` | `str` | — | Bus message type emitted on detection |
-| `utterance` | `str` | — | Hard-coded utterance to emit instead of running STT |
-| `stt_lang` | `str` | — | Override STT language for commands following this word |
+| `sound` | `str\|list` | - | Sound file (or list of choices) played on detection |
+| `bus_event` | `str` | - | Bus message type emitted on detection |
+| `utterance` | `str` | - | Hard-coded utterance to emit instead of running STT |
+| `stt_lang` | `str` | - | Override STT language for commands following this word |
 
 ---
 
@@ -227,7 +227,7 @@ DinkumVoiceLoop.run()                       voice_loop.py:205
 | `recognizer_loop:hotword` | Non-listen hotword detected |
 | `recognizer_loop:wakeupword` | Wakeup word detected while sleeping |
 | `recognizer_loop:stopword` | Stop word detected during recording |
-| `recognizer_loop:utterance` | STT complete — `{"utterances": [...], "lang": "..."}` |
+| `recognizer_loop:utterance` | STT complete - `{"utterances": [...], "lang": "..."}` |
 | `recognizer_loop:speech.recognition.unknown` | STT returned empty or hallucination-only result |
 | `mycroft.awoken` | Voice loop exited sleep mode |
 | `mycroft.audio.play_sound` | Play the listen-start confirmation sound |
