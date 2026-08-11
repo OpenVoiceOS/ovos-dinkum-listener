@@ -47,6 +47,7 @@ from ovos_plugin_manager.wakewords import (
 )
 from ovos_utils.fakebus import FakeBus
 from ovos_utils.log import LOG, log_deprecation
+from ovos_utils.skill_installer import ServiceInstaller
 from ovos_utils.sound import get_sound_duration
 from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessState
 
@@ -479,6 +480,8 @@ class OVOSDinkumVoiceService(Thread):
         """
         Stop the voice_loop and trigger service shutdown
         """
+        if getattr(self, "installer", None):
+            self.installer.shutdown()
         self.status.set_stopping()
         self._stopping = True
         if self.voice_loop.running:
@@ -525,6 +528,7 @@ class OVOSDinkumVoiceService(Thread):
         self.config.set_config_update_handlers(self.bus)
         self.config.set_config_watcher(self.reload_configuration)
         LOG.info("Connected to Mycroft Core message bus")
+        self.installer = ServiceInstaller(self.bus, service_name="ovos_dinkum_listener")
 
     def _report_service_state(self, message):
         """Response to service state requests"""
