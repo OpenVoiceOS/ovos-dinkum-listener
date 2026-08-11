@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.0a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.9.0a1) (2026-08-11)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.8.2a3...0.9.0a1)
+
+**Merged pull requests:**
+
+- feat: run ServiceInstaller so plugins install into the listener env over the bus [\#246](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/246) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.8.2a3](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.8.2a3) (2026-07-31)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.8.2a2...0.8.2a3)
