@@ -71,6 +71,38 @@ non exhaustive list of config options
 }
 ```
 
+## Open data uploads
+
+`ovos-dinkum-listener` can optionally upload wake word and STT audio samples to an
+[ovos-opendata-server](https://github.com/OpenVoiceOS/ovos-opendata-server) instance,
+so users and developers can donate samples to help improve wake word and STT plugins.
+
+**This is exclusively opt-in and off by default.** Nothing is ever uploaded unless
+you explicitly configure at least one `ww_urls` or `stt_urls` endpoint below - there
+is no default server. This pairs with the intent-match metrics upload already
+supported by `ovos-core` (`open_data.intent_urls`).
+
+```json
+{
+  "open_data": {
+    "ww_urls": ["https://your-opendata-server.example/api/wake_word"],
+    "stt_urls": ["https://your-opendata-server.example/api/stt"],
+    "user_agent": "ovos-metrics",
+    "api_key": null
+  }
+}
+```
+
+- `ww_urls` - list of server URLs to POST wake word samples to (`name`, `audio`, `model`,
+  `lang`, `plugin`, `plugin_config`). Leave unset/empty to disable wake word uploads.
+- `stt_urls` - list of server URLs to POST STT samples to (`transcript`, `lang`, `audio`,
+  `model`, `plugin`, `plugin_config`). Leave unset/empty to disable STT uploads.
+- `user_agent` - `User-Agent` header sent with uploads, defaults to `"ovos-metrics"`.
+- `api_key` - optional, sent as the `X-API-Key` header if set.
+
+Uploads happen in a background thread and never block the listener; failures are
+logged and otherwise ignored.
+
 ## Tips and tricks
 
 ### Saving Transcriptions

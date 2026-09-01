@@ -10,6 +10,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import base64
+import io
 import json
 import random
 import wave
@@ -53,6 +54,7 @@ from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessSt
 
 import warnings
 from ovos_dinkum_listener._util import _TemplateFilenameFormatter
+from ovos_dinkum_listener.opendata import upload_wake_word_sample, upload_stt_sample
 from ovos_dinkum_listener.plugins import (
     load_stt_module,
     load_fallback_stt,
@@ -603,6 +605,18 @@ class OVOSDinkumVoiceService(Thread):
             )
         self.bus.emit(Message(SpecMessage.LISTENER_RECORD_STARTED))
 
+    def _wav_bytes(self, audio_bytes: bytes) -> bytes:
+        """Wrap raw PCM frames in an in-memory WAV container using the
+        current microphone's audio parameters."""
+        mic = self.voice_loop.mic
+        buf = io.BytesIO()
+        with wave.open(buf, "wb") as wav_file:
+            wav_file.setframerate(mic.sample_rate)
+            wav_file.setsampwidth(mic.sample_width)
+            wav_file.setnchannels(mic.sample_channels)
+            wav_file.writeframes(audio_bytes)
+        return buf.getvalue()
+
     def _save_ww(self, audio_bytes, ww_meta, save_path=None):
         if save_path:
             hotword_audio_dir = Path(save_path)
@@ -667,6 +681,16 @@ class OVOSDinkumVoiceService(Thread):
             listener = self.config["listener"]
             if listener["record_wake_words"]:
                 payload["filename"] = self._save_ww(audio_bytes, ww_context)
+
+            try:
+                upload_wake_word_sample(
+                    self._wav_bytes(audio_bytes),
+                    name=ww_context.get("key_phrase"),
+                    lang=stt_lang or Configuration().get("lang"),
+                    plugin=ww_context.get("module"),
+                )
+            except Exception:
+                LOG.exception("Error while uploading open_data wake word sample")
 
             utterance = ww_context.get("utterance")
             if utterance:
@@ -833,6 +857,22 @@ class OVOSDinkumVoiceService(Thread):
                 stt_context["filename"] = self._save_stt(audio_bytes, stt_context)
         except Exception:
             LOG.exception("Error while saving STT audio")
+
+        try:
+            try:
+                transcript = stt_context.get("transcriptions", [(None,)])[0][0]
+            except IndexError:
+                transcript = None
+            transcript = transcript or stt_context.get("transcription")
+            lang = stt_context.get("lang") or Configuration().get("lang")
+            upload_stt_sample(
+                self._wav_bytes(audio_bytes),
+                transcript=transcript,
+                lang=lang,
+                plugin=self.config.get("stt", {}).get("module"),
+            )
+        except Exception:
+            LOG.exception("Error while uploading open_data STT sample")
         return stt_context
 
     def _save_recording(self, audio_bytes, stt_meta, save_path=None):
