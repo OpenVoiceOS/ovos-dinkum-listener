@@ -5,19 +5,30 @@ from unittest.mock import Mock, patch
 class TestEnums(unittest.TestCase):
     def test_listening_state(self):
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
-        for state in (ListeningState.DETECT_WAKEWORD,
-                      ListeningState.WAITING_CMD, ListeningState.RECORDING,
-                      ListeningState.SLEEPING, ListeningState.CHECK_WAKE_UP,
-                      ListeningState.BEFORE_COMMAND, ListeningState.IN_COMMAND,
-                      ListeningState.AFTER_COMMAND):
+
+        for state in (
+            ListeningState.DETECT_WAKEWORD,
+            ListeningState.WAITING_CMD,
+            ListeningState.RECORDING,
+            ListeningState.SLEEPING,
+            ListeningState.CHECK_WAKE_UP,
+            ListeningState.BEFORE_COMMAND,
+            ListeningState.IN_COMMAND,
+            ListeningState.AFTER_COMMAND,
+        ):
             self.assertIsInstance(state, ListeningState)
             self.assertIsInstance(state, str)
             self.assertIsInstance(state.value, str)
 
     def test_listening_mode(self):
         from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
-        for state in (ListeningMode.WAKEWORD, ListeningMode.CONTINUOUS,
-                      ListeningMode.HYBRID, ListeningMode.SLEEPING):
+
+        for state in (
+            ListeningMode.WAKEWORD,
+            ListeningMode.CONTINUOUS,
+            ListeningMode.HYBRID,
+            ListeningMode.SLEEPING,
+        ):
             self.assertIsInstance(state, ListeningMode)
             self.assertIsInstance(state, str)
             self.assertIsInstance(state.value, str)
@@ -25,15 +36,21 @@ class TestEnums(unittest.TestCase):
 
 class TestVoiceLoop(unittest.TestCase):
     from ovos_dinkum_listener.voice_loop.voice_loop import VoiceLoop
+
     mic = Mock()
     hotwords = Mock()
     stt = Mock()
     fallback_stt = Mock()
     vad = Mock()
     transformers = Mock()
-    loop = VoiceLoop(mic=mic, hotwords=hotwords, stt=stt,
-                     fallback_stt=fallback_stt, vad=vad,
-                     transformers=transformers)
+    loop = VoiceLoop(
+        mic=mic,
+        hotwords=hotwords,
+        stt=stt,
+        fallback_stt=fallback_stt,
+        vad=vad,
+        transformers=transformers,
+    )
 
     def test_00_loop_init(self):
         self.assertEqual(self.loop.mic, self.mic)
@@ -65,23 +82,30 @@ class TestChunkInfo(unittest.TestCase):
 
 class TestDinkumVoiceLoop(unittest.TestCase):
     from ovos_dinkum_listener.voice_loop.voice_loop import DinkumVoiceLoop
+
     mic = Mock()
     hotwords = Mock()
     stt = Mock()
     fallback_stt = Mock()
     vad = Mock()
     transformers = Mock()
-    loop = DinkumVoiceLoop(mic=mic,
-                           hotwords=hotwords,
-                           stt=stt,
-                           fallback_stt=fallback_stt,
-                           vad=vad,
-                           transformers=transformers)
+    loop = DinkumVoiceLoop(
+        mic=mic,
+        hotwords=hotwords,
+        stt=stt,
+        fallback_stt=fallback_stt,
+        vad=vad,
+        transformers=transformers,
+    )
 
     def test_00_loop_init(self):
         from typing import Deque
-        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState, \
-            ListeningMode, ChunkInfo
+        from ovos_dinkum_listener.voice_loop.voice_loop import (
+            ListeningState,
+            ListeningMode,
+            ChunkInfo,
+        )
+
         self.assertIsInstance(self.loop.speech_seconds, float)
         self.assertIsInstance(self.loop.silence_seconds, float)
         self.assertIsInstance(self.loop.timeout_seconds, float)
@@ -122,10 +146,13 @@ class TestDinkumVoiceLoop(unittest.TestCase):
 
     @patch("ovos_dinkum_listener.voice_loop.voice_loop.Configuration")
     def test_start(self, config):
-        from ovos_dinkum_listener.voice_loop import ListeningMode, \
-            ListeningState
-        mock_config = {"listener": {"continuous_listen": False,
-                                    "hybrid_listen": False}}
+        from ovos_dinkum_listener.voice_loop import ListeningMode, ListeningState
+
+        # Ensure vad_pre_wake_enabled is off so the initial state is predictable
+        # regardless of what the local machine config says.
+        self.loop.vad_pre_wake_enabled = False
+
+        mock_config = {"listener": {"continuous_listen": False, "hybrid_listen": False}}
         config.return_value = mock_config
         self.loop.start()
         self.assertTrue(self.loop.running)
@@ -150,7 +177,7 @@ class TestDinkumVoiceLoop(unittest.TestCase):
         self.loop._running = False
         self.loop.state = None
 
-        # Default, no config values
+        # Default, no config values — vad_pre_wake_enabled still forced off
         config.return_value = dict()
         self.loop.start()
         self.assertTrue(self.loop.running)
@@ -161,8 +188,12 @@ class TestDinkumVoiceLoop(unittest.TestCase):
         self.loop._running = False
 
     def test_run(self):
-        from ovos_dinkum_listener.voice_loop import ListeningMode, \
-            ListeningState
+        from ovos_dinkum_listener.voice_loop import ListeningMode, ListeningState
+
+        # Override so the loop starts in DETECT_WAKEWORD regardless of machine config.
+        self.loop.vad_pre_wake_enabled = False
+        self.loop.listen_mode = ListeningMode.WAKEWORD
+        self.loop.state = ListeningState.DETECT_WAKEWORD
 
         def _raise(e, *args):
             raise e
@@ -189,6 +220,7 @@ class TestDinkumVoiceLoop(unittest.TestCase):
 
         # Run 1x chunk, trigger hotword reload
         from ovos_dinkum_listener.voice_loop.hotwords import HotWordException
+
         self.loop._detect_ww.side_effect = lambda x: _raise(HotWordException, x)
         self.loop._is_running = True
         self.hotwords.reload_on_failure = True
@@ -210,5 +242,5 @@ class TestDinkumVoiceLoop(unittest.TestCase):
         self.loop.debiased_energy = real_debiased_energy
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
