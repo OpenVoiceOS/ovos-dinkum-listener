@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.0a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.10.0a1) (2026-09-01)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.9.1a1...0.10.0a1)
+
+**Merged pull requests:**
+
+- feat: opt-in open\_data upload of wake word and stt samples [\#243](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/243) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.9.1a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.9.1a1) (2026-09-01)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.9.0a1...0.9.1a1)
