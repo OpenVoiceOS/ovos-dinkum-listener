@@ -727,12 +727,21 @@ class TestB64Transcribe(_ServiceTestBase):
         )
 
         msg = Message(
-            "recognizer_loop:b64_transcribe", {"audio": audio_b64, "lang": "en-us"}
+            "recognizer_loop:b64_transcribe", {"audio": audio_b64, "lang": "en-us"},
+            context={"session": {"session_id": "abc123"}},
         )
         self.service._handle_b64_transcribe(msg)
 
         # Transcribe should have been called on the stt
         self.service.voice_loop.stt.transcribe.assert_called()
+
+        # the emitted topic must be byte-identical to the wire topic
+        # consumers already listen on (OVOS-MSG-1 SS5.3: `:` in the
+        # dispatch topic makes `message.response()` undefined)
+        self.assertEqual(len(received), 1)
+        response = received[0]
+        self.assertEqual(response.msg_type, "recognizer_loop:b64_transcribe.response")
+        self.assertEqual(response.context["session"]["session_id"], "abc123")
 
 
 class TestOpmHandlers(_ServiceTestBase):
