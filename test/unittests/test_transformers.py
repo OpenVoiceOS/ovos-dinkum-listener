@@ -147,3 +147,56 @@ class TestTransformers(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestStageConfigResolution(unittest.TestCase):
+    """The audio stage is handed its own config section, not the whole
+    configuration.
+
+    ``audio_transformers`` does not ship in the default configuration, and
+    the plugin manager cannot tell a whole configuration lacking the section
+    from the section itself: every top-level key then reads as an enabled
+    plugin and the loader warns once per key that it is not installed.
+    """
+
+    FULL_CONFIG = {
+        "lang": "en-US",
+        "listener": {"sample_rate": 16000},
+        "websocket": {"host": "127.0.0.1"},
+        "tts": {"module": "ovos-tts-plugin-server"},
+        "system_unit": "metric",
+    }
+
+    def _warnings(self, config):
+        from ovos_dinkum_listener.transformers import AudioTransformersService
+        with patch("ovos_dinkum_listener.transformers."
+                   "find_audio_transformer_plugins", return_value={}), \
+             patch("ovos_plugin_manager.transformer_services."
+                   "LOG.warning") as w:
+            AudioTransformersService(FakeBus(), config)
+        return [c.args[0] for c in w.call_args_list]
+
+    def test_a_whole_configuration_is_reported_against_every_key(self):
+        """Why passing the section matters, stated as a measurement.
+
+        Asserts which keys are named rather than how many lines name them:
+        the plugin manager aggregates them into one line once
+        OpenVoiceOS/ovos-plugin-manager#450 lands, and this property holds
+        either way.
+        """
+        warnings = self._warnings(dict(self.FULL_CONFIG))
+        self.assertTrue(warnings, "a whole configuration must be reported")
+        reported = " ".join(warnings)
+        for key in self.FULL_CONFIG:
+            self.assertIn(key, reported)
+
+    def test_the_section_alone_warns_about_nothing(self):
+        warnings = self._warnings(
+            dict(self.FULL_CONFIG).get("audio_transformers") or {})
+        self.assertEqual(warnings, [])
+
+    def test_a_configured_but_missing_plugin_is_still_reported(self):
+        """The guard that silencing the false lines kept the true one."""
+        warnings = self._warnings({"some-audio-plugin": {}})
+        self.assertEqual(len(warnings), 1, warnings)
+        self.assertIn("some-audio-plugin", warnings[0])

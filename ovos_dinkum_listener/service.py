@@ -207,7 +207,13 @@ class OVOSDinkumVoiceService(Thread):
             self.fallback_stt = None
         else:
             self.fallback_stt = fallback_stt or load_fallback_stt()
-        self.transformers = AudioTransformersService(self.bus, self.config)
+        # the stage's own section, not the whole configuration: the plugin
+        # manager cannot tell a whole config lacking the section from the
+        # section itself, and would read every top-level key as an enabled
+        # plugin, warning once per key that it is not installed.
+        # 'audio_transformers' does not ship in the default configuration.
+        self.transformers = AudioTransformersService(
+            self.bus, self.config.get("audio_transformers") or {})
 
         self._load_lock = RLock()
         self._reload_event = Event()

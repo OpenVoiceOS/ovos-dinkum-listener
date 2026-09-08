@@ -93,6 +93,12 @@ class TestDinkumVoiceService(unittest.TestCase):
         self.assertEqual(service.stt, stt)
         self.assertEqual(service.fallback_stt, fallback)
         self.assertIsInstance(service.transformers, AudioTransformersService)
+        # the stage gets its own section, never the whole configuration: the
+        # plugin manager would read every top-level key as an enabled plugin
+        # and warn once per key that it is not installed
+        from ovos_config import Configuration
+        self.assertEqual(service.transformers.config,
+                         Configuration().get("audio_transformers") or {})
         self.assertIsInstance(service.default_save_path, str)
 
         # Voice Loop
