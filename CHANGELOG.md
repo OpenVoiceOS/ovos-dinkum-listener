@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.1a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.10.1a1) (2026-09-08)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.10.0a1...0.10.1a1)
+
+**Merged pull requests:**
+
+- fix: give the audio transformer stage its own config section [\#254](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/254) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.10.0a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.10.0a1) (2026-09-01)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.9.1a1...0.10.0a1)
