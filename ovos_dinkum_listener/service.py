@@ -1089,7 +1089,8 @@ class OVOSDinkumVoiceService(Thread):
         self.voice_loop.stt.stream_stop()
 
         LOG.debug(f"transcripts: {utterances}")
-        self.bus.emit(message.response({"transcriptions": utterances, "lang": lang}))
+        self.bus.emit(message.reply("recognizer_loop:b64_transcribe.response",
+                                     {"transcriptions": utterances, "lang": lang}))
 
     def _handle_b64_audio(self, message: Message):
         """
