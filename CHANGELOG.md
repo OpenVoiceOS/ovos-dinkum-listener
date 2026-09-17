@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.4a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.10.4a1) (2026-09-17)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.10.3a1...0.10.4a1)
+
+**Merged pull requests:**
+
+- fix: compare destination by equality per OVOS-MSG-1 3.4 [\#260](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/260) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [0.10.3a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.10.3a1) (2026-09-17)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.10.2a1...0.10.3a1)
