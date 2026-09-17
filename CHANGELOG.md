@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.3a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.10.3a1) (2026-09-17)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.10.2a1...0.10.3a1)
+
+**Merged pull requests:**
+
+- fix: emit destination as a string \(OVOS-MSG-1 §3.3\) [\#258](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/258) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [0.10.2a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.10.2a1) (2026-09-17)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.10.1a1...0.10.2a1)
