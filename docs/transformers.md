@@ -116,7 +116,7 @@ Default context initialised at the start of `transform()` - `transformers.py:117
 {
     "client_name": "ovos_dinkum_listener",
     "source": "audio",
-    "destination": ["skills"]
+    "destination": "skills"
 }
 ```
 
@@ -195,7 +195,7 @@ assert svc.has_loaded is True
 
 chunk, ctx = svc.transform(b'\x00' * 100)
 assert ctx["source"] == "audio"
-assert ctx["destination"] == ["skills"]
+assert ctx["destination"] == "skills"
 ```
 
 See `test/unittests/test_transformers.py` for complete test coverage.
