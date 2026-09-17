@@ -674,7 +674,7 @@ class OVOSDinkumVoiceService(Thread):
         context = {
             "client_name": "ovos_dinkum_listener",
             "source": "audio",  # default native audio source
-            "destination": ["skills"],
+            "destination": "skills",
         }
         stt_lang = ww_context.get(
             "stt_lang"
@@ -722,7 +722,7 @@ class OVOSDinkumVoiceService(Thread):
             if sound:
                 LOG.debug(f"Handling listen sound: {sound}")
                 audio_context = dict(context)
-                audio_context["destination"] = ["audio"]
+                audio_context["destination"] = "audio"
                 self.bus.emit(
                     Message(
                         "mycroft.audio.play_sound",

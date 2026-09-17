@@ -42,7 +42,7 @@ class AudioTransformersService(_AudioTransformersService):
                          default_context={
                              "client_name": "ovos_dinkum_listener",
                              "source": "audio",  # default native audio source
-                             "destination": ["skills"]})
+                             "destination": "skills"})
 
     @classmethod
     def find_plugins(cls):

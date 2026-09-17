@@ -200,3 +200,14 @@ class TestStageConfigResolution(unittest.TestCase):
         warnings = self._warnings({"some-audio-plugin": {}})
         self.assertEqual(len(warnings), 1, warnings)
         self.assertIn("some-audio-plugin", warnings[0])
+
+
+class TestTransformerContextDestination(unittest.TestCase):
+    def test_default_destination_is_a_string(self):
+        # OVOS-MSG-1 §3.3: destination is a string, with no list form.
+        from ovos_dinkum_listener.transformers import AudioTransformersService
+        with patch.object(AudioTransformersService, "find_plugins",
+                          return_value=[]):
+            service = AudioTransformersService(FakeBus(), {})
+        _, context = service.transform(b"x")
+        self.assertEqual(context["destination"], "skills")
