@@ -1095,7 +1095,13 @@ class OVOSDinkumVoiceService(Thread):
         self.voice_loop.stt.stream_stop()
 
         LOG.debug(f"transcripts: {utterances}")
-        self.bus.emit(message.response({"transcriptions": utterances, "lang": lang}))
+        # "recognizer_loop:b64_transcribe" contains a ":" (a dispatch
+        # topic per OVOS-MSG-1 §2.1.1), so it has no ".response"
+        # shorthand (§5.3); name the answering topic explicitly and
+        # derive via reply() instead of response().
+        self.bus.emit(message.reply(
+            "recognizer_loop:b64_transcribe.response",
+            {"transcriptions": utterances, "lang": lang}))
 
     def _handle_b64_audio(self, message: Message):
         """

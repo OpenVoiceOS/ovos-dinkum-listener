@@ -734,6 +734,20 @@ class TestB64Transcribe(_ServiceTestBase):
         # Transcribe should have been called on the stt
         self.service.voice_loop.stt.transcribe.assert_called()
 
+        # The emitted Message must actually carry the transcription on
+        # the "recognizer_loop:b64_transcribe.response" topic: the
+        # dispatch topic contains a ":" and has no ".response"
+        # shorthand (OVOS-MSG-1 §5.3), so the handler must derive the
+        # answering topic explicitly rather than via response().
+        self.assertEqual(len(received), 1)
+        self.assertEqual(
+            received[0].msg_type, "recognizer_loop:b64_transcribe.response"
+        )
+        self.assertEqual(
+            received[0].data,
+            {"transcriptions": [("hello", 0.9)], "lang": "en-us"},
+        )
+
 
 class TestOpmHandlers(_ServiceTestBase):
     """Tests for OPM query handlers."""
