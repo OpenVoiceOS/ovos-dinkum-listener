@@ -104,6 +104,8 @@ If `stt` or `hotwords` were passed as constructor arguments, they are not reload
 
 Guards `mycroft.mic.listen` so that only messages targeted at native audio sources are processed. Native sources are configured via `Audio.native_sources` (default: `["debug_cli", "audio"]`).
 
+The `destination` value is compared to each configured name by string equality, as OVOS-MSG-1 3.4 and 7 require. A value that only contains a native source name, `audioplayer` for example, is a different consumer and is refused. A legacy emitter that sends a list of consumers still matches: each entry of the list is compared by equality.
+
 Messages with no `destination` in context are treated as broadcasts and always accepted.
 
 Set `validate_source=False` in the constructor to disable this check.

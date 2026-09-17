@@ -235,7 +235,13 @@ class OVOSDinkumVoiceService(Thread):
                 or audio_config.get("native_sources", ["debug_cli", "audio"])
                 or []
             )
-            if any(s in destination for s in native_sources):
+            if isinstance(destination, list):
+                # a legacy emitter addresses a list of consumers; compare each
+                # entry by equality, never by substring (OVOS-MSG-1 3.4)
+                is_native = any(d in native_sources for d in destination)
+            else:
+                is_native = destination in native_sources
+            if is_native:
                 # request from device
                 return True
             # external request, do not handle
