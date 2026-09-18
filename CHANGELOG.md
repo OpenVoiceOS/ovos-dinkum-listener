@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.5a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.10.5a1) (2026-09-18)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.10.4a1...0.10.5a1)
+
+**Merged pull requests:**
+
+- fix: a string Audio.native\_sources setting is one source, not a substring set [\#263](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/263) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [0.10.4a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.10.4a1) (2026-09-17)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.10.3a1...0.10.4a1)
