@@ -235,6 +235,10 @@ class OVOSDinkumVoiceService(Thread):
                 or audio_config.get("native_sources", ["debug_cli", "audio"])
                 or []
             )
+            if isinstance(native_sources, str):
+                # a single source configured as a string; without this
+                # `destination in native_sources` is a substring test again
+                native_sources = [native_sources]
             if isinstance(destination, list):
                 # a legacy emitter addresses a list of consumers; compare each
                 # entry by equality, never by substring (OVOS-MSG-1 3.4)

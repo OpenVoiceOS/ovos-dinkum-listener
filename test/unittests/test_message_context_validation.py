@@ -13,7 +13,7 @@ from os.path import join, dirname
 from unittest.mock import MagicMock, Mock, patch
 
 from ovos_bus_client.message import Message
-from ovos_utils.messagebus import FakeBus
+from ovos_utils.fakebus import FakeBus
 
 _NATIVE = ["debug_cli", "audio", "mycroft-gui"]
 
@@ -24,12 +24,16 @@ class TestValidateMessageContext(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        cls._prior_xdg = environ.get("XDG_CONFIG_HOME")
         environ["XDG_CONFIG_HOME"] = cls.config_dir
         makedirs(cls.config_dir, exist_ok=True)
 
     @classmethod
     def tearDownClass(cls):
-        environ.pop("XDG_CONFIG_HOME", None)
+        if cls._prior_xdg is None:
+            environ.pop("XDG_CONFIG_HOME", None)
+        else:
+            environ["XDG_CONFIG_HOME"] = cls._prior_xdg
         shutil.rmtree(cls.config_dir, ignore_errors=True)
 
     @patch("ovos_dinkum_listener.service.OVOSMicrophoneFactory.create")
@@ -79,6 +83,22 @@ class TestValidateMessageContext(unittest.TestCase):
     def test_legacy_list_destination_of_other_consumers_is_refused(self):
         self.assertFalse(self._check(["audioplayer"]))
         self.assertFalse(self._check(["skills", "some_other_consumer"]))
+
+    def test_string_native_sources_setting_is_one_source(self):
+        # Audio.native_sources configured as a single string, not a list:
+        # the exact name matches, a substring of it does not
+        msg = Message("mycroft.mic.listen", {}, {"destination": "audio"})
+        self.assertTrue(
+            self.service._validate_message_context(msg, "audio"))
+        for name in ["aud", "audioplayer", "a"]:
+            msg = Message("mycroft.mic.listen", {}, {"destination": name})
+            self.assertFalse(
+                self.service._validate_message_context(msg, "audio"), name)
+        # a legacy list destination against the string setting
+        msg = Message("mycroft.mic.listen", {}, {"destination": ["aud"]})
+        self.assertFalse(self.service._validate_message_context(msg, "audio"))
+        msg = Message("mycroft.mic.listen", {}, {"destination": ["audio"]})
+        self.assertTrue(self.service._validate_message_context(msg, "audio"))
 
     def test_validate_source_off_accepts_everything(self):
         self.service.validate_source = False
