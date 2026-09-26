@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.5a2](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.10.5a2) (2026-09-26)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.10.5a1...0.10.5a2)
+
+**Merged pull requests:**
+
+- chore\(ci\): drop the broken Dependabot config [\#262](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/262) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [0.10.5a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.10.5a1) (2026-09-18)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.10.4a1...0.10.5a1)
