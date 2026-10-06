@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.0a2](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.11.0a2) (2026-10-06)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.11.0a1...0.11.0a2)
+
+**Merged pull requests:**
+
+- test: end-to-end recording mode, stop word and max-silence timeout [\#271](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/271) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.11.0a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.11.0a1) (2026-10-06)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.10.6a1...0.11.0a1)
