@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.6a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.10.6a1) (2026-10-06)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.10.5a2...0.10.6a1)
+
+**Merged pull requests:**
+
+- fix: depend on ovos-ww-plugin-wakeforge instead of vosk and precise-onnx [\#268](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/268) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.10.5a2](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.10.5a2) (2026-09-26)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.10.5a1...0.10.5a2)
