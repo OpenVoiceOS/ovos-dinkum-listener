@@ -135,12 +135,13 @@ Per-plugin record stored in `_plugins[word]`:
 |---|---|---|
 | **Listen word** | `listen: true` or matches `listener.wake_word` | Starts VAD/STT recording pipeline |
 | **Wakeup word** | `wakeup: true` or matches `listener.stand_up_word` | Exits sleep mode |
-| **Stop word** | `stopword: true` | Ends free `RECORDING` mode |
+| **Stop word** | `stopword: true`; the one named by `listener.stop_word` is enabled automatically | Ends free `RECORDING` mode |
 | **Hotword** | none of the above (active=true) | Plays sound and/or emits bus event |
 
 Auto-enable rules (when `active` is `null`/`None`) - `hotwords.py:158`:
 - Main wake word (`listener.wake_word`) → enabled
 - Stand-up word (`listener.stand_up_word`) → enabled
+- Stop word (`listener.stop_word`, default `stop_recording`) → enabled
 - All other hotwords → disabled
 
 ### `update(chunk)` - `hotwords.py:312`

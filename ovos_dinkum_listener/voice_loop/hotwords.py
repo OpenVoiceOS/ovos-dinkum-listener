@@ -154,6 +154,11 @@ class HotwordContainer:
             .get("stand_up_word", "wake_up")
             .replace(" ", "_")
         )
+        stopw = (
+            config_core.get("listener", {})
+            .get("stop_word", "stop_recording")
+            .replace(" ", "_")
+        )
 
         for word, data in dict(hot_words).items():
             try:
@@ -176,7 +181,7 @@ class HotwordContainer:
                 # automatically enable default wake words
                 # only if the active status is undefined
                 if enabled is None:
-                    if word == main_ww or word == wakeupw:
+                    if word in (main_ww, wakeupw, stopw):
                         enabled = True
                     else:
                         enabled = False

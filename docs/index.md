@@ -108,6 +108,7 @@ ovos_dinkum_listener/
 |---|---|---|---|
 | `listener.wake_word` | `str` | `"hey_mycroft"` | Primary wake word name (must match a key in `hotwords`) |
 | `listener.stand_up_word` | `str` | `"wake_up"` | Word to exit sleep mode |
+| `listener.stop_word` | `str` | `"stop_recording"` | Word to end free recording mode (must match a key in `hotwords` with `stopword: true`) |
 | `listener.continuous_listen` | `bool` | `false` | Enable continuous listening mode (no wakeword needed) |
 | `listener.hybrid_listen` | `bool` | `false` | Listen continuously but also recognise hotwords |
 | `listener.vad_pre_wake_enabled` | `bool` | `false` | Only activate wakeword engines when VAD detects speech |

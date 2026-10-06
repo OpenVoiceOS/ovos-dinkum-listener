@@ -595,6 +595,93 @@ class TestHotwordContainer(unittest.TestCase):
         container.load_hotword_engines()
         self.assertIn("hey_mycroft", container._plugins)
 
+    def _load_with(self, mock_config, hotwords, listener=None):
+        container = self._make_container()
+        mock_config.return_value = {
+            "lang": "en-us",
+            "hotwords": hotwords,
+            "listener": {
+                "wake_word": "hey_mycroft",
+                "stand_up_word": "wake_up",
+                **(listener or {}),
+            },
+            "confirm_listening": False,
+            "sounds": {},
+        }
+        container.load_hotword_engines()
+        return container
+
+    @patch("ovos_dinkum_listener.voice_loop.hotwords.Configuration")
+    @patch(
+        "ovos_dinkum_listener.voice_loop.hotwords.OVOSWakeWordFactory.create_hotword"
+    )
+    def test_default_stop_word_auto_enabled(self, mock_create, mock_config):
+        """The default stop word loads when its active key is unset."""
+        from ovos_plugin_manager.wakewords import HotWordEngine
+
+        mock_create.return_value = Mock(spec=HotWordEngine)
+        container = self._load_with(
+            mock_config,
+            {"stop_recording": {"module": "m", "stopword": True}},
+        )
+        self.assertIn("stop_recording", container.stop_words)
+        mock_create.assert_called_once_with("stop_recording")
+
+    @patch("ovos_dinkum_listener.voice_loop.hotwords.Configuration")
+    @patch(
+        "ovos_dinkum_listener.voice_loop.hotwords.OVOSWakeWordFactory.create_hotword"
+    )
+    def test_configured_stop_word_auto_enabled(self, mock_create, mock_config):
+        """listener.stop_word names the stop word, with spaces read as underscores."""
+        from ovos_plugin_manager.wakewords import HotWordEngine
+
+        mock_create.return_value = Mock(spec=HotWordEngine)
+        container = self._load_with(
+            mock_config,
+            {
+                "stop_recording": {"module": "m", "stopword": True},
+                "end_recording": {"module": "m", "stopword": True},
+            },
+            listener={"stop_word": "end recording"},
+        )
+        self.assertEqual(list(container.stop_words), ["end_recording"])
+
+    @patch("ovos_dinkum_listener.voice_loop.hotwords.Configuration")
+    @patch(
+        "ovos_dinkum_listener.voice_loop.hotwords.OVOSWakeWordFactory.create_hotword"
+    )
+    def test_other_stop_word_without_active_stays_disabled(
+        self, mock_create, mock_config
+    ):
+        """A stop word that listener.stop_word does not name needs active: true."""
+        from ovos_plugin_manager.wakewords import HotWordEngine
+
+        mock_create.return_value = Mock(spec=HotWordEngine)
+        container = self._load_with(
+            mock_config,
+            {
+                "stop_recording": {"module": "m", "stopword": True},
+                "halt_recording": {"module": "m", "stopword": True},
+                "some_hotword": {"module": "m"},
+            },
+        )
+        self.assertEqual(list(container.stop_words), ["stop_recording"])
+        self.assertNotIn("halt_recording", container._plugins)
+        self.assertNotIn("some_hotword", container._plugins)
+
+    @patch("ovos_dinkum_listener.voice_loop.hotwords.Configuration")
+    @patch(
+        "ovos_dinkum_listener.voice_loop.hotwords.OVOSWakeWordFactory.create_hotword"
+    )
+    def test_stop_word_explicitly_inactive_is_disabled(self, mock_create, mock_config):
+        """active: false on the stop word wins over the automatic enabling."""
+        container = self._load_with(
+            mock_config,
+            {"stop_recording": {"module": "m", "stopword": True, "active": False}},
+        )
+        self.assertNotIn("stop_recording", container._plugins)
+        mock_create.assert_not_called()
+
     @patch("ovos_dinkum_listener.voice_loop.hotwords.Configuration")
     @patch(
         "ovos_dinkum_listener.voice_loop.hotwords.OVOSWakeWordFactory.create_hotword"
