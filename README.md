@@ -1,6 +1,8 @@
-# OpenVoiceOS Dinkum Listener 
+# OpenVoiceOS Dinkum Listener
 
-Documentation can be found in [the technical manual](https://openvoiceos.github.io/ovos-technical-manual/speech_service/)
+`ovos-dinkum-listener` is the voice input daemon for [OpenVoiceOS](https://openvoiceos.com). It reads audio from the microphone, runs it through a wakeword, VAD, and STT pipeline, and emits the results on the message bus for the rest of OVOS to use.
+
+Full documentation lives in [the technical manual](https://openvoiceos.github.io/ovos-technical-manual/speech_service/) and in [docs/](docs/index.md).
 
 ## Install
 
@@ -69,6 +71,38 @@ non exhaustive list of config options
 }
 ```
 
+## Open data uploads
+
+`ovos-dinkum-listener` can optionally upload wake word and STT audio samples to an
+[ovos-opendata-server](https://github.com/OpenVoiceOS/ovos-opendata-server) instance,
+so users and developers can donate samples to help improve wake word and STT plugins.
+
+**This is exclusively opt-in and off by default.** Nothing is ever uploaded unless
+you explicitly configure at least one `ww_urls` or `stt_urls` endpoint below - there
+is no default server. This pairs with the intent-match metrics upload already
+supported by `ovos-core` (`open_data.intent_urls`).
+
+```json
+{
+  "open_data": {
+    "ww_urls": ["https://your-opendata-server.example/api/wake_word"],
+    "stt_urls": ["https://your-opendata-server.example/api/stt"],
+    "user_agent": "ovos-metrics",
+    "api_key": null
+  }
+}
+```
+
+- `ww_urls` - list of server URLs to POST wake word samples to (`name`, `audio`, `model`,
+  `lang`, `plugin`, `plugin_config`). Leave unset/empty to disable wake word uploads.
+- `stt_urls` - list of server URLs to POST STT samples to (`transcript`, `lang`, `audio`,
+  `model`, `plugin`, `plugin_config`). Leave unset/empty to disable STT uploads.
+- `user_agent` - `User-Agent` header sent with uploads, defaults to `"ovos-metrics"`.
+- `api_key` - optional, sent as the `X-API-Key` header if set.
+
+Uploads happen in a background thread and never block the listener; failures are
+logged and otherwise ignored.
+
 ## Tips and tricks
 
 ### Saving Transcriptions
@@ -111,6 +145,117 @@ In this case the listen sound will be sent to STT and might negatively affect th
 > set `"instant_listen": false` in your [listener config](https://github.com/OpenVoiceOS/ovos-config/blob/V0.0.13a19/ovos_config/mycroft.conf#L519), this will drop the listen sound audio from the STT audio buffer. You will need to wait for the listen sound to finish before speaking your command in this case
 
 
+### Wake Word Verifiers
+
+After the wake-word engine fires, optional *verifier plugins* can inspect the
+raw audio and suppress false detections before any callback is triggered.
+Plugins that implement `HotWordVerifier` (from `ovos-plugin-manager`) are
+discovered automatically.
+
+Example — enable the Silero-VAD verifier with a custom threshold:
+
+```json
+{
+  "listener": {
+    "ww_verifiers": {
+      "ovos-ww-verifier-silero": {"threshold": 0.1}
+    }
+  }
+}
+```
+
+**Fail-open behaviour:** if a verifier plugin raises an unexpected exception,
+the exception is logged and the detection is **not** suppressed.  Only an
+explicit `False` return from `HotWordVerifier.verify()` discards the wake.
+
+Disable a specific verifier without removing it from config:
+
+```json
+{
+  "listener": {
+    "ww_verifiers": {
+      "ovos-ww-verifier-silero": {"enabled": false}
+    }
+  }
+}
+```
+
+> **Note:** enabling `ovos-ww-verifier-silero` and `"vad_pre_wake_enabled": true`
+> at the same time applies Silero VAD twice.  Use one or the other.
+
+## How to test
+
+Install the package with test dependencies, then run the suite:
+
+```bash
+pip install -e ".[extras]"
+pip install pytest pytest-timeout
+pytest test/ --timeout=30 -q
+```
+
+Expected output (clean environment):
+
+```
+...
+258 passed in ~30s
+```
+
+To exercise the verifier chain in isolation:
+
+```bash
+pytest test/unittests/test_hotwords.py::TestHotwordVerifierChain -v
+```
+
+Expected output:
+
+```
+PASSED test_verify_no_verifiers_returns_true
+PASSED test_verify_single_verifier_accepts
+PASSED test_verify_single_verifier_rejects
+PASSED test_verify_multiple_all_accept
+PASSED test_verify_first_verifier_rejects_short_circuits
+PASSED test_verify_second_verifier_rejects
+PASSED test_verify_raising_verifier_is_fail_open
+PASSED test_verify_raising_verifier_followed_by_rejecting_verifier
+PASSED test_verify_constructor_verifiers_param
+
+9 passed
+```
+
+To test end-to-end with the Silero verifier plugin installed:
+
+```bash
+pip install ovos-ww-verifier-silero
+```
+
+Add to your OVOS config:
+
+```json
+{
+  "listener": {
+    "ww_verifiers": {
+      "ovos-ww-verifier-silero": {"threshold": 0.1}
+    },
+    "vad_pre_wake_enabled": false
+  }
+}
+```
+
+Then start the listener and observe logs — a detected wake word followed by
+`"wake word verifier plugins discarded detection"` means the verifier rejected
+the audio (expected on a non-speech trigger).
+
+## Related projects
+
+- [OpenVoiceOS/ovos-core](https://github.com/OpenVoiceOS/ovos-core) - the assistant core that runs this listener
+- [OpenVoiceOS/ovos-plugin-manager](https://github.com/OpenVoiceOS/ovos-plugin-manager) - discovers and loads the STT, VAD, wakeword, and audio transformer plugins used here
+- [OpenVoiceOS/ovos-utterance-corrections-plugin](https://github.com/OpenVoiceOS/ovos-utterance-corrections-plugin) - fixes recurring STT transcription errors
+- [OpenVoiceOS/ovos-microphone-plugin-sounddevice](https://github.com/OpenVoiceOS/ovos-microphone-plugin-sounddevice) - microphone plugin for MacOS
+
 ## Credits
 
 Voice Loop state machine implementation by [@Synesthesiam](https://github.com/synesthesiam) for [mycroft-dinkum](https://github.com/MycroftAI/mycroft-dinkum)
+
+## License
+
+Apache License 2.0. See [LICENSE](LICENSE).
