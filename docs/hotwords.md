@@ -210,29 +210,34 @@ Each entry under `hotwords` in `mycroft.conf`:
 {
   "hotwords": {
     "hey_mycroft": {
-      "module": "ovos-ww-plugin-precise-lite",
+      "module": "ovos-ww-plugin-wakeforge",
+      "model": "wakehubert_hey_mycroft",
       "listen": true,
       "sound": "snd/start_listening.wav",
       "active": null
     },
     "wake_up": {
-      "module": "ovos-ww-plugin-vosk",
+      "module": "ovos-ww-plugin-wakeforge",
+      "model": "wakehubert_wake_up",
       "wakeup": true,
       "active": null
     },
     "stop_recording": {
-      "module": "ovos-ww-plugin-vosk",
+      "module": "ovos-ww-plugin-wakeforge-zeroshot",
+      "ipa": ["s t ɑː p ɹ ᵻ k ɔːɹ d ɪ ŋ", "ɛ n d ɹ ᵻ k ɔːɹ d ɪ ŋ"],
       "stopword": true,
       "active": true
     },
-    "hey_computer": {
-      "module": "ovos-ww-plugin-precise-lite",
+    "hey_jarvis": {
+      "module": "ovos-ww-plugin-wakeforge",
+      "model": "wakehubert_jarvis",
       "bus_event": "my.custom.event",
       "sound": "snd/ding.wav",
       "active": true
     },
     "hola_mycroft": {
-      "module": "ovos-ww-plugin-precise-lite",
+      "module": "ovos-ww-plugin-wakeforge-zeroshot",
+      "ipa": "o l a m i k ɾ o f t",
       "listen": true,
       "stt_lang": "es-es",
       "active": true

@@ -39,6 +39,7 @@ extras = [
     # WakeWord plugins
     "ovos-ww-plugin-vosk>=0.1.7,<1.0.0",
     "ovos_ww_plugin_precise_onnx>=0.0.1,<1.0.0",
+    "ovos-ww-plugin-wakeforge>=0.15.0a1",
 ]
 linux = [
     # Microphone plugins
