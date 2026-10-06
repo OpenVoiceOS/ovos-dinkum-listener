@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.0a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.11.0a1) (2026-10-06)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.10.6a1...0.11.0a1)
+
+**Merged pull requests:**
+
+- feat: listener.stop\_word setting, enabled automatically like stand\_up\_word [\#270](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/270) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.10.6a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.10.6a1) (2026-10-06)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.10.5a2...0.10.6a1)
