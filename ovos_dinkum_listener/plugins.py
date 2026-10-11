@@ -1,3 +1,4 @@
+import time
 from typing import Any, Dict, Optional, List, Tuple, Union
 
 from ovos_config.config import Configuration
@@ -58,6 +59,40 @@ class FakeStreamingSTT(StreamingSTT):
             self.queue, self.lang, self.engine, sample_rate, sample_width
         )
 
+    def stream_start(self, language=None):
+        """Discard audio left over from the previous session before starting.
+
+        ``StreamingSTT.stream_start`` stops the old stream, and stopping a
+        ``FakeStreamThread`` transcribes whatever its buffer still holds.
+        Anything still there was never asked for via ``transcribe`` (the
+        voice loop only reads the fallback engine when the primary fails),
+        so it would be transcribed late, inside the voice loop thread, and
+        for a server-backed engine that is a network round trip per wake.
+        """
+        if self.stream is not None:
+            self.stream.buffer.clear()
+        super().stream_start(language)
+
+    def _wait_for_buffered_audio(self, timeout: float = 2.0) -> None:
+        """Block until the stream thread has written every queued chunk.
+
+        ``stream_data`` only enqueues; the thread copies chunks into the
+        buffer on its own schedule. Reading the buffer before the queue is
+        drained silently drops the tail of the utterance, and the dropped
+        chunks are then transcribed at the next ``stream_start``.
+        """
+        queue, stream = getattr(self, "queue", None), self.stream
+        if queue is None or stream is None:
+            return
+        deadline = time.monotonic() + timeout
+        while queue.unfinished_tasks and stream.is_alive():
+            if time.monotonic() >= deadline:
+                LOG.warning(f"STT stream still has {queue.unfinished_tasks} "
+                            f"unwritten chunk(s) after {timeout}s; "
+                            "transcribing partial audio")
+                return
+            time.sleep(0.005)
+
     def transcribe(
         self,
         audio: Optional[Union[bytes, AudioData]] = None,
@@ -67,6 +102,7 @@ class FakeStreamingSTT(StreamingSTT):
         possible transcriptions and respective confidences"""
         # plugins expect AudioData objects
         if audio is None:
+            self._wait_for_buffered_audio()
             audiod = AudioData(
                 self.stream.buffer.read(),
                 sample_rate=self.stream.sample_rate,

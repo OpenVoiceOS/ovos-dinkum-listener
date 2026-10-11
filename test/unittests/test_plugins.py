@@ -269,3 +269,71 @@ class TestPlugins(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestFakeStreamingSTTDrain(unittest.TestCase):
+    """transcribe(None) must see every chunk handed to stream_data().
+
+    The stream thread copies queued chunks into the buffer on its own
+    schedule; reading the buffer before it catches up drops the tail of
+    the utterance.
+    """
+
+    @patch("ovos_dinkum_listener.plugins.Configuration")
+    def test_transcribe_waits_for_queued_chunks(self, mock_config):
+        import time
+        from ovos_dinkum_listener.plugins import FakeStreamingSTT, FakeStreamThread
+
+        mock_config.return_value = {
+            "listener": {"sample_rate": 16000, "sample_width": 2}}
+        engine = Mock()
+        engine.transcribe.return_value = [("ok", 1.0)]
+        stt = FakeStreamingSTT(engine=engine, config={})
+
+        slow_update = FakeStreamThread.update
+
+        def delayed_update(self, chunk):
+            time.sleep(0.01)
+            slow_update(self, chunk)
+
+        chunks = [bytes([i]) * 320 for i in range(20)]
+        with patch.object(FakeStreamThread, "update", delayed_update):
+            stt.stream_start()
+            for chunk in chunks:
+                stt.stream_data(chunk)
+            stt.transcribe(audio=None, lang="en-us")
+            stt.stream_stop()
+
+        audio = engine.transcribe.call_args[0][0]
+        self.assertEqual(audio.frame_data, b"".join(chunks))
+
+    def test_transcribe_before_stream_start_does_not_fail(self):
+        from ovos_dinkum_listener.plugins import FakeStreamingSTT
+
+        engine = Mock()
+        engine.transcribe.return_value = [("ok", 1.0)]
+        stt = FakeStreamingSTT(engine=engine, config={})
+        stream = Mock()
+        stream.sample_rate = 16000
+        stream.sample_width = 2
+        stream.buffer = Mock()
+        stream.buffer.read.return_value = b"\x00" * 100
+        stt.stream = stream
+        self.assertEqual(stt.transcribe(audio=None, lang="en-us"), [("ok", 1.0)])
+
+    @patch("ovos_dinkum_listener.plugins.Configuration")
+    def test_stream_start_discards_unread_audio(self, mock_config):
+        """Audio never requested via transcribe() is dropped, not transcribed
+        late by the old thread's finalize()."""
+        from ovos_dinkum_listener.plugins import FakeStreamingSTT
+
+        mock_config.return_value = {
+            "listener": {"sample_rate": 16000, "sample_width": 2}}
+        engine = Mock()
+        stt = FakeStreamingSTT(engine=engine, config={})
+        stt.stream_start()
+        stt.stream_data(b"\x01" * 640)
+        stt._wait_for_buffered_audio()
+        stt.stream_start()
+        stt.stream_stop()
+        engine.execute.assert_not_called()
