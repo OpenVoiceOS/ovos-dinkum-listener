@@ -846,10 +846,14 @@ class DinkumVoiceLoop(VoiceLoop):
 
         return default_lang
 
-    def _get_tx(self, stt_context: dict) -> (str, dict):
+    def _get_tx(
+        self, stt_context: dict, audio: Optional[bytes] = None
+    ) -> (str, dict):
         """
         Get a string transcription of audio that was previously streamed to STT.
         @param stt_context: dict context determined by transformers service
+        @param audio: full utterance audio to transcribe, None to read the
+        audio as streamed to the STT buffer during recording
         @return: string transcription and dict context
         """
         # handle lang detection from speech
@@ -865,7 +869,7 @@ class DinkumVoiceLoop(VoiceLoop):
 
         # get text and trigger callback
         try:
-            utts = self.stt.transcribe(lang=lang) or []
+            utts = self.stt.transcribe(audio, lang=lang) or []
         except Exception as e:
             LOG.exception(f"Primary STT transcription failed: {str(e)}")
             LOG.exception("STT failed")
@@ -874,7 +878,7 @@ class DinkumVoiceLoop(VoiceLoop):
         if not utts and self.fallback_stt is not None:
             LOG.info("Attempting fallback STT plugin")
             try:
-                utts = self.fallback_stt.transcribe(lang=lang) or []
+                utts = self.fallback_stt.transcribe(audio, lang=lang) or []
             except Exception as e:
                 LOG.exception(f"Fallback STT transcription failed: {str(e)}")
                 LOG.exception("Fallback STT failed")
@@ -900,21 +904,26 @@ class DinkumVoiceLoop(VoiceLoop):
         stt_context["transcriptions"] = filtered
         return filtered, stt_context
 
-    def _vad_remove_silence(self):
-        """removes silence from the STT buffer using the VAD plugin
+    def _vad_remove_silence(self, audio: Optional[bytes] = None) -> bytes:
+        """removes silence from the STT audio using the VAD plugin
         trimmed audio will never be < 1 second
+
+        @param audio: utterance audio to trim, defaults to the recorded
+        utterance; may be audio modified by the transformers pipeline
+        @return: trimmed audio, or the input audio unchanged if trimming
+        did not apply
         """
-        # NOTE: This is using the FS-STT buffer directly, not the S-STT queue
-        n_chunks = len(self.stt_audio_bytes) / self.mic.chunk_size
+        audio = audio if audio is not None else self.stt_audio_bytes
+        n_chunks = len(audio) / self.mic.chunk_size
         seconds = n_chunks * self.mic.seconds_per_chunk
         LOG.debug(f"recorded {seconds} seconds of audio")
         if seconds > 1:
-            extracted_speech = self.vad.extract_speech(self.stt_audio_bytes)
+            extracted_speech = self.vad.extract_speech(audio)
             if extracted_speech is None:
                 LOG.debug(
                     "audio appears to be full silence! skipping VAD silence removal"
                 )
-                return
+                return audio
             n_chunks = len(extracted_speech) / self.mic.chunk_size
             seconds2 = n_chunks * self.mic.seconds_per_chunk
             LOG.debug(
@@ -922,13 +931,11 @@ class DinkumVoiceLoop(VoiceLoop):
                 f"trimmed audio has {seconds2} seconds"
             )
             if extracted_speech and seconds2 >= 1:
-                self.stt.stream.buffer.clear()
-                # replace the stt buffer with cropped audio
-                self.stt.stream.update(extracted_speech)
-            else:
-                LOG.debug("trimmed audio is too short! skipping VAD silence removal")
+                return extracted_speech
+            LOG.debug("trimmed audio is too short! skipping VAD silence removal")
         else:
             LOG.debug("skipping silence removal")
+        return audio
 
     def _after_cmd(self, chunk: bytes):
         """
@@ -936,14 +943,19 @@ class DinkumVoiceLoop(VoiceLoop):
         Calls `stt_audio_callback` and `text_callback` with finalized utterance
         recording and transcript. The loop is reset to the appropriate state for
         the next command.
-        @param chunk: bytes of audio captured
+        @param chunk: bytes of audio captured after the command ended; not
+        part of the recorded utterance
         """
-        # Command has ended, call transformers pipeline before STT
-        chunk, stt_context = self.transformers.transform(chunk)
+        # Command has ended, run the transformers pipeline over the full
+        # recorded utterance before STT. When a plugin modified the audio,
+        # the transformed utterance is what gets transcribed
+        utterance, stt_context = self.transformers.transform(self.stt_audio_bytes)
         if isinstance(self.stt, FakeStreamingSTT) and self.remove_silence:
-            self._vad_remove_silence()
+            utterance = self._vad_remove_silence(utterance)
 
-        utts, stt_context = self._get_tx(stt_context)
+        # None reads the audio streamed to the STT buffer during recording
+        stt_audio = utterance if utterance != self.stt_audio_bytes else None
+        utts, stt_context = self._get_tx(stt_context, stt_audio)
         LOG.info(f"Raw transcription: {utts}")
         if utts:
             LOG.debug(f"transformers metadata: {stt_context}")
