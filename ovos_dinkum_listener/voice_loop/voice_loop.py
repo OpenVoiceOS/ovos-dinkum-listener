@@ -32,6 +32,14 @@ from ovos_dinkum_listener.voice_loop.hotwords import (
     HotWordException,
 )
 
+try:
+    from ovos_plugin_manager.templates.eot import ChunkContext, EndOfTurnEngine
+except ImportError:
+    # ovos-plugin-manager predates the end_of_turn plugin type; the voice loop
+    # falls back to its silence timer
+    ChunkContext = None
+    EndOfTurnEngine = None
+
 
 class ListeningState(str, Enum):
     DETECT_WAKEWORD = "wakeword"
@@ -147,6 +155,9 @@ class DinkumVoiceLoop(VoiceLoop):
     num_hotword_keep_chunks: int = 15
     remove_silence: bool = False
     instant_listen: bool = False
+    #: optional end-of-turn engine; when set, its decision can end a command
+    #: before the silence timer elapses. None keeps the silence-timer behavior.
+    end_of_turn: Optional["EndOfTurnEngine"] = None
     skip_next_wake: bool = False
     hotword_chunks: Deque = field(default_factory=deque)
     stt_chunks: Deque = field(default_factory=deque)
@@ -201,6 +212,12 @@ class DinkumVoiceLoop(VoiceLoop):
         self.speech_seconds_left = self.speech_seconds
         self.timeout_seconds_left = self.timeout_seconds
         self.timeout_seconds_with_silence_left = self.timeout_seconds_with_silence
+        self._reset_end_of_turn()
+
+    def _reset_end_of_turn(self):
+        """Reset the end-of-turn engine for a new user turn, if one is loaded."""
+        if self.end_of_turn is not None:
+            self.end_of_turn.reset()
 
     def start(self):
         """
@@ -697,6 +714,7 @@ class DinkumVoiceLoop(VoiceLoop):
                     self.stt.stream_start()
                     if self.fallback_stt is not None:
                         self.fallback_stt.stream_start()
+                    self._reset_end_of_turn()
                     self.state = ListeningState.IN_COMMAND
                 else:
                     self.state = ListeningState.BEFORE_COMMAND
@@ -775,6 +793,7 @@ class DinkumVoiceLoop(VoiceLoop):
                 if self.speech_seconds_left <= 0:
                     # Voice command has started, so start looking for the
                     # end.
+                    self._reset_end_of_turn()
                     self.state = ListeningState.IN_COMMAND
                     self.silence_seconds_left = self.silence_seconds
                     LOG.debug(f"STATE: {self.state}")
@@ -811,6 +830,19 @@ class DinkumVoiceLoop(VoiceLoop):
             # Wait for enough silence before considering the command to be
             # ended.
             self._chunk_info.is_speech = not self.vad.is_silence(stt_chunk)
+
+            # An end-of-turn engine can end the command earlier than the
+            # silence timer; it sees every chunk, speech or silence. The VAD
+            # verdict travels with the chunk so the engine and the listener
+            # share one silence criterion.
+            if self.end_of_turn is not None:
+                context = ChunkContext(is_speech=self._chunk_info.is_speech)
+                if self.end_of_turn.update(stt_chunk, context).ended:
+                    # End of voice command detected
+                    self.state = ListeningState.AFTER_COMMAND
+                    LOG.debug(f"STATE: {self.state}")
+                    break
+
             if not self._chunk_info.is_speech:
                 self.silence_seconds_left -= self.mic.seconds_per_chunk
                 if self.silence_seconds_left <= 0:

@@ -13,6 +13,7 @@ continuously reads audio from the microphone, runs it through a deterministic fi
 | Microphone input | Reads raw audio chunks from a `Microphone` plugin via `OVOSMicrophoneFactory` |
 | Wakeword / hotword detection | Routes chunks through `HotwordContainer` to detect listen words, hotwords, stop words, and wakeup words |
 | Voice Activity Detection | Determines speech start/end boundaries using a `VADEngine` plugin |
+| End-of-turn detection | Optionally ends a command through an `EndOfTurnEngine` plugin; without one the silence timer ends the command |
 | STT transcription | Streams accumulated audio to a `StreamingSTT` plugin (with optional fallback) |
 | Audio transformation | Runs audio through `AudioTransformersService` before and after STT |
 | Bus integration | Reports recording lifecycle, transcription results, handles remote listen/mute/sleep/state controls |
@@ -32,6 +33,7 @@ OVOSDinkumVoiceService (Thread)             service.py:84
     │     ├── stop_words
     │     └── hot_words
     ├── VADEngine plugin                OVOSVADFactory.create()
+    ├── EndOfTurnEngine plugin (opt.)   OVOSEndOfTurnFactory.create()
     ├── StreamingSTT + fallback STT     plugins.py
     ├── AudioTransformersService        transformers.py
     │
@@ -122,6 +124,7 @@ ovos_dinkum_listener/
 | `listener.recording_timeout` | `float` | `10.0` | Max total recording seconds |
 | `listener.recording_timeout_with_silence` | `float` | `5.0` | Max pre-speech silence seconds after wakeword |
 | `listener.recording_mode_max_silence` | `float` | `30.0` | Max silence seconds in free recording mode |
+| `listener.end_of_turn` | `dict` | `{}` | End-of-turn plugin config; when empty, the silence timer ends commands |
 
 ### STT Quality
 
@@ -206,7 +209,7 @@ DinkumVoiceLoop.run()                       voice_loop.py:205
        ├─[BEFORE_COMMAND]─ vad.is_silence() ──► stt.stream_data()
        │                         │ speech_seconds elapsed
        ├─[IN_COMMAND]───── vad.is_silence() ──► stt.stream_data()
-       │                       │ silence_seconds elapsed
+       │                       │ end_of_turn.update() ended, or silence_seconds elapsed
        ├─[AFTER_COMMAND]── transformers.transform()
        │                   stt.transcribe()   [+ fallback]
        │                   stt_audio_callback, text_callback
