@@ -68,6 +68,15 @@ from ovos_dinkum_listener.voice_loop import (
 )
 from ovos_dinkum_listener.voice_loop.hotwords import HotwordContainer
 
+try:
+    from ovos_plugin_manager.end_of_turn import OVOSEndOfTurnFactory
+    from ovos_plugin_manager.templates.eot import EndOfTurnEngine
+except ImportError:
+    # ovos-plugin-manager predates the end_of_turn plugin type; end-of-turn
+    # detection stays on the silence timer
+    OVOSEndOfTurnFactory = None
+    EndOfTurnEngine = None
+
 # Seconds between systemd watchdog updates
 WATCHDOG_DELAY = 0.5
 
@@ -153,6 +162,7 @@ class OVOSDinkumVoiceService(Thread):
         stt: Optional[STT] = None,
         fallback_stt: Optional[STT] = None,
         vad: Optional[VADEngine] = None,
+        end_of_turn: Optional["EndOfTurnEngine"] = None,
         hotwords: Optional[HotwordContainer] = None,
         disable_fallback: bool = False,
         *args,
@@ -197,6 +207,7 @@ class OVOSDinkumVoiceService(Thread):
             bus=self.bus, verifiers=self._load_ww_verifiers()
         )
         self.vad = vad or OVOSVADFactory.create()
+        self.end_of_turn = end_of_turn or self._load_end_of_turn()
         if stt and not isinstance(stt, StreamingSTT):
             stt = FakeStreamingSTT(stt)
         self.stt = stt or load_stt_module()
@@ -270,6 +281,7 @@ class OVOSDinkumVoiceService(Thread):
         loop_config = {
             "listener": self.config.get("listener"),
             "vad": self.config.get("VAD"),
+            "end_of_turn": self.config.get("listener", {}).get("end_of_turn"),
             "mic": self.config.get("microphone"),
         }
         hotword_config = {
@@ -326,6 +338,32 @@ class OVOSDinkumVoiceService(Thread):
         LOG.debug(f"Loaded wake word verifier plugins: {list(verifier_plugs)}")
         return list(verifier_plugs.values())
 
+    def _load_end_of_turn(self):
+        """Instantiate the configured end-of-turn plugin, if any.
+
+        Reads ``listener.end_of_turn`` from the active config. Returns ``None``
+        when no module is configured, when the plugin type is unavailable in the
+        installed ``ovos-plugin-manager``, or when the plugin fails to load; the
+        voice loop then keeps its silence timer.
+
+        Returns:
+            EndOfTurnEngine or None: ready to pass to the voice loop.
+        """
+        if OVOSEndOfTurnFactory is None:
+            return None
+        cfg = self.config.get("listener", {}).get("end_of_turn") or {}
+        if not cfg.get("module"):
+            return None
+        try:
+            engine = OVOSEndOfTurnFactory.create(self.config)
+        except Exception:
+            LOG.exception(
+                "Failed to load end-of-turn plugin; falling back to the silence timer"
+            )
+            return None
+        LOG.debug(f"Loaded end-of-turn plugin: {cfg.get('module')}")
+        return engine
+
     def _init_voice_loop(self, listener_config: dict):
         """
         Initialize a DinkumVoiceLoop object with the specified config
@@ -339,6 +377,7 @@ class OVOSDinkumVoiceService(Thread):
                 stt=self.stt,
                 fallback_stt=self.fallback_stt,
                 vad=self.vad,
+                end_of_turn=self.end_of_turn,
                 transformers=self.transformers,
                 instant_listen=listener_config.get("instant_listen", True),
                 speech_seconds=listener_config.get("speech_begin", 0.3),
@@ -1341,6 +1380,8 @@ class OVOSDinkumVoiceService(Thread):
                 del self.vad
                 self.vad = OVOSVADFactory.create(self.config)
 
+                self.end_of_turn = self._load_end_of_turn()
+
                 self.mic.stop()
                 del self.mic
                 microphone_config = self.config.get("microphone", {})
@@ -1351,6 +1392,7 @@ class OVOSDinkumVoiceService(Thread):
                 # Update voice_loop with new parameters
                 self.voice_loop.mic = self.mic
                 self.voice_loop.vad = self.vad
+                self.voice_loop.end_of_turn = self.end_of_turn
                 listener_config = self.config["listener"]
                 self.voice_loop.speech_seconds = listener_config.get(
                     "speech_begin", 0.3

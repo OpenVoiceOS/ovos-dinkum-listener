@@ -48,6 +48,12 @@ non exhaustive list of config options
     "speech_begin": 0.1,
     // Seconds of silence before a voice command has finished
     "silence_end": 0.5,
+    // Optional end-of-turn detector. When set, it decides when the user
+    // finished speaking and ends the command before "silence_end" elapses.
+    // Leave empty to end commands with the "silence_end" timer.
+    // "end_of_turn": {
+    //   "module": "ovos-eot-plugin-cuelight"
+    // },
     // Settings used by microphone to set recording timeout with and without speech detected
     "recording_timeout": 10.0,
     // Settings used by microphone to set recording timeout without speech detected.
