@@ -13,5 +13,6 @@ jobs:
       python_version: '3.11'
       coverage_source: 'ovos_dinkum_listener'
       test_path: 'test/'
+      test_extras: 'tests'
       install_extras: ''
       min_coverage: 0
