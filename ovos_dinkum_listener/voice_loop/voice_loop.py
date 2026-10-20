@@ -268,7 +268,10 @@ class DinkumVoiceLoop(VoiceLoop):
             for chunk in rewind_chunks[-n_to_rewind:]:
                 # feed some pre-VAD detection audio to hotwords
                 # VAD is usually a bit too late
-                self.hotwords.update(chunk)
+                # the wake word engines only take audio in the LISTEN state
+                for state in (HotwordState.LISTEN, HotwordState.HOTWORD):
+                    self.hotwords.state = state
+                    self.hotwords.update(chunk)
         else:
             self.transformers.feed_audio(chunk)
 
@@ -361,6 +364,7 @@ class DinkumVoiceLoop(VoiceLoop):
                             )
                             self.state = ListeningState.PRE_WAKE_VAD
                             self._vad_window_start = 0
+                            self.hotword_chunks.clear()
                 except HotWordException as e:
                     if self.hotwords.reload_on_failure:
                         LOG.warning(e)
