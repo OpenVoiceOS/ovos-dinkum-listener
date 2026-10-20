@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.1a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.11.1a1) (2026-10-20)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.11.0a3...0.11.1a1)
+
+**Merged pull requests:**
+
+- fix: feed the pre-VAD rewind to the wake word engines in the LISTEN state [\#280](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/280) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [0.11.0a3](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.11.0a3) (2026-10-20)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.11.0a2...0.11.0a3)
@@ -373,11 +381,6 @@
 ## [0.3.5a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.5a1) (2025-01-04)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.4...0.3.5a1)
-
-**Merged pull requests:**
-
-- Release 0.3.5a1 [\#164](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/164) ([github-actions[bot]](https://github.com/apps/github-actions))
-- chore: add warnings [\#163](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/163) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.3.4](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.4) (2024-11-20)
 
