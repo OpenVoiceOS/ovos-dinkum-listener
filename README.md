@@ -38,7 +38,7 @@ non exhaustive list of config options
     // this should reduce false activations
     "vad_pre_wake_enabled": true,
     // Voice Activity Detection is used to determine when users are speaking
-    VAD": {
+    "VAD": {
      // recommended plugin: "ovos-vad-plugin-silero"
      "module": "ovos-vad-plugin-silero",
      "ovos-vad-plugin-silero": {"threshold": 0.2},
@@ -183,6 +183,85 @@ Disable a specific verifier without removing it from config:
 > **Note:** enabling `ovos-ww-verifier-silero` and `"vad_pre_wake_enabled": true`
 > at the same time applies Silero VAD twice.  Use one or the other.
 
+### Measuring false activations
+
+`examples/measure_false_activations.py` runs the real voice loop on your
+recordings and reports recall and false activations per hour for four setups:
+the engine only, the pre-wake VAD, the verifiers, and both. It needs
+`ovoscope`, `scipy` and `soundfile` next to the listener:
+
+```bash
+python examples/measure_false_activations.py \
+    --module ovos-ww-plugin-wakeforge --ww-config '{"model": "wakehubert_hey_floyd"}' \
+    --vad ovos-vad-plugin-silero --verifier ovos-ww-verifier-silero \
+    --positives hey_floyd/ --negatives noise/ --out results.json
+```
+
+The script feeds the loop in microphone chunks of `--chunk-bytes`, 4096 by
+default (128 ms of 16 kHz 16-bit mono). That is the chunk size of the default
+microphone plugins. If your `microphone` configuration sets a different
+`chunk_size`, give that value, because the chunk size changes what the
+verifiers see. Without the pre-wake VAD, they get the last
+`num_hotword_keep_chunks` chunks before the detection: 15 × 128 ms = 1.92 s.
+With the pre-wake VAD on, which is the default, the window starts where the
+VAD heard speech, so it is shorter.
+
+Before each positive, the script plays `--lead-silence` seconds (3 by default)
+of white noise at `--noise-floor-dbfs` (-60 by default), because a real
+microphone always hears a noise floor. It plays each positive at
+`--lead-phases` offsets of that lead (8 by default), spread evenly over one
+chunk. The chunk boundaries fall at a different place in the recording for each
+offset, and the pre-wake VAD and the engines react to that cut. A single fixed
+lead shows only one of the cuts. Recall counts every play.
+
+These rates were measured at 4096-byte chunks and 8 lead offsets, so recall
+counts 928 plays for `hey_chatterbox` (116 clips) and 768 for `hey_floyd` (96
+clips). The positives are real recordings from
+[ovos-community-wakewords-dataset](https://huggingface.co/datasets/OpenVoiceOS/ovos-community-wakewords-dataset):
+116 of "hey chatterbox" and 96 of "hey floyd". The noise negatives are 1.015 h
+of [wake_word_noise](https://huggingface.co/datasets/OpenVoiceOS/wake_word_noise):
+false activations captured on real devices, spoken near-misses, microphone
+taps and background noise. The speech negatives are 5.4 h of LibriSpeech
+test-clean.
+
+| Engine | Negatives | Setup | Recall | False activations per hour |
+|---|---|---|---|---|
+| `wakehubert_hey_chatterbox` | noise, 1.015 h | engine only | 82.2% | 4.93 |
+| `wakehubert_hey_chatterbox` | noise, 1.015 h | pre-wake VAD | 82.2% | 4.93 |
+| `wakehubert_hey_chatterbox` | noise, 1.015 h | Silero verifier | 71.2% | 4.93 |
+| `wakehubert_hey_chatterbox` | noise, 1.015 h | both | 79.5% | 4.93 |
+| `wakehubert_hey_floyd` | noise, 1.015 h | engine only | 92.4% | 0.99 |
+| `wakehubert_hey_floyd` | noise, 1.015 h | pre-wake VAD | 92.4% | 0.99 |
+| `wakehubert_hey_floyd` | noise, 1.015 h | Silero verifier | 81.4% | 0.99 |
+| `wakehubert_hey_floyd` | noise, 1.015 h | both | 82.2% | 0 |
+| `wakehubert_hey_floyd` | speech, 5.4 h | engine only | 92.4% | 0.56 |
+| `wakehubert_hey_floyd` | speech, 5.4 h | pre-wake VAD | 92.4% | 0.74 |
+| `wakehubert_hey_floyd` | speech, 5.4 h | Silero verifier | 81.4% | 0.56 |
+| `wakehubert_hey_floyd` | speech, 5.4 h | both | 82.2% | 0.74 |
+
+The recall column is the same for both negative sets because the positives are
+the same. The false activation counts are 1 (`hey_floyd`) and 5
+(`hey_chatterbox`) in the noise set, and 3 or 4 in the speech set. One
+activation moves a rate by 0.99 per hour in the noise set and by 0.19 in the
+speech set, so differences of one activation are not a measured effect.
+
+The pre-wake VAD costs no recall. It fires after the wake word has started, so
+the loop feeds the audio recorded just before the trigger (the last five
+chunks) to the wake word engines. The recall above includes that audio.
+
+The pre-wake VAD removed no false activation in these runs, and it added one to the `hey_floyd` speech set (4 against 3).
+
+The Silero verifier removed no false activation on its own. It cost 11.1 points
+of recall for `hey_floyd` and 11.0 for `hey_chatterbox`. Added to the pre-wake VAD, it cost 2.7 points for
+`hey_chatterbox` and 10.3 points for `hey_floyd`. In the `hey_floyd` noise set
+that combination had no false activation where each setup alone had one. That is
+a single activation. Leave the verifier off unless your own measurements show a
+gain. The verifier rows were measured with ovos-vad-plugin-silero 0.1.3a2.
+
+Three of the five `hey_chatterbox` false activations come from the spoken
+near-misses "a cheddar block" and "a chatter block" in the noise set. All five are spoken words, so no VAD
+or verifier can reject them.
+
 ## How to test
 
 Install the package with test dependencies, then run the suite:
@@ -225,8 +304,10 @@ PASSED test_verify_constructor_verifiers_param
 To test end-to-end with the Silero verifier plugin installed:
 
 ```bash
-pip install ovos-ww-verifier-silero
+pip install ovos-vad-plugin-silero
 ```
+
+The `ovos-ww-verifier-silero` verifier is an entry point of the `ovos-vad-plugin-silero` package.
 
 Add to your OVOS config:
 
