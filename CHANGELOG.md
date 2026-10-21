@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.1a2](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.11.1a2) (2026-10-21)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.11.1a1...0.11.1a2)
+
+**Merged pull requests:**
+
+- docs: measure false activations through the real voice loop [\#277](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/277) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [0.11.1a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.11.1a1) (2026-10-20)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.11.0a3...0.11.1a1)
@@ -366,17 +374,9 @@
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.6a1...0.3.6)
 
-**Merged pull requests:**
-
-- Release 0.3.6a1 [\#166](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/166) ([github-actions[bot]](https://github.com/apps/github-actions))
-
 ## [0.3.6a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.6a1) (2025-01-16)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.5a1...0.3.6a1)
-
-**Merged pull requests:**
-
-- fix:runtime\_lang [\#165](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/165) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.3.5a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.5a1) (2025-01-04)
 
