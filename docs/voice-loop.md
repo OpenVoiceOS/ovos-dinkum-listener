@@ -191,7 +191,7 @@ Main loop. Reads from `mic.read_chunk()` until `stop()` is called. On each chunk
 State transitions during `DETECT_WAKEWORD`:
 - `CONTINUOUS` mode → immediately transition to `WAITING_CMD`
 - else check `_detect_ww()` then `_detect_hot()` then feed transformers
-- if `vad_pre_wake_enabled` and no WW within 5s → return to `PRE_WAKE_VAD` - `voice_loop.py:276`
+- if `vad_pre_wake_enabled` and no WW within 5s → clear the hotword chunks, reset the VAD and return to `PRE_WAKE_VAD`
 
 ### `DinkumVoiceLoop._pre_wake_vad(chunk)` - `voice_loop.py:190`
 
