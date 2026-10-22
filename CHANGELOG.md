@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.2a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.11.2a1) (2026-10-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.11.1a2...0.11.2a1)
+
+**Merged pull requests:**
+
+- fix\(deps\): accept ovos-plugin-manager 3 [\#284](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/284) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [0.11.1a2](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.11.1a2) (2026-10-21)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.11.1a1...0.11.1a2)
@@ -358,17 +366,9 @@
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.7a1...0.3.7)
 
-**Merged pull requests:**
-
-- Release 0.3.7a1 [\#168](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/168) ([github-actions[bot]](https://github.com/apps/github-actions))
-
 ## [0.3.7a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.7a1) (2025-03-19)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.6...0.3.7a1)
-
-**Merged pull requests:**
-
-- fix: allow latest ovos-config [\#167](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/167) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.3.6](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.6) (2025-01-16)
 
