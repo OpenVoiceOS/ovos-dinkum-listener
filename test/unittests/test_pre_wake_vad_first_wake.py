@@ -66,6 +66,26 @@ def entry(engine, listen):
     }
 
 
+class StatefulVad:
+    """Reports speech for two chunks after the last speech chunk, as Silero does
+    until it is reset."""
+
+    def __init__(self):
+        self.stale = 0
+
+    def is_silence(self, chunk):
+        if chunk == CODA:
+            self.stale = 2
+            return False
+        if self.stale:
+            self.stale -= 1
+            return False
+        return True
+
+    def reset(self):
+        self.stale = 0
+
+
 class TestPreWakeVadFirstWake(unittest.TestCase):
     def setUp(self):
         loaded = HotwordContainer._loaded.is_set()
@@ -149,3 +169,24 @@ class TestPreWakeVadFirstWake(unittest.TestCase):
 
         self.assertEqual(self.listen.fed, chunks)
         self.assertEqual(self.hot.fed, chunks)
+
+    def test_noise_after_a_closed_window_does_not_open_another(self):
+        self.listen.found_wake_word = lambda: False
+        self.hot.found_wake_word = lambda: False
+        self.loop.vad = StatefulVad()
+        chunks = [CODA] * 12 + [SILENCE] * 12
+        self.loop.mic = ScriptedMic(chunks, self.loop.stop)
+        states = []
+        self.loop.chunk_callback = lambda info: states.append(self.loop.state)
+        ticks = itertools.count(1_000_000)
+        self.loop.start()
+        with patch.object(time, "time", side_effect=lambda: float(next(ticks))):
+            self.loop.run()
+
+        opened_over_noise = [
+            i
+            for i in range(12, len(states))
+            if states[i] == ListeningState.DETECT_WAKEWORD
+            and states[i - 1] != ListeningState.DETECT_WAKEWORD
+        ]
+        self.assertEqual(opened_over_noise, [])

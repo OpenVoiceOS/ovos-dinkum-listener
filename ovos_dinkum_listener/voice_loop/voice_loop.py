@@ -365,6 +365,8 @@ class DinkumVoiceLoop(VoiceLoop):
                             self.state = ListeningState.PRE_WAKE_VAD
                             self._vad_window_start = 0
                             self.hotword_chunks.clear()
+                            if hasattr(self.vad, "reset"):
+                                self.vad.reset()
                 except HotWordException as e:
                     if self.hotwords.reload_on_failure:
                         LOG.warning(e)
