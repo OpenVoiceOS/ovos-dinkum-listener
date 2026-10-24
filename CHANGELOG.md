@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.3a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.11.3a1) (2026-10-24)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.11.2a1...0.11.3a1)
+
+**Merged pull requests:**
+
+- fix: reset the VAD when the pre-wake window closes without a wake word [\#282](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/282) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [0.11.2a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.11.2a1) (2026-10-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.11.1a2...0.11.2a1)
@@ -350,17 +358,9 @@
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.8a1...0.3.8)
 
-**Merged pull requests:**
-
-- Release 0.3.8a1 [\#170](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/170) ([github-actions[bot]](https://github.com/apps/github-actions))
-
 ## [0.3.8a1](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.8a1) (2025-04-02)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-dinkum-listener/compare/0.3.7...0.3.8a1)
-
-**Merged pull requests:**
-
-- fix: pin onnx.txt [\#169](https://github.com/OpenVoiceOS/ovos-dinkum-listener/pull/169) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.3.7](https://github.com/OpenVoiceOS/ovos-dinkum-listener/tree/0.3.7) (2025-03-19)
 
