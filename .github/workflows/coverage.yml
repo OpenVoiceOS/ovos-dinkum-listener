@@ -1,0 +1,18 @@
+name: Code Coverage
+
+on:
+  pull_request:
+    branches: [dev]
+  workflow_dispatch:
+
+jobs:
+  coverage:
+    uses: OpenVoiceOS/gh-automations/.github/workflows/coverage.yml@dev
+    secrets: inherit
+    with:
+      python_version: '3.11'
+      coverage_source: 'ovos_dinkum_listener'
+      test_path: 'test/'
+      test_extras: 'tests'
+      install_extras: ''
+      min_coverage: 0
