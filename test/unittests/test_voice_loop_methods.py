@@ -371,6 +371,79 @@ class TestInCmd(unittest.TestCase):
 
         fallback.stream_data.assert_called()
 
+    def test_end_of_turn_ends_command_early(self):
+        """An end-of-turn engine fires before the silence timer."""
+        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+        from ovos_plugin_manager.templates.eot import ChunkContext
+
+        eot = Mock()
+        eot.update.return_value = Mock(ended=True)
+        loop = _make_loop(end_of_turn=eot)
+        loop.state = ListeningState.IN_COMMAND
+        loop.timeout_seconds_left = 99.0
+        loop.silence_seconds_left = 99.0
+        loop.vad.is_silence.return_value = False  # speech: timer would not fire
+        loop.stt_chunks = deque([SPEECH_CHUNK])
+        loop.stt_audio_bytes = bytes()
+
+        loop._in_cmd(SPEECH_CHUNK)
+
+        self.assertEqual(loop.state, ListeningState.AFTER_COMMAND)
+        args, _ = eot.update.call_args
+        self.assertEqual(args[0], SPEECH_CHUNK)
+        self.assertIsInstance(args[1], ChunkContext)
+        self.assertTrue(args[1].is_speech)
+
+    def test_end_of_turn_not_ended_keeps_command(self):
+        """A chunk the engine does not end leaves the command running."""
+        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
+        eot = Mock()
+        eot.update.return_value = Mock(ended=False)
+        loop = _make_loop(end_of_turn=eot)
+        loop.state = ListeningState.IN_COMMAND
+        loop.timeout_seconds_left = 99.0
+        loop.silence_seconds_left = 99.0
+        loop.vad.is_silence.return_value = False
+        loop.stt_chunks = deque([SPEECH_CHUNK])
+        loop.stt_audio_bytes = bytes()
+
+        loop._in_cmd(SPEECH_CHUNK)
+
+        self.assertEqual(loop.state, ListeningState.IN_COMMAND)
+
+
+class TestEndOfTurnReset(unittest.TestCase):
+    """The end-of-turn engine is reset at the start of a new user turn."""
+
+    def test_reset_speech_timer_resets_engine(self):
+        eot = Mock()
+        loop = _make_loop(end_of_turn=eot)
+        loop.reset_speech_timer()
+        eot.reset.assert_called_once()
+
+    def test_reset_without_engine(self):
+        loop = _make_loop()
+        loop.reset_speech_timer()  # must not raise
+
+    def test_entering_in_command_resets_engine(self):
+        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningState
+
+        eot = Mock()
+        loop = _make_loop(end_of_turn=eot)
+        loop.state = ListeningState.BEFORE_COMMAND
+        loop.timeout_seconds_left = 99.0
+        loop.timeout_seconds_with_silence_left = 99.0
+        loop.speech_seconds_left = SECONDS_PER_CHUNK * 0.5
+        loop.vad.is_silence.return_value = False  # speech
+        loop.stt_chunks = deque([SPEECH_CHUNK])
+        loop.stt_audio_bytes = bytes()
+
+        loop._before_cmd(SPEECH_CHUNK)
+
+        self.assertEqual(loop.state, ListeningState.IN_COMMAND)
+        eot.reset.assert_called_once()
+
 
 class TestAfterCmd(unittest.TestCase):
     """Tests for DinkumVoiceLoop._after_cmd()."""

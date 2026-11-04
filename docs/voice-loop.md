@@ -88,6 +88,7 @@ from ovos_dinkum_listener.voice_loop import DinkumVoiceLoop, ListeningMode, List
 | `listen_mode` | `ListeningMode` | `WAKEWORD` | Global listening mode |
 | `is_muted` | `bool` | `False` | If `True`, zero-fill chunks (soft mute) |
 | `vad_pre_wake_enabled` | `bool` | from config | Enable the `PRE_WAKE_VAD` state |
+| `end_of_turn` | `EndOfTurnEngine` | `None` | Optional end-of-turn plugin; `None` falls back to the silence timer |
 
 Internal timer fields (countdown per chunk): `speech_seconds_left`, `silence_seconds_left`, `confirmation_seconds_left`, `timeout_seconds_left`, `timeout_seconds_with_silence_left`, `recording_seconds_with_silence_left`.
 
@@ -219,7 +220,7 @@ In `BEFORE_COMMAND` state. Streams every chunk from `stt_chunks` into `stt.strea
 
 ### `DinkumVoiceLoop._in_cmd(chunk)` - `voice_loop.py:678`
 
-In `IN_COMMAND` state. Feeds `transformers.feed_speech()`. Streams audio to `stt.stream_data()`. Checks VAD: on `silence_seconds` of silence → `AFTER_COMMAND`. If `timeout_seconds_left` reaches zero → `AFTER_COMMAND`.
+In `IN_COMMAND` state. Feeds `transformers.feed_speech()`. Streams audio to `stt.stream_data()`. When an end-of-turn engine is set, each chunk also goes to `end_of_turn.update()`, which receives the chunk and a `ChunkContext` carrying the listener's VAD verdict; when it reports `ended` the state moves to `AFTER_COMMAND`. Otherwise checks VAD: on `silence_seconds` of silence → `AFTER_COMMAND`. If `timeout_seconds_left` reaches zero → `AFTER_COMMAND`. The engine is reset when a new turn starts.
 
 ### `DinkumVoiceLoop._after_cmd(chunk)` - `voice_loop.py:818`
 
