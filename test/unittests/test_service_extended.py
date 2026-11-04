@@ -727,7 +727,8 @@ class TestB64Transcribe(_ServiceTestBase):
         )
 
         msg = Message(
-            "recognizer_loop:b64_transcribe", {"audio": audio_b64, "lang": "en-us"}
+            "recognizer_loop:b64_transcribe", {"audio": audio_b64, "lang": "en-us"},
+            context={"session": {"session_id": "abc123"}},
         )
         self.service._handle_b64_transcribe(msg)
 
@@ -747,6 +748,10 @@ class TestB64Transcribe(_ServiceTestBase):
             received[0].data,
             {"transcriptions": [("hello", 0.9)], "lang": "en-us"},
         )
+
+        # reply() copies the caller's context; a bare Message() keeps the topic
+        # and the payload but loses the session, and the caller reads "default".
+        self.assertEqual(received[0].context["session"]["session_id"], "abc123")
 
 
 class TestOpmHandlers(_ServiceTestBase):
