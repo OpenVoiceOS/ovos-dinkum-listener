@@ -552,6 +552,86 @@ class TestAfterCmd(unittest.TestCase):
         self.assertEqual(utts, [])
 
 
+class TestAfterCmdTransformerAudio(unittest.TestCase):
+    """Tests for the transformer chain audio flow in _after_cmd()."""
+
+    def test_transform_receives_full_utterance(self):
+        """transformers.transform gets the full utterance, not the trailing chunk."""
+        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
+        loop = _make_loop()
+        loop.listen_mode = ListeningMode.WAKEWORD
+        loop.stt_audio_bytes = b"recorded utterance"
+        loop.stt_chunks = deque()
+        loop.transformers.transform.return_value = (b"recorded utterance", {})
+
+        loop._after_cmd(b"trailing chunk")
+
+        self.assertEqual(
+            loop.transformers.transform.call_args[0][0], b"recorded utterance"
+        )
+
+    def test_transformed_audio_reaches_stt(self):
+        """Audio modified by the transformer chain is what STT transcribes."""
+        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
+        loop = _make_loop()
+        loop.listen_mode = ListeningMode.WAKEWORD
+        loop.stt_audio_bytes = b"raw utterance"
+        loop.stt_chunks = deque()
+        loop.transformers.transform.return_value = (
+            b"isolated utterance",
+            {"speaker": "alice"},
+        )
+
+        loop._after_cmd(b"trailing chunk")
+
+        self.assertEqual(
+            loop.stt.transcribe.call_args[0][0], b"isolated utterance"
+        )
+
+    def test_unchanged_audio_reads_stt_buffer(self):
+        """When transformers do not modify the audio, STT reads its own buffer."""
+        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
+        loop = _make_loop()
+        loop.listen_mode = ListeningMode.WAKEWORD
+        loop.stt_audio_bytes = b"raw utterance"
+        loop.stt_chunks = deque()
+        loop.transformers.transform.return_value = (b"raw utterance", {})
+
+        loop._after_cmd(b"trailing chunk")
+
+        self.assertIsNone(loop.stt.transcribe.call_args[0][0])
+
+    def test_silence_removal_applies_to_transformed_audio(self):
+        """VAD silence removal crops the transformed utterance, and STT
+        transcribes the cropped audio."""
+        from ovos_dinkum_listener.plugins import FakeStreamingSTT
+        from ovos_dinkum_listener.voice_loop.voice_loop import ListeningMode
+
+        loop = _make_loop()
+        loop.listen_mode = ListeningMode.WAKEWORD
+        loop.stt = Mock(spec=FakeStreamingSTT)
+        loop.stt.lang = "en-us"
+        loop.stt.stream = Mock()
+        loop.stt.stream.language = "en-us"
+        loop.stt.transcribe.return_value = [("hello world", 0.9)]
+        loop.remove_silence = True
+        loop.stt_audio_bytes = b"raw"
+        loop.stt_chunks = deque()
+        # transformer output > 1 second so trimming applies
+        loop.transformers.transform.return_value = (bytes(CHUNK_SIZE * 6), {})
+        # extracted speech > 1 second
+        loop.vad.extract_speech.return_value = bytes(CHUNK_SIZE * 5)
+
+        loop._after_cmd(b"trailing chunk")
+
+        self.assertEqual(
+            loop.stt.transcribe.call_args[0][0], bytes(CHUNK_SIZE * 5)
+        )
+
+
 class TestValidateLang(unittest.TestCase):
     """Tests for DinkumVoiceLoop._validate_lang()."""
 
@@ -724,48 +804,31 @@ class TestVadRemoveSilence(unittest.TestCase):
 
         loop.vad.extract_speech.assert_called_once()
 
-    def test_extracted_speech_replaces_buffer(self):
-        """Extracted speech replaces the STT stream buffer."""
-        from ovos_dinkum_listener.plugins import FakeStreamingSTT
-
+    def test_extracted_speech_returned(self):
+        """Extracted speech is returned by _vad_remove_silence."""
         loop = _make_loop()
-        # Set stt to FakeStreamingSTT type so the isinstance check passes
-        loop.stt = Mock(spec=FakeStreamingSTT)
-        loop.stt.stream = Mock()
-        loop.stt.stream.buffer = Mock()
-        loop.stt.lang = "en-us"
-        loop.stt.stream.language = "en-us"
 
         # Long audio: 6 chunks → 1.536s
         long_audio = bytes(CHUNK_SIZE * 6)
-        loop.stt_audio_bytes = long_audio
         # Extracted speech > 1 second
         extracted = bytes(CHUNK_SIZE * 5)  # 1.28 seconds
         loop.vad.extract_speech.return_value = extracted
 
-        loop._vad_remove_silence()
+        trimmed = loop._vad_remove_silence(long_audio)
 
-        loop.stt.stream.buffer.clear.assert_called_once()
-        loop.stt.stream.update.assert_called_once_with(extracted)
+        self.assertEqual(trimmed, extracted)
 
     def test_short_extracted_speech_skips_replacement(self):
-        """If extracted speech < 1 second, buffer is NOT replaced."""
-        from ovos_dinkum_listener.plugins import FakeStreamingSTT
-
+        """If extracted speech < 1 second, input audio is returned unchanged."""
         loop = _make_loop()
-        loop.stt = Mock(spec=FakeStreamingSTT)
-        loop.stt.stream = Mock()
-        loop.stt.stream.buffer = Mock()
-        loop.stt.lang = "en-us"
-        loop.stt.stream.language = "en-us"
 
-        loop.stt_audio_bytes = bytes(CHUNK_SIZE * 6)  # 1.536s
+        long_audio = bytes(CHUNK_SIZE * 6)  # 1.536s
         # Extracted speech < 1 second → should not replace
         loop.vad.extract_speech.return_value = bytes(CHUNK_SIZE * 2)  # 0.512s
 
-        loop._vad_remove_silence()
+        trimmed = loop._vad_remove_silence(long_audio)
 
-        loop.stt.stream.buffer.clear.assert_not_called()
+        self.assertEqual(trimmed, long_audio)
 
 
 class TestWaitCmd(unittest.TestCase):
